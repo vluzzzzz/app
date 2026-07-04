@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== Tema CLARO (por defecto) ===== */
+:root {
+  color-scheme: light;
+  --surface: 244 246 251; /* fondo app */
+  --ink: 17 24 39; /* texto/acento neutro */
+
+  --glass-a: 0.55; /* opacidad del vidrio */
+  --glass-strong-a: 0.72;
+  --glass-brd: 17 24 39; /* borde */
+  --glass-brd-a: 0.1;
+  --glass-shadow: 0 10px 34px rgba(17, 24, 39, 0.12);
+  --glass-highlight: rgba(255, 255, 255, 0.7);
+}
+
+/* ===== Tema OSCURO ===== */
+.dark {
+  color-scheme: dark;
+  --surface: 11 11 18;
+  --ink: 255 255 255;
+
+  --glass-a: 0.1;
+  --glass-strong-a: 0.16;
+  --glass-brd: 255 255 255;
+  --glass-brd-a: 0.15;
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  --glass-highlight: rgba(255, 255, 255, 0.3);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: theme('fontFamily.sans');
+  color: rgb(var(--ink));
+  background-color: rgb(var(--surface));
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@layer components {
+  /* Tarjeta de vidrio líquido base. El saturate hace el vidrio más vibrante. */
+  .glass {
+    background-color: rgb(255 255 255 / var(--glass-a));
+    border: 1px solid rgb(var(--glass-brd) / var(--glass-brd-a));
+    -webkit-backdrop-filter: blur(18px) saturate(1.6);
+    backdrop-filter: blur(18px) saturate(1.6);
+    box-shadow: var(--glass-shadow);
+  }
+  .dark .glass {
+    background-image: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.14),
+      rgba(255, 255, 255, 0.04)
+    );
+  }
+
+  .glass-strong {
+    background-color: rgb(255 255 255 / var(--glass-strong-a));
+    border: 1px solid rgb(var(--glass-brd) / calc(var(--glass-brd-a) + 0.05));
+    -webkit-backdrop-filter: blur(28px) saturate(1.8);
+    backdrop-filter: blur(28px) saturate(1.8);
+    box-shadow: var(--glass-shadow);
+  }
+  .dark .glass-strong {
+    background-image: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.2),
+      rgba(255, 255, 255, 0.06)
+    );
+  }
+
+  /* Highlight interno tipo reflejo de cristal */
+  .glass-highlight {
+    box-shadow:
+      inset 0 1px 1px var(--glass-highlight),
+      var(--glass-shadow);
+  }
+
+  /* Resplandor de color: se controla con la variable --glow. */
+  .glow {
+    box-shadow: 0 0 32px -10px var(--glow, transparent);
+  }
+
+  /* Brillo que barre de izquierda a derecha. */
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      110deg,
+      transparent 25%,
+      rgba(255, 255, 255, 0.45) 50%,
+      transparent 75%
+    );
+    transform: translateX(-100%);
+    animation: shimmer 2.4s ease-in-out infinite;
+    pointer-events: none;
+  }
+}
+
+@keyframes shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
