@@ -41,20 +41,23 @@ export function TabBar({
           const I = isActive ? IconActive : Icon
           return (
             <motion.button
+              layout
               key={id}
-              whileTap={{ scale: 0.88 }}
+              whileTap={{ scale: 0.9 }}
               onClick={() => onChange(id)}
-              className="relative flex h-14 w-14 items-center justify-center rounded-full"
+              transition={{ layout: { type: 'spring', stiffness: 420, damping: 36 } }}
+              className={`relative flex h-14 items-center justify-center rounded-2xl ${
+                isActive ? 'px-6' : 'px-3.5'
+              }`}
             >
               {isActive && (
                 <motion.span
                   layoutId="nav-active"
-                  className="absolute inset-0 rounded-full"
+                  className="absolute inset-0 rounded-2xl"
                   style={{
-                    // Relleno plano + borde simple más claro (nada de 3D).
+                    // Relleno sólido + glow suave del mismo color (como stepbro). Sin borde.
                     background: 'rgb(var(--accent))',
-                    border: '2px solid rgb(var(--accent-light))',
-                    boxShadow: '0 3px 10px -3px rgb(var(--accent) / 0.45)',
+                    boxShadow: '0 0 30px -8px rgb(var(--accent))',
                   }}
                   transition={{ type: 'spring', stiffness: 420, damping: 34 }}
                 />
