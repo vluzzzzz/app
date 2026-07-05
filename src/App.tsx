@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { AnimatedMesh } from './components/background/AnimatedMesh'
 import { TabBar, type TabId } from './components/ui/TabBar'
+import { AppMenuSheet } from './components/ui/AppMenuSheet'
 import { Inicio } from './pages/Inicio'
 import { Calculadora } from './pages/Calculadora'
 import { Horario } from './pages/Horario'
@@ -9,6 +10,7 @@ import { Calendario } from './pages/Calendario'
 import { Settings } from './pages/Settings'
 import { SubjectDetail } from './features/subjects/SubjectDetail'
 import { EASE } from './lib/motion'
+import { accentRgb } from './lib/accents'
 import { useAppStore } from './store/useAppStore'
 
 export type Route =
@@ -29,11 +31,17 @@ const pageVariants = {
 
 export default function App() {
   const [route, setRoute] = useState<Route>({ name: 'inicio' })
+  const [menuOpen, setMenuOpen] = useState(false)
   const theme = useAppStore((s) => s.theme)
+  const accent = useAppStore((s) => s.accent)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--accent', accentRgb(accent))
+  }, [accent])
 
   const showTabBar = TAB_ROUTES.includes(route.name as TabId)
   const key = route.name === 'subject' ? `subject-${route.id}` : route.name
@@ -51,7 +59,7 @@ export default function App() {
             exit="exit"
             transition={{ duration: 0.4, ease: EASE.smooth }}
           >
-            {route.name === 'inicio' && <Inicio navigate={setRoute} />}
+            {route.name === 'inicio' && <Inicio />}
             {route.name === 'calculadora' && <Calculadora navigate={setRoute} />}
             {route.name === 'horario' && <Horario />}
             {route.name === 'calendario' && <Calendario />}
@@ -67,8 +75,15 @@ export default function App() {
         <TabBar
           active={route.name as TabId}
           onChange={(t) => setRoute({ name: t } as Route)}
+          onOpenMenu={() => setMenuOpen(true)}
         />
       )}
+
+      <AppMenuSheet
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        navigate={setRoute}
+      />
     </>
   )
 }

@@ -12,12 +12,21 @@ export function Calculadora({ navigate }: { navigate: (r: Route) => void }) {
   const [adding, setAdding] = useState(false)
 
   return (
-    <div className="min-h-screen px-5 pb-40 pt-6">
-      <header className="mb-6">
-        <p className="text-sm font-medium text-ink/50">Tus ramos</p>
-        <h1 className="text-[34px] font-bold leading-tight text-ink">
-          Calculadora
-        </h1>
+    <div className="min-h-screen px-5 pb-28 pt-6">
+      <header className="mb-6 flex items-end justify-between">
+        <div>
+          <p className="text-sm font-medium text-ink/50">Tus ramos</p>
+          <h1 className="text-[34px] font-bold leading-tight text-ink">
+            Calculadora
+          </h1>
+        </div>
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setAdding(true)}
+          className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink text-surface shadow-glass"
+        >
+          <PlusIcon className="h-6 w-6" />
+        </motion.button>
       </header>
 
       {subjects.length === 0 ? (
@@ -43,16 +52,6 @@ export function Calculadora({ navigate }: { navigate: (r: Route) => void }) {
           </AnimatePresence>
         </motion.div>
       )}
-
-      {/* FAB (sobre la barra de navegación) */}
-      <motion.button
-        whileTap={{ scale: 0.9 }}
-        whileHover={{ scale: 1.05 }}
-        onClick={() => setAdding(true)}
-        className="fixed bottom-24 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-ink text-surface shadow-glass-lg"
-      >
-        <PlusIcon className="h-7 w-7" />
-      </motion.button>
 
       <AddSubjectSheet
         open={adding}
