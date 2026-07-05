@@ -66,8 +66,8 @@ body {
   .glass {
     background-color: rgb(255 255 255 / var(--glass-a));
     border: 1px solid rgb(var(--glass-brd) / var(--glass-brd-a));
-    -webkit-backdrop-filter: blur(14px) saturate(1.5);
-    backdrop-filter: blur(14px) saturate(1.5);
+    -webkit-backdrop-filter: blur(10px) saturate(1.4);
+    backdrop-filter: blur(10px) saturate(1.4);
     box-shadow: var(--glass-shadow);
   }
   .dark .glass {
@@ -81,8 +81,8 @@ body {
   .glass-strong {
     background-color: rgb(255 255 255 / var(--glass-strong-a));
     border: 1px solid rgb(var(--glass-brd) / calc(var(--glass-brd-a) + 0.05));
-    -webkit-backdrop-filter: blur(20px) saturate(1.7);
-    backdrop-filter: blur(20px) saturate(1.7);
+    -webkit-backdrop-filter: blur(16px) saturate(1.6);
+    backdrop-filter: blur(16px) saturate(1.6);
     box-shadow: var(--glass-shadow);
   }
   .dark .glass-strong {

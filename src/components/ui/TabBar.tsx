@@ -22,25 +22,22 @@ export function TabBar({
           const isActive = active === id
           return (
             <motion.button
-              layout
               key={id}
               whileTap={{ scale: 0.9 }}
               onClick={() => onChange(id)}
-              transition={{ layout: { type: 'spring', stiffness: 420, damping: 36 } }}
-              className={`relative flex h-14 items-center justify-center rounded-full ${
-                isActive ? 'px-6' : 'px-3.5'
-              }`}
+              className="relative flex h-14 w-14 items-center justify-center"
             >
               {isActive && (
+                // Pill más ancho que el ícono; se DESLIZA con transform (GPU), sin
+                // recalcular tamaños (layout) → mucho más fluido en móvil.
                 <motion.span
                   layoutId="nav-active"
-                  className="absolute inset-0 rounded-full"
+                  className="absolute inset-y-1.5 -inset-x-2 rounded-full"
                   style={{
-                    // Relleno sólido + glow suave del mismo color (como stepbro). Sin borde.
                     background: 'rgb(var(--accent))',
-                    boxShadow: '0 0 30px -8px rgb(var(--accent))',
+                    boxShadow: '0 0 26px -8px rgb(var(--accent))',
                   }}
-                  transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 32 }}
                 />
               )}
               <NavIcon
