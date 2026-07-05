@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import type { ReactNode } from 'react'
 import { EASE } from '../../lib/motion'
+import { useKeyboardInset } from '../../lib/useKeyboardInset'
 
 type Props = {
   open: boolean
@@ -11,6 +12,7 @@ type Props = {
 
 /** Hoja modal estilo iOS que sube desde abajo, con backdrop y arrastre para cerrar. */
 export function GlassSheet({ open, onClose, title, children }: Props) {
+  const kbInset = useKeyboardInset()
   return (
     <AnimatePresence>
       {open && (
@@ -26,9 +28,10 @@ export function GlassSheet({ open, onClose, title, children }: Props) {
             onClick={onClose}
           />
 
-          {/* Panel */}
+          {/* Panel — se sube por encima del teclado (kbInset) */}
           <motion.div
-            className="glass-strong glass-highlight relative w-full max-w-md rounded-t-5xl px-5 pb-8 pt-3"
+            className="glass-strong glass-highlight relative w-full max-w-md rounded-t-5xl px-5 pb-8 pt-3 transition-[margin] duration-200"
+            style={{ marginBottom: kbInset }}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}

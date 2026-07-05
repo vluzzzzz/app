@@ -1,177 +1,155 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import type { Route } from '../App'
-import { useAppStore } from '../store/useAppStore'
-import { minGradeToPass } from '../lib/grades'
 import { EASE } from '../lib/motion'
-import { GlassCard } from '../components/ui/GlassCard'
-import { BellIcon, ChevronRight, SettingsIcon } from '../components/ui/Icons'
+import { AnimatedNumber } from '../components/ui/AnimatedNumber'
+import { BellIcon, ClockIcon, StarIcon } from '../components/ui/Icons'
 
 const FRASES = [
-  'Tú puedes con todo hoy.',
-  'Un paso a la vez, se puede.',
-  'Enfócate en lo que puedes controlar.',
-  'Hoy es un buen día para avanzar.',
-  'Constancia > perfección.',
+  'Tú puedes\ncon todo hoy.',
+  'Un paso\na la vez.',
+  'Enfócate en lo\nque controlas.',
+  'Hoy es buen día\npara avanzar.',
 ]
 
-export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
-  const subjects = useAppStore((s) => s.subjects)
+const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
+// Datos placeholder por período (mientras no exista Horario/Calendario).
+const PERIODOS = [
+  { label: 'HOY TIENES', clases: 2, examenes: 1, tareas: 3 },
+  { label: 'ESTA SEMANA TIENES', clases: 9, examenes: 2, tareas: 7 },
+  { label: 'ESTE MES TIENES', clases: 36, examenes: 5, tareas: 20 },
+]
+
+export function Inicio() {
   const now = new Date()
   const h = now.getHours()
   const saludo =
     h < 12 ? 'Buenos días' : h < 20 ? 'Buenas tardes' : 'Buenas noches'
   const frase = FRASES[now.getDate() % FRASES.length]
 
-  let aprobados = 0
-  let enRiesgo = 0
-  subjects.forEach((s) => {
-    const st = minGradeToPass(s).status
-    if (st === 'ASEGURADO') aprobados++
-    else if (st === 'IMPOSIBLE') enRiesgo++
+  // Semana actual (lunes → domingo) con el día de hoy resaltado.
+  const dow = (now.getDay() + 6) % 7
+  const monday = new Date(now)
+  monday.setDate(now.getDate() - dow)
+  const week = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    return d
   })
+
+  const [periodo, setPeriodo] = useState(0)
+  const p = PERIODOS[periodo]
 
   return (
     <div className="min-h-screen px-5 pb-32 pt-6">
-      {/* Header */}
-      <header className="mb-5 flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium text-ink/55">{saludo}, 👋</p>
-          <h1 className="mt-0.5 max-w-[16ch] text-[30px] font-bold leading-[1.1] text-ink">
-            {frase}
-          </h1>
+      {/* Top: racha + campana */}
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-1.5 rounded-full bg-ink/5 px-3 py-1.5">
+          <span className="text-base leading-none">🔥</span>
+          <span className="text-sm font-bold tabular-nums text-ink">7</span>
         </div>
-        <div className="flex items-center gap-2">
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            className="glass glass-highlight relative rounded-2xl p-2.5 text-ink/70"
-          >
-            <BellIcon className="h-5 w-5" />
-          </motion.button>
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => navigate({ name: 'settings' })}
-            className="glass glass-highlight rounded-2xl p-2.5 text-ink/70"
-          >
-            <SettingsIcon className="h-5 w-5" />
-          </motion.button>
-        </div>
-      </header>
+        <button className="glass glass-highlight relative rounded-full p-2.5 text-ink/70">
+          <BellIcon className="h-5 w-5" />
+          <span
+            className="absolute right-2 top-2 h-2 w-2 rounded-full"
+            style={{ background: 'rgb(var(--accent))' }}
+          />
+        </button>
+      </div>
 
-      {/* Mascota */}
-      <Mascota />
-
-      {/* Resumen real */}
-      <GlassCard className="mb-4 p-5">
-        <p className="mb-3 text-sm font-semibold text-ink/60">Tu semestre</p>
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <Stat n={subjects.length} label="Ramos" tone="ink" />
-          <Stat n={aprobados} label="Aprobados" tone="good" />
-          <Stat n={enRiesgo} label="En riesgo" tone="bad" />
-        </div>
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={() => navigate({ name: 'calculadora' })}
-          className="mt-4 flex w-full items-center justify-between rounded-2xl bg-ink/5 px-4 py-3 text-left"
+      {/* Saludo + estrella */}
+      <div className="relative mb-5">
+        <p className="text-sm font-medium text-ink/55">{saludo}, 👋</p>
+        <h1 className="mt-1 whitespace-pre-line text-[34px] font-bold leading-[1.05] text-ink">
+          {frase}
+        </h1>
+        <motion.div
+          initial={{ opacity: 0, rotate: -12, scale: 0.8 }}
+          animate={{ opacity: 1, rotate: 8, scale: 1 }}
+          transition={{ duration: 0.6, ease: EASE.overshoot }}
+          className="glass glass-highlight absolute -top-1 right-1 flex h-20 w-20 items-center justify-center rounded-2xl"
         >
-          <span className="text-sm font-medium text-ink">
-            Ir a la calculadora
-          </span>
-          <ChevronRight className="h-5 w-5 text-ink/40" />
-        </motion.button>
-      </GlassCard>
-
-      {/* Próximamente */}
-      <div className="grid grid-cols-2 gap-3">
-        <Soon
-          emoji="🗓️"
-          title="Horario"
-          text="Tus clases de la semana"
-          onClick={() => navigate({ name: 'horario' })}
-        />
-        <Soon
-          emoji="📅"
-          title="Calendario"
-          text="Pruebas y entregas"
-          onClick={() => navigate({ name: 'calendario' })}
-        />
+          <StarIcon className="h-9 w-9 text-ink/50" />
+        </motion.div>
       </div>
-    </div>
-  )
-}
 
-function Mascota() {
-  const [ok, setOk] = useState(true)
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9, filter: 'blur(10px)' }}
-      animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-      transition={{ duration: 0.6, ease: EASE.overshoot }}
-      className="mb-5 flex items-center justify-center"
-    >
-      {ok ? (
-        // El usuario puede dejar su ilustración en public/mascot.png
-        <img
-          src="/mascot.png"
-          alt="Mascota"
-          onError={() => setOk(false)}
-          className="h-40 w-40 object-contain drop-shadow-xl"
-        />
-      ) : (
-        <div className="flex h-40 w-40 flex-col items-center justify-center rounded-[2.5rem] bg-gradient-to-br from-violet-400/30 to-pink-400/30 backdrop-blur-sm">
-          <div className="text-6xl">🐥</div>
-          <p className="mt-1 text-[11px] font-medium text-ink/40">tu mascota</p>
+      {/* Tira de días */}
+      <div className="glass glass-highlight mb-2 rounded-3xl px-2 py-3">
+        <div className="flex items-stretch justify-between">
+          {week.map((d, i) => {
+            const isToday = d.toDateString() === now.toDateString()
+            return (
+              <div
+                key={i}
+                className={`flex flex-1 flex-col items-center gap-1 rounded-2xl py-1.5 ${
+                  isToday ? 'text-surface' : 'text-ink/60'
+                }`}
+                style={
+                  isToday ? { background: 'rgb(var(--accent))' } : undefined
+                }
+              >
+                <span className="text-[11px] font-medium">{DIAS[i]}</span>
+                <span className="text-[15px] font-bold tabular-nums">
+                  {d.getDate()}
+                </span>
+              </div>
+            )
+          })}
         </div>
-      )}
-    </motion.div>
-  )
-}
+      </div>
+      <div className="mb-2 flex justify-center">
+        <span className="h-1.5 w-1.5 rounded-full bg-ink/20" />
+      </div>
 
-function Stat({
-  n,
-  label,
-  tone,
-}: {
-  n: number
-  label: string
-  tone: 'ink' | 'good' | 'bad'
-}) {
-  const color =
-    tone === 'good'
-      ? 'text-emerald-600 dark:text-emerald-300'
-      : tone === 'bad'
-        ? 'text-rose-500 dark:text-rose-300'
-        : 'text-ink'
-  return (
-    <div className="rounded-2xl bg-ink/5 py-3">
-      <div className={`text-3xl font-black tabular-nums ${color}`}>{n}</div>
-      <div className="text-[11px] font-medium text-ink/50">{label}</div>
+      {/* Espacio central: se ve el fondo en movimiento (futuro chat IA) */}
+      <div className="h-40" />
+
+      {/* Próxima clase */}
+      <div className="glass glass-highlight mb-4 flex items-center gap-3 rounded-4xl p-5">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm text-ink/50">Próxima clase</p>
+          <div className="mt-0.5 flex items-center gap-2">
+            <h3 className="text-xl font-bold text-ink">Cálculo I</h3>
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ background: 'rgb(var(--accent))' }}
+            />
+          </div>
+          <p className="mt-0.5 text-sm text-ink/60">10:30 AM • Aula 204</p>
+          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-ink/10 px-3 py-1.5">
+            <ClockIcon className="h-4 w-4 text-ink/70" />
+            <span className="text-sm font-semibold text-ink">En 45 min</span>
+          </div>
+        </div>
+        <div className="text-6xl">⏰</div>
+      </div>
+
+      {/* Hoy tienes (ciclable + números animados) */}
+      <button
+        onClick={() => setPeriodo((v) => (v + 1) % PERIODOS.length)}
+        className="glass glass-highlight w-full rounded-4xl p-5 text-left"
+      >
+        <p className="mb-2 text-sm font-semibold tracking-wide text-ink/60">
+          {p.label}
+        </p>
+        <div className="grid grid-cols-3 divide-x divide-ink/10">
+          <Stat n={p.clases} label="Clases" />
+          <Stat n={p.examenes} label="Examen" />
+          <Stat n={p.tareas} label="Tareas" />
+        </div>
+      </button>
     </div>
   )
 }
 
-function Soon({
-  emoji,
-  title,
-  text,
-  onClick,
-}: {
-  emoji: string
-  title: string
-  text: string
-  onClick: () => void
-}) {
+function Stat({ n, label }: { n: number; label: string }) {
   return (
-    <GlassCard interactive onClick={onClick} className="cursor-pointer p-4">
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-2xl">{emoji}</span>
-        <span className="rounded-full bg-ink/10 px-2 py-0.5 text-[10px] font-semibold text-ink/50">
-          pronto
-        </span>
-      </div>
-      <p className="font-semibold text-ink">{title}</p>
-      <p className="text-xs text-ink/50">{text}</p>
-    </GlassCard>
+    <div className="px-2 text-center">
+      <AnimatedNumber
+        value={n}
+        className="block text-3xl font-black tabular-nums text-ink"
+      />
+      <span className="text-xs font-medium text-ink/50">{label}</span>
+    </div>
   )
 }

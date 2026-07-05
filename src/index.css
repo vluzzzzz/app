@@ -5,8 +5,9 @@
 /* ===== Tema CLARO (por defecto) ===== */
 :root {
   color-scheme: light;
-  --surface: 244 246 251; /* fondo app */
+  --surface: 255 255 255; /* fondo app: blanco puro */
   --ink: 17 24 39; /* texto/acento neutro */
+  --accent: 148 163 184; /* color de acento (gris por defecto) */
 
   --glass-a: 0.55; /* opacidad del vidrio */
   --glass-strong-a: 0.72;
@@ -121,6 +122,29 @@ body {
 @keyframes shimmer {
   to {
     transform: translateX(100%);
+  }
+}
+
+/* Órbita del mesh gradient (círculos que dan vueltas alrededor del centro).
+   Técnica: rotar + alejar (translateX radio) + contra-rotar → orbita recto. */
+@keyframes mesh-orbit-cw {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg) translateX(var(--orbit-r, 140px))
+      rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg)
+      translateX(var(--orbit-r, 140px)) rotate(-360deg);
+  }
+}
+@keyframes mesh-orbit-ccw {
+  from {
+    transform: translate(-50%, -50%) rotate(360deg)
+      translateX(var(--orbit-r, 120px)) rotate(-360deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(0deg) translateX(var(--orbit-r, 120px))
+      rotate(0deg);
   }
 }
 

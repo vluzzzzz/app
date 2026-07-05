@@ -1,50 +1,85 @@
-import { motion } from 'framer-motion'
+import type { CSSProperties } from 'react'
 import { useAppStore } from '../../store/useAppStore'
 
 /**
- * Fondo "ASMR": blobs de gradiente que flotan lentamente detrás del contenido.
- * Se adapta al tema: pastel suave en claro, vibrante en oscuro.
+ * "Dynamic Micro-Grainy Mesh Gradient" (técnica de stepbro):
+ * - Base BLANCA dominante.
+ * - Mesh gradient del color de acento formado por 2–3 círculos que **orbitan**
+ *   alrededor del centro (rotate + translate + contra-rotate), en direcciones
+ *   opuestas → movimiento orgánico, sin apelotonarse al medio ni costuras.
+ * - Micro-ruido fractal SVG (feTurbulence) animado, fusionado con mix-blend.
  */
-const BLOBS = [
-  { color: '#8b5cf6', size: 460, x: '-10%', y: '-8%', dur: 18, dx: 60, dy: 40 },
-  { color: '#ec4899', size: 400, x: '65%', y: '5%', dur: 22, dx: -50, dy: 60 },
-  { color: '#06b6d4', size: 420, x: '10%', y: '60%', dur: 20, dx: 70, dy: -50 },
-  { color: '#f59e0b', size: 340, x: '70%', y: '65%', dur: 26, dx: -60, dy: -40 },
+
+// Círculos que orbitan (radial-gradient que se desvanece a transparente).
+const ORBS: {
+  size: number
+  r: number
+  dur: number
+  dir: 'cw' | 'ccw'
+  o: number
+}[] = [
+  { size: 640, r: 150, dur: 20, dir: 'cw', o: 0.2 },
+  { size: 560, r: 120, dur: 26, dir: 'ccw', o: 0.16 },
+  { size: 600, r: 200, dur: 34, dir: 'cw', o: 0.12 },
 ]
 
 export function AnimatedMesh() {
-  const theme = useAppStore((s) => s.theme)
-  const isDark = theme === 'dark'
+  const isDark = useAppStore((s) => s.theme === 'dark')
 
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden bg-surface">
-      {BLOBS.map((b, i) => (
-        <motion.div
+      {/* Mesh gradient: círculos orbitando alrededor del centro */}
+      {ORBS.map((b, i) => (
+        <div
           key={i}
-          className="absolute rounded-full"
-          style={{
-            width: b.size,
-            height: b.size,
-            left: b.x,
-            top: b.y,
-            background: b.color,
-            filter: isDark ? 'blur(90px)' : 'blur(100px)',
-            opacity: isDark ? 0.5 : 0.28,
-          }}
-          animate={{
-            x: [0, b.dx, 0],
-            y: [0, b.dy, 0],
-            scale: [1, 1.15, 1],
-          }}
-          transition={{ duration: b.dur, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute left-1/2 top-1/2 rounded-full"
+          style={
+            {
+              width: b.size,
+              height: b.size,
+              background:
+                'radial-gradient(circle, rgb(var(--accent)) 0%, transparent 70%)',
+              opacity: isDark ? b.o + 0.06 : b.o,
+              animation: `${
+                b.dir === 'cw' ? 'mesh-orbit-cw' : 'mesh-orbit-ccw'
+              } ${b.dur}s linear infinite`,
+              '--orbit-r': `${b.r}px`,
+              willChange: 'transform',
+            } as CSSProperties
+          }
         />
       ))}
-      {/* Velo para dar contraste al texto (oscuro en dark, claro en light). */}
+
+      {/* Micro-ruido fractal animado (feTurbulence) */}
       <div
-        className={
-          isDark ? 'absolute inset-0 bg-[#0b0b12]/40' : 'absolute inset-0 bg-white/50'
-        }
-      />
+        className="absolute inset-0"
+        style={{
+          opacity: isDark ? 0.5 : 0.4,
+          mixBlendMode: isDark ? 'screen' : 'overlay',
+        }}
+      >
+        <svg className="h-full w-full">
+          <filter id="grain-filter">
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.9"
+              numOctaves={2}
+              stitchTiles="stitch"
+              seed={1}
+            >
+              <animate
+                attributeName="seed"
+                values="1;2;3;4;5;6;7;8"
+                dur="0.5s"
+                repeatCount="indefinite"
+                calcMode="discrete"
+              />
+            </feTurbulence>
+            <feColorMatrix type="saturate" values="0" />
+          </filter>
+          <rect width="100%" height="100%" filter="url(#grain-filter)" />
+        </svg>
+      </div>
     </div>
   )
 }

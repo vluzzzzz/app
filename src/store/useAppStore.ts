@@ -14,12 +14,15 @@ type State = {
   defaultScale: GradeScale
   subjects: Subject[]
   theme: Theme
+  /** Id del color de acento de la app (ver src/lib/accents.ts). Default 'gray'. */
+  accent: string
 }
 
 type Actions = {
   setDefaultScale: (scale: GradeScale) => void
   setTheme: (theme: Theme) => void
   toggleTheme: () => void
+  setAccent: (accent: string) => void
 
   /** Activa/desactiva % por nota; al activar inicializa pesos repartidos. */
   setWeightedEvals: (subjectId: string, on: boolean) => void
@@ -94,11 +97,13 @@ export const useAppStore = create<State & Actions>()(
       defaultScale: DEFAULT_SCALE,
       subjects: [],
       theme: 'light',
+      accent: 'gray',
 
       setDefaultScale: (scale) => set({ defaultScale: scale }),
       setTheme: (theme) => set({ theme }),
       toggleTheme: () =>
         set((st) => ({ theme: st.theme === 'light' ? 'dark' : 'light' })),
+      setAccent: (accent) => set({ accent }),
 
       setWeightedEvals: (subjectId, on) =>
         set((st) => ({
@@ -260,7 +265,7 @@ export const useAppStore = create<State & Actions>()(
     }),
     {
       name: 'salva-semestres',
-      version: 2,
+      version: 3,
     },
   ),
 )
