@@ -87,6 +87,45 @@ export function CalendarIcon({ className }: IconProps) {
   )
 }
 
+/* ---- Íconos de nav: MISMO path, en línea (inactivo) o relleno (activo) ---- */
+
+const NAV_PATHS = {
+  inicio:
+    'M3.6 11.1 12 3.6l8.4 7.5c.22.2.36.48.36.78V19.4a1.6 1.6 0 0 1-1.6 1.6H4.84a1.6 1.6 0 0 1-1.6-1.6v-7.52c0-.3.14-.58.36-.78Z',
+  calculadora:
+    'M7 2.6h10A2.4 2.4 0 0 1 19.4 5v14A2.4 2.4 0 0 1 17 21.4H7A2.4 2.4 0 0 1 4.6 19V5A2.4 2.4 0 0 1 7 2.6ZM8.4 5.9h7.2v2.7H8.4ZM9.4 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0ZM12.6 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0ZM9.4 16a1 1 0 1 0 2 0 1 1 0 1 0-2 0ZM12.6 16a1 1 0 1 0 2 0 1 1 0 1 0-2 0Z',
+  horario:
+    'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM11.1 7.6a.9.9 0 0 1 1.8 0v3.93l2.63 2.63a.9.9 0 0 1-1.27 1.27l-2.9-2.9a.9.9 0 0 1-.26-.63Z',
+  calendario:
+    'M6.4 5h11.2A2.4 2.4 0 0 1 20 7.4v10.2A2.4 2.4 0 0 1 17.6 20H6.4A2.4 2.4 0 0 1 4 17.6V7.4A2.4 2.4 0 0 1 6.4 5ZM6.4 9.2h11.2v.9H6.4ZM8.2 12.8a.95.95 0 1 0 1.9 0 .95.95 0 1 0-1.9 0ZM12.05 12.8a.95.95 0 1 0 1.9 0 .95.95 0 1 0-1.9 0ZM15.9 12.8a.95.95 0 1 0 1.9 0 .95.95 0 1 0-1.9 0Z',
+}
+
+export function NavIcon({
+  name,
+  filled,
+  className,
+}: {
+  name: keyof typeof NAV_PATHS
+  filled?: boolean
+  className?: string
+}) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill={filled ? 'currentColor' : 'none'}
+      stroke={filled ? 'none' : 'currentColor'}
+      strokeWidth={1.9}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fillRule="evenodd"
+      clipRule="evenodd"
+    >
+      <path d={NAV_PATHS[name]} />
+    </svg>
+  )
+}
+
 /* ---- Variantes RELLENAS (para el tab activo de la nav) ---- */
 
 export function HomeFilledIcon({ className }: IconProps) {

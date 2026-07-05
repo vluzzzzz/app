@@ -1,27 +1,9 @@
 import { motion } from 'framer-motion'
-import type { ComponentType } from 'react'
-import {
-  CalculatorFilledIcon,
-  CalculatorIcon,
-  CalendarFilledIcon,
-  CalendarIcon,
-  ClockFilledIcon,
-  ClockIcon,
-  HomeFilledIcon,
-  HomeIcon,
-  PlusIcon,
-} from './Icons'
+import { NavIcon, PlusIcon } from './Icons'
 
 export type TabId = 'inicio' | 'calculadora' | 'horario' | 'calendario'
 
-type IconC = ComponentType<{ className?: string }>
-
-const TABS: { id: TabId; Icon: IconC; IconActive: IconC }[] = [
-  { id: 'inicio', Icon: HomeIcon, IconActive: HomeFilledIcon },
-  { id: 'calculadora', Icon: CalculatorIcon, IconActive: CalculatorFilledIcon },
-  { id: 'horario', Icon: ClockIcon, IconActive: ClockFilledIcon },
-  { id: 'calendario', Icon: CalendarIcon, IconActive: CalendarFilledIcon },
-]
+const TABS: TabId[] = ['inicio', 'calculadora', 'horario', 'calendario']
 
 export function TabBar({
   active,
@@ -36,9 +18,8 @@ export function TabBar({
     <div className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-center gap-2.5 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
       {/* Pill de pestañas (glass normal, más gruesa) */}
       <div className="glass glass-highlight flex flex-1 items-center justify-around rounded-full p-2">
-        {TABS.map(({ id, Icon, IconActive }) => {
+        {TABS.map((id) => {
           const isActive = active === id
-          const I = isActive ? IconActive : Icon
           return (
             <motion.button
               layout
@@ -62,7 +43,9 @@ export function TabBar({
                   transition={{ type: 'spring', stiffness: 420, damping: 34 }}
                 />
               )}
-              <I
+              <NavIcon
+                name={id}
+                filled={isActive}
                 className={`relative z-10 h-7 w-7 transition-colors ${
                   isActive ? 'text-white' : 'text-ink/40'
                 }`}
