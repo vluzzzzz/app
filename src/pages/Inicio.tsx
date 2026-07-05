@@ -41,7 +41,7 @@ export function Inicio() {
   const p = PERIODOS[periodo]
 
   return (
-    <div className="min-h-screen px-5 pb-32 pt-6">
+    <div className="flex h-[100dvh] flex-col overflow-hidden px-5 pb-24 pt-6">
       {/* Top: racha + campana */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-1.5 rounded-full bg-ink/5 px-3 py-1.5">
@@ -58,7 +58,7 @@ export function Inicio() {
       </div>
 
       {/* Saludo + estrella */}
-      <div className="relative mb-5">
+      <div className="relative mb-4">
         <p className="text-sm font-medium text-ink/55">{saludo}, 👋</p>
         <h1 className="mt-1 whitespace-pre-line text-[34px] font-bold leading-[1.05] text-ink">
           {frase}
@@ -101,11 +101,11 @@ export function Inicio() {
         <span className="h-1.5 w-1.5 rounded-full bg-ink/20" />
       </div>
 
-      {/* Espacio central: se ve el fondo en movimiento (futuro chat IA) */}
-      <div className="h-40" />
+      {/* Espacio central flexible: se ve el fondo en movimiento (futuro chat IA) */}
+      <div className="min-h-0 flex-1" />
 
       {/* Próxima clase */}
-      <div className="glass glass-highlight mb-4 flex items-center gap-3 rounded-4xl p-5">
+      <div className="glass glass-highlight mb-3 flex items-center gap-3 rounded-4xl p-5">
         <div className="min-w-0 flex-1">
           <p className="text-sm text-ink/50">Próxima clase</p>
           <div className="mt-0.5 flex items-center gap-2">
