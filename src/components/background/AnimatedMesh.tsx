@@ -50,12 +50,13 @@ export function AnimatedMesh() {
         />
       ))}
 
-      {/* Micro-ruido fractal animado (feTurbulence) */}
+      {/* Micro-ruido fractal animado (feTurbulence). En oscuro: muy suave con
+          soft-light para que NO se vean puntitos ásperos. */}
       <div
         className="absolute inset-0"
         style={{
-          opacity: isDark ? 0.5 : 0.4,
-          mixBlendMode: isDark ? 'screen' : 'overlay',
+          opacity: isDark ? 0.14 : 0.4,
+          mixBlendMode: isDark ? 'soft-light' : 'overlay',
         }}
       >
         <svg className="h-full w-full">

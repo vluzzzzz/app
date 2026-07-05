@@ -3,14 +3,28 @@ import { AnimatePresence, motion } from 'framer-motion'
 import type { Route } from '../../App'
 import { useAppStore } from '../../store/useAppStore'
 import { ACCENT_THEMES } from '../../lib/accents'
-import { ChevronLeft, ChevronRight, PaletteIcon, SettingsIcon } from './Icons'
+import {
+  ChevronLeft,
+  ChevronRight,
+  PaletteIcon,
+  ReloadIcon,
+  SettingsIcon,
+} from './Icons'
 
-// Vidrio oscuro ("plomo") translúcido para el popover.
+// Vidrio oscuro ("plomo") para el menú Opciones.
 const darkGlass = {
   background: 'rgba(28,28,32,0.62)',
   backdropFilter: 'blur(22px) saturate(1.4)',
   WebkitBackdropFilter: 'blur(22px) saturate(1.4)',
   border: '1px solid rgba(255,255,255,0.12)',
+} as const
+
+// Vidrio blanco para Apariencia.
+const lightGlass = {
+  background: 'rgba(255,255,255,0.75)',
+  backdropFilter: 'blur(22px) saturate(1.6)',
+  WebkitBackdropFilter: 'blur(22px) saturate(1.6)',
+  border: '1px solid rgba(17,24,39,0.1)',
 } as const
 
 export function AppMenuSheet({
@@ -27,6 +41,8 @@ export function AppMenuSheet({
   useEffect(() => {
     if (!open) setView('menu')
   }, [open])
+
+  const isMenu = view === 'menu'
 
   return (
     <AnimatePresence>
@@ -45,17 +61,21 @@ export function AppMenuSheet({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 12 }}
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            style={{ ...darkGlass, transformOrigin: 'bottom right' }}
-            className="fixed bottom-28 right-4 z-50 w-72 overflow-hidden rounded-3xl p-2 text-white shadow-glass-lg"
+            style={{
+              ...(isMenu ? darkGlass : lightGlass),
+              transformOrigin: 'bottom right',
+            }}
+            className="fixed bottom-28 right-4 z-50 w-72 overflow-hidden rounded-3xl p-2 shadow-glass-lg"
           >
             <AnimatePresence mode="wait" initial={false}>
-              {view === 'menu' ? (
+              {isMenu ? (
                 <motion.div
                   key="menu"
                   initial={{ opacity: 0, x: -12 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -12 }}
                   transition={{ duration: 0.18 }}
+                  className="text-white"
                 >
                   <p className="px-3 pb-1 pt-2 text-lg font-bold">Opciones</p>
                   <MenuRow
@@ -71,6 +91,11 @@ export function AppMenuSheet({
                       navigate({ name: 'settings' })
                     }}
                   />
+                  <MenuRow
+                    icon={<ReloadIcon className="h-5 w-5" />}
+                    label="Recargar app"
+                    onClick={() => window.location.reload()}
+                  />
                 </motion.div>
               ) : (
                 <motion.div
@@ -79,11 +104,12 @@ export function AppMenuSheet({
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 12 }}
                   transition={{ duration: 0.18 }}
+                  className="text-ink"
                 >
                   <div className="flex items-center gap-1 px-1 pb-3 pt-1">
                     <button
                       onClick={() => setView('menu')}
-                      className="rounded-full p-1.5 text-white/80 hover:bg-white/10"
+                      className="rounded-full p-1.5 text-ink/80 hover:bg-ink/10"
                     >
                       <ChevronLeft className="h-5 w-5" />
                     </button>
@@ -134,7 +160,7 @@ function AppearanceColors() {
           onClick={() => setAccent(a.id)}
           aria-label={a.label}
           className={`aspect-square rounded-full ring-2 transition-all ${
-            accent === a.id ? 'ring-white/90' : 'ring-transparent'
+            accent === a.id ? 'ring-ink/70' : 'ring-transparent'
           }`}
           style={{
             background: `rgb(${a.rgb})`,
