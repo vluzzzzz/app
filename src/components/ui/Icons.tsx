@@ -87,6 +87,40 @@ export function CalendarIcon({ className }: IconProps) {
   )
 }
 
+/* ---- Variantes RELLENAS (para el tab activo de la nav) ---- */
+
+export function HomeFilledIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M11.35 3.05a1 1 0 0 1 1.3 0l8 6.86A1 1 0 0 1 21 10.67V20a1 1 0 0 1-1 1h-4.5v-5a1 1 0 0 0-1-1h-3a1 1 0 0 0-1 1v5H4a1 1 0 0 1-1-1v-9.33a1 1 0 0 1 .35-.76z" />
+    </svg>
+  )
+}
+
+export function CalculatorFilledIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd" clipRule="evenodd">
+      <path d="M7 2h10a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3zm1 4a1 1 0 0 0-1 1v1.6a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H8zm.6 6.9a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2zm3.4 0a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2zm3.4 0a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2zM8.6 16.6a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2zm3.4 0a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2z" />
+    </svg>
+  )
+}
+
+export function ClockFilledIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd" clipRule="evenodd">
+      <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 5a1 1 0 1 0-2 0v5a1 1 0 0 0 .3.7l3 3a1 1 0 0 0 1.4-1.42L13 11.6V7z" />
+    </svg>
+  )
+}
+
+export function CalendarFilledIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd" clipRule="evenodd">
+      <path d="M8 2a1 1 0 0 1 1 1v1h6V3a1 1 0 1 1 2 0v1a3 3 0 0 1 3 3H4a3 3 0 0 1 3-3V3a1 1 0 0 1 1-1zM4 9h16v9a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V9zm4 3a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm4 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm4 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" />
+    </svg>
+  )
+}
+
 export function PaletteIcon({ className }: IconProps) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
