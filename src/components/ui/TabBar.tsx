@@ -46,14 +46,14 @@ export function TabBar({
               whileTap={{ scale: 0.9 }}
               onClick={() => onChange(id)}
               transition={{ layout: { type: 'spring', stiffness: 420, damping: 36 } }}
-              className={`relative flex h-14 items-center justify-center rounded-2xl ${
+              className={`relative flex h-14 items-center justify-center rounded-full ${
                 isActive ? 'px-6' : 'px-3.5'
               }`}
             >
               {isActive && (
                 <motion.span
                   layoutId="nav-active"
-                  className="absolute inset-0 rounded-2xl"
+                  className="absolute inset-0 rounded-full"
                   style={{
                     // Relleno sólido + glow suave del mismo color (como stepbro). Sin borde.
                     background: 'rgb(var(--accent))',
