@@ -51,11 +51,10 @@ export function TabBar({
                   layoutId="nav-active"
                   className="absolute inset-0 rounded-full"
                   style={{
-                    // Botón "glossy": más claro arriba (bisel), base abajo.
-                    background:
-                      'linear-gradient(180deg, rgb(var(--accent-light)), rgb(var(--accent)) 60%)',
-                    boxShadow:
-                      'inset 0 1.5px 1px rgba(255,255,255,0.55), inset 0 -3px 6px rgba(0,0,0,0.12), 0 4px 10px -2px rgb(var(--accent) / 0.5)',
+                    // Relleno plano + borde simple más claro (nada de 3D).
+                    background: 'rgb(var(--accent))',
+                    border: '2px solid rgb(var(--accent-light))',
+                    boxShadow: '0 3px 10px -3px rgb(var(--accent) / 0.45)',
                   }}
                   transition={{ type: 'spring', stiffness: 420, damping: 34 }}
                 />
