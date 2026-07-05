@@ -29,7 +29,7 @@ export function Settings({ navigate }: { navigate: (r: Route) => void }) {
     p.pass === defaultScale.pass
 
   return (
-    <div className="min-h-screen px-5 pb-24 pt-6">
+    <div className="h-full overflow-y-auto px-5 pb-24 pt-6">
       <header className="mb-6 flex items-center gap-3">
         <motion.button
           whileTap={{ scale: 0.9 }}

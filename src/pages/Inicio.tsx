@@ -41,7 +41,7 @@ export function Inicio() {
   const p = PERIODOS[periodo]
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden px-5 pb-24 pt-6">
+    <div className="flex h-full flex-col overflow-hidden px-5 pb-28 pt-6">
       {/* Top: racha + campana */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-1.5 rounded-full bg-ink/5 px-3 py-1.5">

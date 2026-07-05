@@ -12,7 +12,7 @@ export function Calculadora({ navigate }: { navigate: (r: Route) => void }) {
   const [adding, setAdding] = useState(false)
 
   return (
-    <div className="min-h-screen px-5 pb-28 pt-6">
+    <div className="h-full overflow-y-auto px-5 pb-28 pt-6">
       <header className="mb-6 flex items-end justify-between">
         <div>
           <p className="text-sm font-medium text-ink/50">Tus ramos</p>

@@ -8,6 +8,7 @@
   --surface: 255 255 255; /* fondo app: blanco puro */
   --ink: 17 24 39; /* texto/acento neutro */
   --accent: 148 163 184; /* color de acento (gris por defecto) */
+  --accent-light: 203 213 225; /* versión clara del acento (bordes) */
 
   --glass-a: 0.55; /* opacidad del vidrio */
   --glass-strong-a: 0.72;
@@ -37,6 +38,10 @@ body,
   height: 100%;
 }
 
+html {
+  overscroll-behavior: none;
+}
+
 body {
   margin: 0;
   font-family: theme('fontFamily.sans');
@@ -44,7 +49,9 @@ body {
   background-color: rgb(var(--surface));
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  overflow-x: hidden;
+  /* El body no scrollea (mata el rebote/overscroll); cada página scrollea adentro. */
+  overflow: hidden;
+  overscroll-behavior: none;
   padding: env(safe-area-inset-top) env(safe-area-inset-right)
     env(safe-area-inset-bottom) env(safe-area-inset-left);
   transition: background-color 0.4s ease, color 0.4s ease;

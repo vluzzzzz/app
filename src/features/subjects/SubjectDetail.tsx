@@ -56,7 +56,7 @@ export function SubjectDetail({
   }
 
   return (
-    <div className="min-h-screen px-5 pb-28 pt-6">
+    <div className="h-full overflow-y-auto px-5 pb-28 pt-6">
       {/* Header */}
       <header className="mb-5 flex items-center justify-between">
         <motion.button

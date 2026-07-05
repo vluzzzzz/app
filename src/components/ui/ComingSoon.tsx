@@ -11,7 +11,7 @@ export function ComingSoon({
   text: string
 }) {
   return (
-    <div className="min-h-screen px-5 pb-32 pt-6">
+    <div className="h-full overflow-y-auto px-5 pb-32 pt-6">
       <header className="mb-6">
         <p className="text-sm font-medium text-ink/50">Próximamente</p>
         <h1 className="text-[34px] font-bold leading-tight text-ink">{title}</h1>

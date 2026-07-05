@@ -10,7 +10,7 @@ import { Calendario } from './pages/Calendario'
 import { Settings } from './pages/Settings'
 import { SubjectDetail } from './features/subjects/SubjectDetail'
 import { EASE } from './lib/motion'
-import { accentRgb } from './lib/accents'
+import { accentLightRgb, accentRgb } from './lib/accents'
 import { useAppStore } from './store/useAppStore'
 
 export type Route =
@@ -40,7 +40,9 @@ export default function App() {
   }, [theme])
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--accent', accentRgb(accent))
+    const root = document.documentElement
+    root.style.setProperty('--accent', accentRgb(accent))
+    root.style.setProperty('--accent-light', accentLightRgb(accent))
   }, [accent])
 
   const showTabBar = TAB_ROUTES.includes(route.name as TabId)
@@ -49,10 +51,11 @@ export default function App() {
   return (
     <>
       <AnimatedMesh />
-      <div className="mx-auto min-h-screen w-full max-w-md">
+      <div className="mx-auto h-full w-full max-w-md overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
             key={key}
+            className="h-full"
             variants={pageVariants}
             initial="initial"
             animate="animate"

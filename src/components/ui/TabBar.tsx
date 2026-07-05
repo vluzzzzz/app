@@ -37,18 +37,21 @@ export function TabBar({
               key={id}
               whileTap={{ scale: 0.88 }}
               onClick={() => onChange(id)}
-              className="relative flex h-12 w-12 items-center justify-center rounded-full"
+              className="relative flex h-14 w-14 items-center justify-center rounded-full"
             >
               {isActive && (
                 <motion.span
                   layoutId="nav-active"
                   className="absolute inset-0 rounded-full"
-                  style={{ background: 'rgb(var(--accent))' }}
+                  style={{
+                    background: 'rgb(var(--accent))',
+                    border: '3px solid rgb(var(--accent-light))',
+                  }}
                   transition={{ type: 'spring', stiffness: 420, damping: 34 }}
                 />
               )}
               <Icon
-                className={`relative z-10 h-6 w-6 transition-colors ${
+                className={`relative z-10 h-7 w-7 transition-colors ${
                   isActive ? 'text-white' : 'text-ink/40'
                 }`}
               />
@@ -61,9 +64,9 @@ export function TabBar({
       <motion.button
         whileTap={{ scale: 0.88 }}
         onClick={onOpenMenu}
-        className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-black text-white shadow-glass-lg"
+        className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full bg-black text-white shadow-glass-lg"
       >
-        <PlusIcon className="h-6 w-6" />
+        <PlusIcon className="h-7 w-7" />
       </motion.button>
     </div>
   )

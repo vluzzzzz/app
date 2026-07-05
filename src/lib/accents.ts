@@ -21,3 +21,10 @@ export const ACCENT_THEMES: AccentTheme[] = [
 export function accentRgb(id: string): string {
   return (ACCENT_THEMES.find((a) => a.id === id) ?? ACCENT_THEMES[0]).rgb
 }
+
+/** Versión más clara del acento (mezcla hacia blanco), para bordes/detalles. */
+export function accentLightRgb(id: string, amount = 0.55): string {
+  const [r, g, b] = accentRgb(id).split(' ').map(Number)
+  const mix = (c: number) => Math.round(c + (255 - c) * amount)
+  return `${mix(r)} ${mix(g)} ${mix(b)}`
+}
