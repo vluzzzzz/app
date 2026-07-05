@@ -23,10 +23,11 @@ export type Route =
 
 const TAB_ROUTES: TabId[] = ['inicio', 'calculadora', 'horario', 'calendario']
 
+// Sin `filter: blur` (animar blur es carísimo en móvil): solo opacidad + desplazamiento.
 const pageVariants = {
-  initial: { opacity: 0, y: 12, filter: 'blur(12px)' },
-  animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
-  exit: { opacity: 0, y: -8, filter: 'blur(12px)' },
+  initial: { opacity: 0, y: 10 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -6 },
 }
 
 export default function App() {

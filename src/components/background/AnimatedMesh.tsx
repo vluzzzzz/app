@@ -50,13 +50,14 @@ export function AnimatedMesh() {
         />
       ))}
 
-      {/* Micro-ruido fractal animado (feTurbulence). En oscuro: muy suave con
-          soft-light para que NO se vean puntitos ásperos. */}
+      {/* Micro-ruido fractal ESTÁTICO (se rasteriza una vez = barato) + jitter por
+          CSS transform (GPU) para que igual "vibre" sin recalcular el filtro. */}
       <div
-        className="absolute inset-0"
+        className="grain-jitter absolute -inset-12"
         style={{
           opacity: isDark ? 0.14 : 0.4,
           mixBlendMode: isDark ? 'soft-light' : 'overlay',
+          willChange: 'transform',
         }}
       >
         <svg className="h-full w-full">
@@ -67,15 +68,7 @@ export function AnimatedMesh() {
               numOctaves={2}
               stitchTiles="stitch"
               seed={1}
-            >
-              <animate
-                attributeName="seed"
-                values="1;2;3;4;5;6;7;8"
-                dur="0.5s"
-                repeatCount="indefinite"
-                calcMode="discrete"
-              />
-            </feTurbulence>
+            />
             <feColorMatrix type="saturate" values="0" />
           </filter>
           <rect width="100%" height="100%" filter="url(#grain-filter)" />

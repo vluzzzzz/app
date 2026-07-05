@@ -66,8 +66,8 @@ body {
   .glass {
     background-color: rgb(255 255 255 / var(--glass-a));
     border: 1px solid rgb(var(--glass-brd) / var(--glass-brd-a));
-    -webkit-backdrop-filter: blur(18px) saturate(1.6);
-    backdrop-filter: blur(18px) saturate(1.6);
+    -webkit-backdrop-filter: blur(14px) saturate(1.5);
+    backdrop-filter: blur(14px) saturate(1.5);
     box-shadow: var(--glass-shadow);
   }
   .dark .glass {
@@ -81,8 +81,8 @@ body {
   .glass-strong {
     background-color: rgb(255 255 255 / var(--glass-strong-a));
     border: 1px solid rgb(var(--glass-brd) / calc(var(--glass-brd-a) + 0.05));
-    -webkit-backdrop-filter: blur(28px) saturate(1.8);
-    backdrop-filter: blur(28px) saturate(1.8);
+    -webkit-backdrop-filter: blur(20px) saturate(1.7);
+    backdrop-filter: blur(20px) saturate(1.7);
     box-shadow: var(--glass-shadow);
   }
   .dark .glass-strong {
@@ -129,6 +129,42 @@ body {
 @keyframes shimmer {
   to {
     transform: translateX(100%);
+  }
+}
+
+/* Jitter barato del granulado (solo transform = GPU). */
+@keyframes grain-jitter {
+  0% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(-6px, 4px);
+  }
+  40% {
+    transform: translate(5px, -5px);
+  }
+  60% {
+    transform: translate(-4px, 6px);
+  }
+  80% {
+    transform: translate(6px, 3px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+.grain-jitter {
+  animation: grain-jitter 0.7s steps(1) infinite;
+}
+
+/* Accesibilidad + rendimiento: si el usuario prefiere menos movimiento, congela
+   las animaciones CSS de fondo (mesh/grano/shimmer). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
   }
 }
 
