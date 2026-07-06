@@ -13,9 +13,7 @@ type Msg = { role: 'system' | 'user' | 'assistant'; content: string }
 /** Llama al proxy (Supabase Edge Function) que reenvía a Groq con la key oculta. */
 export async function askAi(messages: Msg[]): Promise<AiResponse> {
   if (!ENDPOINT) {
-    throw new Error(
-      'La IA todavía no está configurada. Falta conectar el proxy (Supabase).',
-    )
+    throw new Error('Brody aún no está configurado.')
   }
   const res = await fetch(ENDPOINT, {
     method: 'POST',

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 /** Barra "Pregúntale a la IA…" que vive en el espacio central del Inicio. */
 export function AiBar({ onOpen }: { onOpen: () => void }) {
   return (
-    <div className="flex min-h-0 flex-1 items-center justify-center py-4">
+    <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden py-2">
       <motion.button
         whileTap={{ scale: 0.98 }}
         onClick={onOpen}
@@ -11,7 +11,7 @@ export function AiBar({ onOpen }: { onOpen: () => void }) {
       >
         <span className="text-2xl">🤖</span>
         <span className="flex-1 text-[15px] font-medium text-ink/50">
-          Pregúntale a la IA…
+          Pregúntale a Brody
         </span>
         <span
           className="flex h-9 w-9 items-center justify-center rounded-full text-surface"

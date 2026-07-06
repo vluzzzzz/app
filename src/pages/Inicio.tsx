@@ -42,7 +42,7 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
   const p = PERIODOS[periodo]
 
   return (
-    <div className="flex h-full flex-col overflow-hidden px-5 pb-28 pt-6">
+    <div className="flex h-full flex-col overflow-hidden px-5 pb-28 pt-4">
       {/* Top: racha + campana */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-1.5 rounded-full bg-ink/5 px-3 py-1.5">
@@ -98,7 +98,7 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
       <AiBar onOpen={() => navigate({ name: 'chat' })} />
 
       {/* Próxima clase */}
-      <div className="glass glass-highlight mb-3 flex items-center gap-3 rounded-4xl p-5">
+      <div className="glass glass-highlight mb-3 flex items-center gap-3 rounded-4xl p-4">
         <div className="min-w-0 flex-1">
           <p className="text-sm text-ink/50">Próxima clase</p>
           <div className="mt-0.5 flex items-center gap-2">
@@ -119,7 +119,7 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
             src="/logosombra.png"
             alt="Próxima clase"
             onError={() => setLogoOk(false)}
-            className="-my-2 h-36 w-36 shrink-0 object-contain drop-shadow-lg"
+            className="-my-1 h-28 w-28 shrink-0 object-contain drop-shadow-lg"
           />
         ) : (
           <div className="text-6xl">⏰</div>
@@ -129,7 +129,7 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
       {/* Hoy tienes (ciclable + números animados) */}
       <button
         onClick={() => setPeriodo((v) => (v + 1) % PERIODOS.length)}
-        className="glass glass-highlight w-full rounded-4xl p-5 text-left"
+        className="glass glass-highlight w-full rounded-4xl p-4 text-left"
       >
         <p className="mb-2 text-sm font-semibold tracking-wide text-ink/60">
           {p.label}

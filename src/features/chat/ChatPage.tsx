@@ -77,7 +77,7 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
         >
           <ChevronLeft className="h-5 w-5" />
         </motion.button>
-        <h1 className="text-lg font-bold text-ink">Asistente IA</h1>
+        <h1 className="text-lg font-bold text-ink">Brody</h1>
         <button
           onClick={clearChat}
           className="rounded-2xl px-3 py-2 text-sm font-medium text-ink/50"
@@ -92,8 +92,8 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
           <div className="mt-6 text-center">
             <div className="mb-2 text-4xl">🤖</div>
             <p className="mb-4 text-sm text-ink/55">
-              Pídeme crear ramos, poner notas o pregúntame qué necesitas para
-              pasar.
+              Soy Brody. Pídeme crear ramos, poner notas o pregúntame qué
+              necesitas para pasar.
             </p>
             <div className="flex flex-col gap-2">
               {SUGERENCIAS.map((s) => (
@@ -108,7 +108,7 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
             </div>
             {!aiConfigured() && (
               <p className="mt-4 text-xs text-amber-600 dark:text-amber-300">
-                ⚠️ La IA aún no está conectada (falta el proxy). Ver guía de setup.
+                ⚠️ Brody aún no está configurado.
               </p>
             )}
           </div>
