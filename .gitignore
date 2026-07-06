@@ -11,3 +11,4 @@ yarn-error.log*
 dev-dist
 *.tsbuildinfo
 .vite
+login-shot.png

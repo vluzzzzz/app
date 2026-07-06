@@ -22,6 +22,24 @@ export function accentRgb(id: string): string {
   return (ACCENT_THEMES.find((a) => a.id === id) ?? ACCENT_THEMES[0]).rgb
 }
 
+/** Fantasmita de Brody (public/bro*.png) según el color de acento. */
+const ACCENT_GHOST: Record<string, string> = {
+  gray: 'brogray',
+  black: 'broblack',
+  red: 'brored',
+  orange: 'broorange',
+  green: 'brogreen',
+  cyan: 'brocyan',
+  blue: 'broceleste',
+  indigo: 'bropurple',
+  violet: 'bropurple2',
+  pink: 'bropink',
+}
+
+export function accentGhost(id: string): string {
+  return `/${ACCENT_GHOST[id] ?? 'brogray'}.png`
+}
+
 /** Versión más clara del acento (mezcla hacia blanco), para bordes/detalles. */
 export function accentLightRgb(id: string, amount = 0.55): string {
   const [r, g, b] = accentRgb(id).split(' ').map(Number)
