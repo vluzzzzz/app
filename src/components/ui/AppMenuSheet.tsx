@@ -65,7 +65,7 @@ export function AppMenuSheet({
               ...(isMenu ? darkGlass : lightGlass),
               transformOrigin: 'bottom right',
             }}
-            className="fixed bottom-28 right-4 z-50 w-72 overflow-hidden rounded-3xl p-2 shadow-glass-lg"
+            className="fixed bottom-32 right-4 z-50 w-80 overflow-hidden rounded-3xl p-2 shadow-glass-lg"
           >
             <AnimatePresence mode="wait" initial={false}>
               {isMenu ? (
@@ -152,20 +152,20 @@ function AppearanceColors() {
   const setAccent = useAppStore((s) => s.setAccent)
 
   return (
-    <div className="grid grid-cols-5 gap-3 px-2 pb-2">
+    <div className="grid grid-cols-4 gap-3.5 px-2 pb-2">
       {ACCENT_THEMES.map((a) => (
         <motion.button
           key={a.id}
-          whileTap={{ scale: 0.85 }}
+          whileTap={{ scale: 0.9 }}
           onClick={() => setAccent(a.id)}
           aria-label={a.label}
-          className={`aspect-square rounded-full ring-2 transition-all ${
+          className={`aspect-square rounded-full ring-2 ring-offset-2 ring-offset-white transition-all ${
             accent === a.id ? 'ring-ink/70' : 'ring-transparent'
           }`}
           style={{
-            background: `rgb(${a.rgb})`,
-            boxShadow:
-              'inset 0 2px 3px rgba(255,255,255,0.45), inset 0 -4px 7px rgba(0,0,0,0.22)',
+            // Glossy tipo esfera (brillo arriba-izq + sombra abajo), como stepbro.
+            background: `radial-gradient(120% 120% at 32% 26%, rgba(255,255,255,0.6), rgba(255,255,255,0) 44%), rgb(${a.rgb})`,
+            boxShadow: 'inset 0 -5px 9px rgba(0,0,0,0.25)',
           }}
         />
       ))}

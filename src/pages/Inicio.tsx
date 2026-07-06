@@ -38,6 +38,7 @@ export function Inicio() {
   })
 
   const [periodo, setPeriodo] = useState(0)
+  const [logoOk, setLogoOk] = useState(true)
   const p = PERIODOS[periodo]
 
   return (
@@ -121,7 +122,16 @@ export function Inicio() {
             <span className="text-sm font-semibold text-ink">En 45 min</span>
           </div>
         </div>
-        <div className="text-6xl">⏰</div>
+        {logoOk ? (
+          <img
+            src="/logosombra.png"
+            alt="Próxima clase"
+            onError={() => setLogoOk(false)}
+            className="h-20 w-20 shrink-0 object-contain drop-shadow-md"
+          />
+        ) : (
+          <div className="text-6xl">⏰</div>
+        )}
       </div>
 
       {/* Hoy tienes (ciclable + números animados) */}

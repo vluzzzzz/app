@@ -17,7 +17,7 @@ export function TabBar({
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-center gap-2.5 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
       {/* Pill de pestañas (glass normal, más gruesa) */}
-      <div className="glass glass-highlight flex flex-1 items-center justify-around rounded-full p-2">
+      <div className="glass glass-highlight flex flex-1 items-center justify-around rounded-full p-2.5">
         {TABS.map((id) => {
           const isActive = active === id
           return (
@@ -25,7 +25,7 @@ export function TabBar({
               key={id}
               whileTap={{ scale: 0.9 }}
               onClick={() => onChange(id)}
-              className="relative flex h-14 w-14 items-center justify-center"
+              className="relative flex h-16 w-16 items-center justify-center"
             >
               {isActive && (
                 // Pill más ancho que el ícono; se DESLIZA con transform (GPU), sin
@@ -43,7 +43,7 @@ export function TabBar({
               <NavIcon
                 name={id}
                 filled={isActive}
-                className={`relative z-10 h-7 w-7 transition-colors ${
+                className={`relative z-10 h-8 w-8 transition-colors ${
                   isActive ? 'text-white' : 'text-ink/40'
                 }`}
               />
@@ -56,9 +56,9 @@ export function TabBar({
       <motion.button
         whileTap={{ scale: 0.88 }}
         onClick={onOpenMenu}
-        className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full bg-black text-white shadow-glass-lg"
+        className="flex h-[80px] w-[80px] shrink-0 items-center justify-center rounded-full bg-black text-white shadow-glass-lg"
       >
-        <PlusIcon className="h-7 w-7" />
+        <PlusIcon className="h-8 w-8" />
       </motion.button>
     </div>
   )
