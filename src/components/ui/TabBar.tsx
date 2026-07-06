@@ -32,7 +32,7 @@ export function TabBar({
                 // los extremos. Se desliza con transform (GPU).
                 <motion.span
                   layoutId="nav-active"
-                  className="absolute inset-y-2 inset-x-1.5 rounded-full"
+                  className="absolute inset-y-1 inset-x-1 rounded-full"
                   style={{
                     background: 'rgb(var(--accent))',
                     boxShadow: '0 0 26px -8px rgb(var(--accent))',
