@@ -108,9 +108,9 @@ export function Onboarding() {
             {step === 'welcome' && (
               <div>
                 <img
-                  src="/logoapp.png"
+                  src="/presentacionlogoapp.png"
                   alt="Brody"
-                  className="mb-5 h-20 w-20 rounded-3xl object-contain"
+                  className="mb-5 h-24 w-24 object-contain"
                 />
                 <h1 className="text-4xl font-bold text-ink">Brody</h1>
                 <p className="mt-1.5 text-lg leading-snug text-ink/55">
