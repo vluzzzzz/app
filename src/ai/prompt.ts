@@ -40,8 +40,8 @@ export function buildSystemPrompt(subjects: Subject[], scale: {
   max: number
   pass: number
 }): string {
-  return `Te llamas **Brody**, el asistente de "Salva Semestres" (app de notas para
-estudiantes en Chile).
+  return `Te llamas **Brody**, el asistente de una app de notas para estudiantes
+en Chile.
 
 PERSONALIDAD:
 - Cercano, motivador y con buena onda; español chileno informal. Respuestas BREVES.

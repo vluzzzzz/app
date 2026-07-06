@@ -118,7 +118,7 @@ export function Settings({ navigate }: { navigate: (r: Route) => void }) {
       </section>
 
       <p className="mt-8 text-center text-xs text-ink/30">
-        Salva Semestres · v0.1 · Tus datos se guardan en este dispositivo.
+        Brody · v0.1 · Tus datos se guardan en este dispositivo.
       </p>
     </div>
   )
