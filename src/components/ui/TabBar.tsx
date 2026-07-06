@@ -17,7 +17,7 @@ export function TabBar({
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-center gap-2.5 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
       {/* Pill de pestañas (glass normal, más gruesa) */}
-      <div className="glass glass-highlight flex flex-1 items-center justify-around rounded-full p-2.5">
+      <div className="glass glass-highlight flex flex-1 items-center rounded-full p-2">
         {TABS.map((id) => {
           const isActive = active === id
           return (
@@ -25,14 +25,14 @@ export function TabBar({
               key={id}
               whileTap={{ scale: 0.9 }}
               onClick={() => onChange(id)}
-              className="relative flex h-16 w-16 items-center justify-center"
+              className="relative flex h-16 flex-1 items-center justify-center"
             >
               {isActive && (
-                // Pill más ancho que el ícono; se DESLIZA con transform (GPU), sin
-                // recalcular tamaños (layout) → mucho más fluido en móvil.
+                // Pill DENTRO del espacio (flex-1) con margen parejo → simétrico en
+                // los extremos. Se desliza con transform (GPU).
                 <motion.span
                   layoutId="nav-active"
-                  className="absolute inset-y-1.5 -inset-x-2 rounded-full"
+                  className="absolute inset-y-2 inset-x-1.5 rounded-full"
                   style={{
                     background: 'rgb(var(--accent))',
                     boxShadow: '0 0 26px -8px rgb(var(--accent))',
