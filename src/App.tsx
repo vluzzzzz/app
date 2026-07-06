@@ -37,10 +37,15 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const theme = useAppStore((s) => s.theme)
   const accent = useAppStore((s) => s.accent)
+  const lite = useAppStore((s) => s.lite)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('lite', lite)
+  }, [lite])
 
   useEffect(() => {
     const root = document.documentElement

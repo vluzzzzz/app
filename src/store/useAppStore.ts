@@ -17,6 +17,8 @@ type State = {
   theme: Theme
   /** Id del color de acento de la app (ver src/lib/accents.ts). Default 'gray'. */
   accent: string
+  /** Modo lite: fondo estático + animaciones reducidas (celus menos potentes). */
+  lite: boolean
   /** Historial del chat con la IA. */
   chat: ChatMessage[]
 }
@@ -26,6 +28,7 @@ type Actions = {
   setTheme: (theme: Theme) => void
   toggleTheme: () => void
   setAccent: (accent: string) => void
+  setLite: (lite: boolean) => void
   pushChat: (m: ChatMessage) => void
   clearChat: () => void
 
@@ -110,6 +113,7 @@ export const useAppStore = create<State & Actions>()(
       subjects: [],
       theme: 'light',
       accent: 'gray',
+      lite: false,
       chat: [],
 
       setDefaultScale: (scale) => set({ defaultScale: scale }),
@@ -117,6 +121,7 @@ export const useAppStore = create<State & Actions>()(
       toggleTheme: () =>
         set((st) => ({ theme: st.theme === 'light' ? 'dark' : 'light' })),
       setAccent: (accent) => set({ accent }),
+      setLite: (lite) => set({ lite }),
       pushChat: (m) => set((st) => ({ chat: [...st.chat, m] })),
       clearChat: () => set({ chat: [] }),
 

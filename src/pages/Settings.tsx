@@ -3,6 +3,7 @@ import type { Route } from '../App'
 import { useAppStore } from '../store/useAppStore'
 import { DEFAULT_SCALE, type GradeScale } from '../lib/types'
 import { GlassButton } from '../components/ui/GlassButton'
+import { Toggle } from '../components/ui/Toggle'
 import { ChevronLeft } from '../components/ui/Icons'
 import { useInstallPrompt } from '../lib/useInstallPrompt'
 
@@ -18,6 +19,8 @@ export function Settings({ navigate }: { navigate: (r: Route) => void }) {
   const theme = useAppStore((s) => s.theme)
   const setTheme = useAppStore((s) => s.setTheme)
   const { canInstall, installed, isIOS, promptInstall } = useInstallPrompt()
+  const lite = useAppStore((s) => s.lite)
+  const setLite = useAppStore((s) => s.setLite)
 
   function patch(field: keyof GradeScale, raw: string) {
     const n = Number(raw.replace(',', '.'))
@@ -70,6 +73,17 @@ export function Settings({ navigate }: { navigate: (r: Route) => void }) {
           )}
         </section>
       )}
+
+      {/* Versión lite (rendimiento) */}
+      <section className="glass glass-highlight mb-4 flex items-center justify-between gap-3 rounded-4xl p-5">
+        <div className="min-w-0 pr-1">
+          <h2 className="text-lg font-semibold text-ink">Versión lite</h2>
+          <p className="text-xs text-ink/55">
+            Para celus menos potentes: fondo estático y menos animaciones.
+          </p>
+        </div>
+        <Toggle on={lite} onToggle={() => setLite(!lite)} />
+      </section>
 
       {/* Apariencia */}
       <section className="glass glass-highlight mb-4 rounded-4xl p-5">

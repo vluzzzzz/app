@@ -25,10 +25,14 @@ const ORBS: {
 
 export function AnimatedMesh() {
   const isDark = useAppStore((s) => s.theme === 'dark')
+  const lite = useAppStore((s) => s.lite)
+
+  // Posiciones fijas para el modo lite (fondo estático, repartido en diagonal).
+  const staticPos = ['translate(-118px, -96px)', 'translate(118px, 108px)']
 
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden bg-surface">
-      {/* Mesh gradient: círculos orbitando alrededor del centro */}
+      {/* Mesh gradient: círculos que orbitan (o quietos en modo lite) */}
       {ORBS.map((b, i) => (
         <div
           key={i}
@@ -40,11 +44,17 @@ export function AnimatedMesh() {
               background:
                 'radial-gradient(circle, rgb(var(--accent)) 0%, transparent 70%)',
               opacity: isDark ? b.o + 0.06 : b.o,
-              animation: `${
-                b.dir === 'cw' ? 'mesh-orbit-cw' : 'mesh-orbit-ccw'
-              } ${b.dur}s linear infinite`,
-              '--orbit-r': `${b.r}px`,
-              willChange: 'transform',
+              ...(lite
+                ? {
+                    transform: `translate(-50%,-50%) ${staticPos[i] ?? ''}`,
+                  }
+                : {
+                    animation: `${
+                      b.dir === 'cw' ? 'mesh-orbit-cw' : 'mesh-orbit-ccw'
+                    } ${b.dur}s linear infinite`,
+                    ['--orbit-r' as string]: `${b.r}px`,
+                    willChange: 'transform',
+                  }),
             } as CSSProperties
           }
         />

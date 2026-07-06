@@ -186,6 +186,14 @@ body {
   }
 }
 
+/* Modo lite: apaga animaciones CSS continuas (shimmer, etc.) para celus lentos. */
+.lite *,
+.lite *::before,
+.lite *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+}
+
 /* Órbita del mesh gradient (círculos que dan vueltas alrededor del centro).
    Técnica: rotar + alejar (translateX radio) + contra-rotar → orbita recto. */
 @keyframes mesh-orbit-cw {
