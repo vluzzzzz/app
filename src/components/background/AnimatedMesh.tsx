@@ -18,9 +18,9 @@ const ORBS: {
   dir: 'cw' | 'ccw'
   o: number
 }[] = [
-  { size: 640, r: 150, dur: 20, dir: 'cw', o: 0.2 },
-  { size: 560, r: 120, dur: 26, dir: 'ccw', o: 0.16 },
-  { size: 600, r: 200, dur: 34, dir: 'cw', o: 0.12 },
+  // Menos blobs = menos fill-rate en móvil, pero el fondo SIGUE en movimiento.
+  { size: 620, r: 150, dur: 24, dir: 'cw', o: 0.22 },
+  { size: 560, r: 130, dur: 30, dir: 'ccw', o: 0.16 },
 ]
 
 export function AnimatedMesh() {

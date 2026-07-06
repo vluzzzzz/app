@@ -4,6 +4,7 @@ import { useAppStore } from '../store/useAppStore'
 import { DEFAULT_SCALE, type GradeScale } from '../lib/types'
 import { GlassButton } from '../components/ui/GlassButton'
 import { ChevronLeft } from '../components/ui/Icons'
+import { useInstallPrompt } from '../lib/useInstallPrompt'
 
 const PRESETS: { label: string; scale: GradeScale }[] = [
   { label: 'Chile 1,0 – 7,0', scale: { min: 1, max: 7, pass: 4 } },
@@ -16,6 +17,7 @@ export function Settings({ navigate }: { navigate: (r: Route) => void }) {
   const setDefaultScale = useAppStore((s) => s.setDefaultScale)
   const theme = useAppStore((s) => s.theme)
   const setTheme = useAppStore((s) => s.setTheme)
+  const { canInstall, installed, isIOS, promptInstall } = useInstallPrompt()
 
   function patch(field: keyof GradeScale, raw: string) {
     const n = Number(raw.replace(',', '.'))
@@ -40,6 +42,34 @@ export function Settings({ navigate }: { navigate: (r: Route) => void }) {
         </motion.button>
         <h1 className="text-[28px] font-bold text-ink">Ajustes</h1>
       </header>
+
+      {/* Instalar app (PWA) */}
+      {!installed && (
+        <section className="glass glass-highlight mb-4 rounded-4xl p-5">
+          <h2 className="mb-1 text-lg font-semibold text-ink">Instalar app</h2>
+          {canInstall ? (
+            <>
+              <p className="mb-4 text-sm text-ink/55">
+                Instala Brody en tu pantalla de inicio para abrirlo como app.
+              </p>
+              <GlassButton variant="primary" full onClick={promptInstall}>
+                📲 Instalar Brody
+              </GlassButton>
+            </>
+          ) : isIOS ? (
+            <p className="text-sm text-ink/60">
+              En iPhone: toca <b>Compartir</b> (el cuadrito con la flecha ↑) y luego{' '}
+              <b>"Agregar a inicio"</b>.
+            </p>
+          ) : (
+            <p className="text-sm text-ink/55">
+              Si tu navegador lo permite, verás la opción de instalar en su menú
+              (⋮). En escritorio, el ícono de instalar aparece en la barra de
+              direcciones.
+            </p>
+          )}
+        </section>
+      )}
 
       {/* Apariencia */}
       <section className="glass glass-highlight mb-4 rounded-4xl p-5">
