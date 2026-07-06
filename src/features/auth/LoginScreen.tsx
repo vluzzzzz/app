@@ -53,7 +53,7 @@ export function LoginScreen() {
         code !== 'auth/popup-closed-by-user' &&
         code !== 'auth/cancelled-popup-request'
       ) {
-        setMsg(errorEs(code))
+        setMsg(errorEs(code) + (code ? ` [${code}]` : ''))
       }
     }
   }
@@ -70,7 +70,7 @@ export function LoginScreen() {
       }
     } catch (e) {
       const code = (e as { code?: string })?.code ?? ''
-      setMsg(errorEs(code))
+      setMsg(errorEs(code) + (code ? ` [${code}]` : ''))
     } finally {
       setLoading(false)
     }
