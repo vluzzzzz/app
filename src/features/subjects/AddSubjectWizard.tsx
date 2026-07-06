@@ -24,6 +24,7 @@ export function AddSubjectWizard({
   onCancel: () => void
 }) {
   const addSubject = useAppStore((s) => s.addSubject)
+  const subjects = useAppStore((s) => s.subjects)
   const [step, setStep] = useState<1 | 2>(1)
   const [name, setName] = useState('')
   const [color, setColor] = useState(ACCENTS[0].id)
@@ -36,8 +37,19 @@ export function AddSubjectWizard({
   const sum = subs.reduce((s, d) => s + (d.weight || 0), 0)
   const weightsOk = !hasSubs || Math.abs(sum - 100) < 0.01
 
+  // Nombre único ignorando tildes y mayúsculas (calculo = Càlculo = Calculo).
+  const norm = (s: string) =>
+    s
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+  const duplicate =
+    name.trim() !== '' && subjects.some((s) => norm(s.name) === norm(name))
+  const canNext = name.trim() !== '' && !duplicate
+
   function create() {
-    if (!name.trim() || !weightsOk) return
+    if (!canNext || !weightsOk) return
     const id = addSubject({
       name,
       color,
@@ -70,20 +82,25 @@ export function AddSubjectWizard({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && name.trim()) setStep(2)
+                  if (e.key === 'Enter' && canNext) setStep(2)
                 }}
                 placeholder="Ej: Cálculo I"
                 className="min-w-0 flex-1 rounded-2xl border border-ink/15 bg-ink/5 px-4 py-3.5 text-lg text-ink outline-none placeholder:text-ink/30 focus:border-ink/40"
               />
               <motion.button
                 whileTap={{ scale: 0.9 }}
-                disabled={!name.trim()}
-                onClick={() => setStep(2)}
+                disabled={!canNext}
+                onClick={() => canNext && setStep(2)}
                 className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-ink text-surface shadow-glass disabled:opacity-30"
               >
                 <ChevronRight className="h-6 w-6" />
               </motion.button>
             </div>
+            {duplicate && (
+              <p className="mt-2 text-sm font-medium text-rose-500 dark:text-rose-300">
+                Ya tienes un ramo con ese nombre.
+              </p>
+            )}
             <button
               onClick={onCancel}
               className="mt-6 self-start text-sm font-medium text-ink/40"
