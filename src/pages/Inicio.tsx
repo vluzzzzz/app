@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import type { Route } from '../App'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
+import { AiBar } from '../features/chat/AiBar'
 import { BellIcon, ClockIcon } from '../components/ui/Icons'
 
 const FRASES = [
@@ -18,7 +20,7 @@ const PERIODOS = [
   { label: 'ESTE MES TIENES', clases: 36, examenes: 5, tareas: 20 },
 ]
 
-export function Inicio() {
+export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
   const now = new Date()
   const h = now.getHours()
   const saludo =
@@ -92,8 +94,8 @@ export function Inicio() {
         <span className="h-1.5 w-1.5 rounded-full bg-ink/20" />
       </div>
 
-      {/* Espacio central flexible: se ve el fondo en movimiento (futuro chat IA) */}
-      <div className="min-h-0 flex-1" />
+      {/* Espacio central: barra que abre el chat con IA */}
+      <AiBar onOpen={() => navigate({ name: 'chat' })} />
 
       {/* Próxima clase */}
       <div className="glass glass-highlight mb-3 flex items-center gap-3 rounded-4xl p-5">

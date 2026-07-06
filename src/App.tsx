@@ -9,6 +9,7 @@ import { Horario } from './pages/Horario'
 import { Calendario } from './pages/Calendario'
 import { Settings } from './pages/Settings'
 import { SubjectDetail } from './features/subjects/SubjectDetail'
+import { ChatPage } from './features/chat/ChatPage'
 import { EASE } from './lib/motion'
 import { accentLightRgb, accentRgb } from './lib/accents'
 import { useAppStore } from './store/useAppStore'
@@ -19,6 +20,7 @@ export type Route =
   | { name: 'horario' }
   | { name: 'calendario' }
   | { name: 'settings' }
+  | { name: 'chat' }
   | { name: 'subject'; id: string }
 
 const TAB_ROUTES: TabId[] = ['inicio', 'calculadora', 'horario', 'calendario']
@@ -63,8 +65,9 @@ export default function App() {
             exit="exit"
             transition={{ duration: 0.4, ease: EASE.smooth }}
           >
-            {route.name === 'inicio' && <Inicio />}
+            {route.name === 'inicio' && <Inicio navigate={setRoute} />}
             {route.name === 'calculadora' && <Calculadora navigate={setRoute} />}
+            {route.name === 'chat' && <ChatPage navigate={setRoute} />}
             {route.name === 'horario' && <Horario />}
             {route.name === 'calendario' && <Calendario />}
             {route.name === 'settings' && <Settings navigate={setRoute} />}

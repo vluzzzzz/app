@@ -9,6 +9,7 @@ import {
   type Subject,
   type Theme,
 } from '../lib/types'
+import type { ChatMessage } from '../ai/types'
 
 type State = {
   defaultScale: GradeScale
@@ -16,6 +17,8 @@ type State = {
   theme: Theme
   /** Id del color de acento de la app (ver src/lib/accents.ts). Default 'gray'. */
   accent: string
+  /** Historial del chat con la IA. */
+  chat: ChatMessage[]
 }
 
 type Actions = {
@@ -23,6 +26,8 @@ type Actions = {
   setTheme: (theme: Theme) => void
   toggleTheme: () => void
   setAccent: (accent: string) => void
+  pushChat: (m: ChatMessage) => void
+  clearChat: () => void
 
   /** Activa/desactiva % por nota; al activar inicializa pesos repartidos. */
   setWeightedEvals: (subjectId: string, on: boolean) => void
@@ -52,6 +57,13 @@ type Actions = {
 
   /** subId = null => evaluación suelta (sin subdivisiones). */
   addEvaluation: (subjectId: string, subId: string | null, name: string) => void
+  /** Igual que addEvaluation pero creando ya con nota (para la IA). */
+  addEvaluationWith: (
+    subjectId: string,
+    subId: string | null,
+    name: string,
+    grade: number | null,
+  ) => void
   updateEvaluation: (
     subjectId: string,
     subId: string | null,
@@ -98,12 +110,15 @@ export const useAppStore = create<State & Actions>()(
       subjects: [],
       theme: 'light',
       accent: 'gray',
+      chat: [],
 
       setDefaultScale: (scale) => set({ defaultScale: scale }),
       setTheme: (theme) => set({ theme }),
       toggleTheme: () =>
         set((st) => ({ theme: st.theme === 'light' ? 'dark' : 'light' })),
       setAccent: (accent) => set({ accent }),
+      pushChat: (m) => set((st) => ({ chat: [...st.chat, m] })),
+      clearChat: () => set({ chat: [] }),
 
       setWeightedEvals: (subjectId, on) =>
         set((st) => ({
@@ -241,6 +256,20 @@ export const useAppStore = create<State & Actions>()(
             mapEvaluations(s, subId, (evals) => [
               ...evals,
               { id: makeId(), name: name.trim() || `Nota ${evals.length + 1}`, grade: null },
+            ]),
+          ),
+        })),
+
+      addEvaluationWith: (subjectId, subId, name, grade) =>
+        set((st) => ({
+          subjects: mapSubject(st.subjects, subjectId, (s) =>
+            mapEvaluations(s, subId, (evals) => [
+              ...evals,
+              {
+                id: makeId(),
+                name: name.trim() || `Nota ${evals.length + 1}`,
+                grade,
+              },
             ]),
           ),
         })),
