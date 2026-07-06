@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { Route } from '../../App'
 import { useAppStore } from '../../store/useAppStore'
+import { accentGhost } from '../../lib/accents'
 import { makeId } from '../../lib/format'
 import { EASE } from '../../lib/motion'
 import { buildSystemPrompt } from '../../ai/prompt'
@@ -20,6 +21,8 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
   const chat = useAppStore((s) => s.chat)
   const pushChat = useAppStore((s) => s.pushChat)
   const clearChat = useAppStore((s) => s.clearChat)
+  const accent = useAppStore((s) => s.accent)
+  const theme = useAppStore((s) => s.theme)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const kb = useKeyboardInset()
@@ -36,13 +39,16 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
     pushChat({ id: makeId(), role: 'user', text })
     setLoading(true)
     try {
-      const { subjects, defaultScale } = useAppStore.getState()
+      const { subjects, defaultScale, userName } = useAppStore.getState()
       const history = useAppStore
         .getState()
         .chat.filter((m) => !m.error)
         .map((m) => ({ role: m.role, content: m.text }))
       const messages = [
-        { role: 'system' as const, content: buildSystemPrompt(subjects, defaultScale) },
+        {
+          role: 'system' as const,
+          content: buildSystemPrompt(subjects, defaultScale, userName),
+        },
         ...history,
       ]
       const res = await askAi(messages)
@@ -90,7 +96,11 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {chat.length === 0 && (
           <div className="mt-6 text-center">
-            <div className="mb-2 text-4xl">🤖</div>
+            <img
+              src={accentGhost(accent, theme === 'dark')}
+              alt="Brody"
+              className="mx-auto mb-3 h-16 w-16 object-contain"
+            />
             <p className="mb-4 text-sm text-ink/55">
               Soy Brody. Pídeme crear ramos, poner notas o pregúntame qué
               necesitas para pasar.

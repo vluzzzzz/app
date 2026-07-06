@@ -23,34 +23,34 @@ type Orb = {
 const VARIANTS: Record<number, { light: Orb[]; dark: Orb[] }> = {
   1: {
     light: [
-      { size: 720, r: 150, dur: 26, dir: 'cw', o: 0.26 },
-      { size: 620, r: 130, dur: 32, dir: 'ccw', o: 0.2, light: true },
+      { size: 720, r: 150, dur: 15, dir: 'cw', o: 0.26 },
+      { size: 620, r: 130, dur: 19, dir: 'ccw', o: 0.2, light: true },
     ],
     dark: [
-      { size: 760, r: 160, dur: 26, dir: 'cw', o: 0.5 },
-      { size: 640, r: 140, dur: 32, dir: 'ccw', o: 0.4, light: true },
+      { size: 760, r: 160, dur: 15, dir: 'cw', o: 0.5 },
+      { size: 640, r: 140, dur: 19, dir: 'ccw', o: 0.4, light: true },
     ],
   },
   2: {
     light: [
-      { size: 640, r: 140, dur: 28, dir: 'cw', o: 0.2 },
-      { size: 560, r: 120, dur: 34, dir: 'ccw', o: 0.16, light: true },
+      { size: 640, r: 140, dur: 16, dir: 'cw', o: 0.2 },
+      { size: 560, r: 120, dur: 20, dir: 'ccw', o: 0.16, light: true },
     ],
     dark: [
-      { size: 660, r: 150, dur: 28, dir: 'cw', o: 0.28 },
-      { size: 580, r: 130, dur: 34, dir: 'ccw', o: 0.22, light: true },
+      { size: 660, r: 150, dur: 16, dir: 'cw', o: 0.28 },
+      { size: 580, r: 130, dur: 20, dir: 'ccw', o: 0.22, light: true },
     ],
   },
   3: {
     light: [
-      { size: 820, r: 170, dur: 24, dir: 'cw', o: 0.4 },
-      { size: 720, r: 150, dur: 30, dir: 'ccw', o: 0.32, light: true },
-      { size: 560, r: 120, dur: 36, dir: 'cw', o: 0.26 },
+      { size: 820, r: 170, dur: 14, dir: 'cw', o: 0.4 },
+      { size: 720, r: 150, dur: 17, dir: 'ccw', o: 0.32, light: true },
+      { size: 560, r: 120, dur: 21, dir: 'cw', o: 0.26 },
     ],
     dark: [
-      { size: 860, r: 180, dur: 24, dir: 'cw', o: 0.55 },
-      { size: 740, r: 150, dur: 30, dir: 'ccw', o: 0.45, light: true },
-      { size: 560, r: 120, dur: 36, dir: 'cw', o: 0.4 },
+      { size: 860, r: 180, dur: 14, dir: 'cw', o: 0.55 },
+      { size: 740, r: 150, dur: 17, dir: 'ccw', o: 0.45, light: true },
+      { size: 560, r: 120, dur: 21, dir: 'cw', o: 0.4 },
     ],
   },
 }

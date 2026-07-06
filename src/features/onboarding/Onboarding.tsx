@@ -9,14 +9,23 @@ import { EASE } from '../../lib/motion'
 const STEPS = ['welcome', 'name', 'theme', 'color', 'scale', 'referral', 'done'] as const
 type Step = (typeof STEPS)[number]
 
-// Escalas por país (sin comas, con banderas). El usuario las afina luego en Ajustes.
-const SCALES: { label: string; flags: string; pass: string; scale: GradeScale }[] = [
-  { label: '1 - 7', flags: '🇨🇱', pass: 'Aprueba 4', scale: { min: 1, max: 7, pass: 4 } },
-  { label: '0 - 10', flags: '🇲🇽 🇦🇷 🇧🇷', pass: 'Aprueba 6', scale: { min: 0, max: 10, pass: 6 } },
-  { label: '0 - 20', flags: '🇵🇪 🇻🇪', pass: 'Aprueba 11', scale: { min: 0, max: 20, pass: 11 } },
-  { label: '0 - 100', flags: '🇺🇸', pass: 'Aprueba 60', scale: { min: 0, max: 100, pass: 60 } },
-  { label: '0 - 5', flags: '🇨🇴', pass: 'Aprueba 3', scale: { min: 0, max: 5, pass: 3 } },
+// Escalas por país (sin comas). Banderas como imágenes (flagcdn) porque el emoji de
+// bandera no renderiza en todos los dispositivos. El usuario las afina luego en Ajustes.
+const SCALES: { label: string; codes: string[]; pass: string; scale: GradeScale }[] = [
+  { label: '1 - 7', codes: ['cl'], pass: 'Aprueba 4', scale: { min: 1, max: 7, pass: 4 } },
+  { label: '0 - 10', codes: ['mx', 'ar', 'br'], pass: 'Aprueba 6', scale: { min: 0, max: 10, pass: 6 } },
+  { label: '0 - 20', codes: ['pe', 've'], pass: 'Aprueba 11', scale: { min: 0, max: 20, pass: 11 } },
+  { label: '0 - 100', codes: ['us'], pass: 'Aprueba 60', scale: { min: 0, max: 100, pass: 60 } },
+  { label: '0 - 5', codes: ['co'], pass: 'Aprueba 3', scale: { min: 0, max: 5, pass: 3 } },
 ]
+
+// Oscurece un "r g b" hacia un tono más profundo del mismo color (para el borde).
+function darken(rgb: string, f = 0.55): string {
+  return rgb
+    .split(' ')
+    .map((n) => Math.round(Number(n) * f))
+    .join(' ')
+}
 
 const REFERRALS: {
   id: string
@@ -71,7 +80,7 @@ export function Onboarding() {
     p.min === defaultScale.min && p.max === defaultScale.max && p.pass === defaultScale.pass
 
   return (
-    <div className="mx-auto flex h-[100dvh] w-full max-w-md flex-col px-6 pb-6 pt-6">
+    <div className="mx-auto flex h-[100dvh] w-full max-w-md flex-col overflow-y-auto px-6 pb-6 pt-6">
       {showProgress && (
         <div className="mb-2 flex items-center gap-3">
           <button
@@ -95,7 +104,7 @@ export function Onboarding() {
         </div>
       )}
 
-      <div className="flex flex-1 flex-col overflow-y-auto">
+      <div className="flex flex-1 flex-col">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={step}
@@ -103,7 +112,7 @@ export function Onboarding() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -22 }}
             transition={{ duration: 0.3, ease: EASE.smooth }}
-            className="flex min-h-full flex-col justify-center py-4"
+            className="flex flex-1 flex-col justify-center py-4"
           >
             {step === 'welcome' && (
               <div>
@@ -190,7 +199,7 @@ export function Onboarding() {
                         style={{
                           background: `radial-gradient(110% 110% at 32% 28%, rgba(255,255,255,0.4), rgba(255,255,255,0) 52%), rgb(${a.rgb})`,
                           boxShadow: selected
-                            ? `0 0 0 3px rgb(var(--surface)), 0 0 0 5px rgb(${a.rgb}), inset 0 -3px 6px rgba(0,0,0,0.14)`
+                            ? `0 0 0 3px rgb(${darken(a.rgb)}), inset 0 -3px 6px rgba(0,0,0,0.14)`
                             : 'inset 0 -3px 6px rgba(0,0,0,0.14)',
                         }}
                       />
@@ -217,10 +226,19 @@ export function Onboarding() {
                         isPreset(s.scale) ? 'ring-2 ring-ink/60' : ''
                       }`}
                     >
+                      <span className="mb-1 flex gap-1">
+                        {s.codes.map((c) => (
+                          <img
+                            key={c}
+                            src={`https://flagcdn.com/w40/${c}.png`}
+                            alt={c}
+                            className="h-4 rounded-[3px] shadow-sm"
+                          />
+                        ))}
+                      </span>
                       <span className="text-2xl font-black tabular-nums text-ink">
                         {s.label}
                       </span>
-                      <span className="text-base leading-none">{s.flags}</span>
                       <span className="mt-0.5 text-xs font-medium text-ink/50">
                         {s.pass}
                       </span>
@@ -264,14 +282,8 @@ export function Onboarding() {
                     )
                   })}
                 </div>
-                <div className="mt-7 flex flex-col gap-2">
+                <div className="mt-7">
                   <AccentBtn onClick={next}>Continuar →</AccentBtn>
-                  <button
-                    onClick={next}
-                    className="w-full py-2 text-center text-sm font-medium text-ink/50"
-                  >
-                    Omitir
-                  </button>
                 </div>
               </div>
             )}
@@ -313,7 +325,7 @@ function AccentBtn({
     <motion.button
       whileTap={{ scale: 0.96 }}
       onClick={onClick}
-      className="w-full rounded-3xl px-5 py-4 text-[15px] font-semibold shadow-glass-lg"
+      className="w-full rounded-3xl px-5 py-4 text-[15px] font-semibold"
       style={{ background: 'rgb(var(--accent))', color: 'rgb(var(--surface))' }}
     >
       {children}
