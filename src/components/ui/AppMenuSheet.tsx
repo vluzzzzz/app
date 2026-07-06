@@ -165,7 +165,11 @@ function AppearanceColors() {
             animate={{ borderRadius: selected ? '30%' : '50%' }}
             transition={{ type: 'spring', stiffness: 420, damping: 26 }}
             className="aspect-square"
-            style={{ background: `rgb(${a.rgb})` }}
+            style={{
+              // Gloss SUTIL tipo esfera pulida (como stepbro): brillo arriba + sombrita abajo.
+              background: `radial-gradient(110% 110% at 32% 28%, rgba(255,255,255,0.4), rgba(255,255,255,0) 52%), rgb(${a.rgb})`,
+              boxShadow: 'inset 0 -3px 6px rgba(0,0,0,0.14)',
+            }}
           />
         )
       })}
