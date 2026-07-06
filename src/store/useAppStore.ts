@@ -44,6 +44,8 @@ type Actions = {
   setOnboarded: (v: boolean) => void
   setUserName: (name: string) => void
   setReferral: (r: string) => void
+  /** Borra todos los datos del usuario y vuelve al onboarding (empezar de 0). */
+  resetAll: () => void
   pushChat: (m: ChatMessage) => void
   clearChat: () => void
 
@@ -147,6 +149,17 @@ export const useAppStore = create<State & Actions>()(
       setOnboarded: (onboarded) => set({ onboarded }),
       setUserName: (userName) => set({ userName }),
       setReferral: (referral) => set({ referral }),
+      resetAll: () =>
+        set({
+          subjects: [],
+          chat: [],
+          userName: '',
+          referral: '',
+          onboarded: false,
+          defaultScale: DEFAULT_SCALE,
+          accent: 'gray',
+          theme: 'light',
+        }),
       pushChat: (m) => set((st) => ({ chat: [...st.chat, m] })),
       clearChat: () => set({ chat: [] }),
 

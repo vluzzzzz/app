@@ -3,12 +3,15 @@ import { AnimatePresence, motion } from 'framer-motion'
 import type { Route } from '../../App'
 import { useAppStore } from '../../store/useAppStore'
 import { ACCENT_THEMES } from '../../lib/accents'
+import { auth } from '../../lib/firebase'
 import {
   ChevronLeft,
   ChevronRight,
+  LogoutIcon,
   PaletteIcon,
   ReloadIcon,
   SettingsIcon,
+  TrashIcon,
 } from './Icons'
 
 // Vidrio oscuro ("plomo") para el menú Opciones.
@@ -27,6 +30,8 @@ const lightGlass = {
   border: '1px solid rgba(17,24,39,0.1)',
 } as const
 
+type View = 'menu' | 'appearance' | 'confirmReset'
+
 export function AppMenuSheet({
   open,
   onClose,
@@ -36,13 +41,12 @@ export function AppMenuSheet({
   onClose: () => void
   navigate: (r: Route) => void
 }) {
-  const [view, setView] = useState<'menu' | 'appearance'>('menu')
+  const [view, setView] = useState<View>('menu')
+  const resetAll = useAppStore((s) => s.resetAll)
 
   useEffect(() => {
     if (!open) setView('menu')
   }, [open])
-
-  const isMenu = view === 'menu'
 
   return (
     <AnimatePresence>
@@ -62,13 +66,13 @@ export function AppMenuSheet({
             exit={{ opacity: 0, scale: 0.9, y: 12 }}
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             style={{
-              ...(isMenu ? darkGlass : lightGlass),
+              ...(view === 'appearance' ? lightGlass : darkGlass),
               transformOrigin: 'bottom right',
             }}
             className="fixed bottom-32 right-4 z-50 w-80 overflow-hidden rounded-3xl p-2 shadow-glass-lg"
           >
             <AnimatePresence mode="wait" initial={false}>
-              {isMenu ? (
+              {view === 'menu' && (
                 <motion.div
                   key="menu"
                   initial={{ opacity: 0, x: -12 }}
@@ -96,8 +100,24 @@ export function AppMenuSheet({
                     label="Recargar app"
                     onClick={() => window.location.reload()}
                   />
+                  <MenuRow
+                    icon={<LogoutIcon className="h-5 w-5" />}
+                    label="Cerrar sesión"
+                    onClick={() => {
+                      onClose()
+                      auth?.signOut()
+                    }}
+                  />
+                  <MenuRow
+                    icon={<TrashIcon className="h-5 w-5" />}
+                    label="Empezar de 0"
+                    danger
+                    onClick={() => setView('confirmReset')}
+                  />
                 </motion.div>
-              ) : (
+              )}
+
+              {view === 'appearance' && (
                 <motion.div
                   key="appearance"
                   initial={{ opacity: 0, x: 12 }}
@@ -116,7 +136,40 @@ export function AppMenuSheet({
                     <span className="text-lg font-bold">Apariencia</span>
                   </div>
                   <AppearanceColors />
-                  <BgTester />
+                </motion.div>
+              )}
+
+              {view === 'confirmReset' && (
+                <motion.div
+                  key="confirm"
+                  initial={{ opacity: 0, x: 12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 12 }}
+                  transition={{ duration: 0.18 }}
+                  className="text-white"
+                >
+                  <p className="px-3 pb-1 pt-2 text-lg font-bold">¿Empezar de 0?</p>
+                  <p className="px-3 pb-4 text-sm leading-snug text-white/70">
+                    Se borrará <b>todo</b>: tus ramos, notas y tu nombre. Volverás a la
+                    presentación desde cero. Esto no se puede deshacer.
+                  </p>
+                  <div className="flex flex-col gap-2 px-1 pb-1">
+                    <button
+                      onClick={() => {
+                        resetAll()
+                        onClose()
+                      }}
+                      className="rounded-2xl bg-rose-500 px-3 py-3 text-sm font-semibold text-white active:bg-rose-600"
+                    >
+                      Sí, borrar todo
+                    </button>
+                    <button
+                      onClick={() => setView('menu')}
+                      className="rounded-2xl px-3 py-3 text-sm font-medium text-white/70 hover:bg-white/10"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -131,17 +184,21 @@ function MenuRow({
   icon,
   label,
   onClick,
+  danger,
 }: {
   icon: ReactNode
   label: string
   onClick: () => void
+  danger?: boolean
 }) {
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-white/90 transition-colors hover:bg-white/10 active:bg-white/10"
+      className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-white/10 active:bg-white/10 ${
+        danger ? 'text-rose-300' : 'text-white/90'
+      }`}
     >
-      <span className="text-white/70">{icon}</span>
+      <span className={danger ? 'text-rose-300' : 'text-white/70'}>{icon}</span>
       <span className="flex-1 text-[15px] font-medium">{label}</span>
       <ChevronRight className="h-4 w-4 text-white/30" />
     </button>
@@ -174,61 +231,6 @@ function AppearanceColors() {
           />
         )
       })}
-    </div>
-  )
-}
-
-// TEMP: selector de prueba de fondo/grano. Quitar cuando Angel elija la variante.
-function BgTester() {
-  const bgVariant = useAppStore((s) => s.bgVariant)
-  const setBgVariant = useAppStore((s) => s.setBgVariant)
-  const grain = useAppStore((s) => s.grain)
-  const setGrain = useAppStore((s) => s.setGrain)
-
-  const chip = (on: boolean) =>
-    `rounded-xl border px-2 py-2 text-sm font-semibold transition-colors ${
-      on
-        ? 'border-ink/60 bg-ink/15 text-ink'
-        : 'border-ink/15 bg-ink/5 text-ink/55'
-    }`
-
-  return (
-    <div className="mt-1 border-t border-ink/10 px-2 pt-3">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink/45">
-        Fondo (prueba)
-      </p>
-      <div className="grid grid-cols-3 gap-2">
-        {([1, 2, 3] as const).map((v) => (
-          <button
-            key={v}
-            onClick={() => setBgVariant(v)}
-            className={chip(bgVariant === v)}
-          >
-            {v}
-          </button>
-        ))}
-      </div>
-      <p className="mb-2 mt-1.5 text-[11px] leading-tight text-ink/40">
-        1 claro/oscuro · 2 blanco · 3 colorido
-      </p>
-
-      <p className="mb-2 mt-3 text-xs font-semibold uppercase tracking-wide text-ink/45">
-        Grano
-      </p>
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          onClick={() => setGrain('marked')}
-          className={chip(grain === 'marked')}
-        >
-          Marcado
-        </button>
-        <button
-          onClick={() => setGrain('subtle')}
-          className={chip(grain === 'subtle')}
-        >
-          Sutil
-        </button>
-      </div>
     </div>
   )
 }

@@ -3,17 +3,11 @@ import { motion } from 'framer-motion'
 import type { Route } from '../App'
 import { useAppStore } from '../store/useAppStore'
 import { DEFAULT_SCALE, type GradeScale } from '../lib/types'
+import { COUNTRY_SCALES, flagUrl } from '../lib/scales'
 import { GlassButton } from '../components/ui/GlassButton'
 import { Toggle } from '../components/ui/Toggle'
-import { ChevronLeft, PlusIcon } from '../components/ui/Icons'
+import { ChevronLeft, PlusIcon, SunIcon, MoonIcon } from '../components/ui/Icons'
 import { useInstallPrompt } from '../lib/useInstallPrompt'
-import { auth, firebaseReady } from '../lib/firebase'
-
-const PRESETS: { label: string; scale: GradeScale }[] = [
-  { label: 'Chile 1,0 – 7,0', scale: { min: 1, max: 7, pass: 4 } },
-  { label: '0 – 100', scale: { min: 0, max: 100, pass: 60 } },
-  { label: '0 – 10', scale: { min: 0, max: 10, pass: 5 } },
-]
 
 export function Settings({ navigate }: { navigate: (r: Route) => void }) {
   const defaultScale = useAppStore((s) => s.defaultScale)
@@ -35,7 +29,7 @@ export function Settings({ navigate }: { navigate: (r: Route) => void }) {
     p.max === defaultScale.max &&
     p.pass === defaultScale.pass
 
-  const isCustom = !PRESETS.some((p) => isPreset(p.scale))
+  const isCustom = !COUNTRY_SCALES.some((c) => isPreset(c.scale))
 
   return (
     <div className="h-full overflow-y-auto px-5 pb-24 pt-6">
@@ -98,13 +92,18 @@ export function Settings({ navigate }: { navigate: (r: Route) => void }) {
               key={t}
               whileTap={{ scale: 0.96 }}
               onClick={() => setTheme(t)}
-              className={`rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${
+              className={`flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${
                 theme === t
                   ? 'border-ink/60 bg-ink/15 text-ink'
                   : 'border-ink/15 bg-ink/5 text-ink/60'
               }`}
             >
-              {t === 'light' ? '☀️ Claro' : '🌙 Oscuro'}
+              {t === 'light' ? (
+                <SunIcon className="h-4 w-4" />
+              ) : (
+                <MoonIcon className="h-4 w-4" />
+              )}
+              {t === 'light' ? 'Claro' : 'Oscuro'}
             </motion.button>
           ))}
         </div>
@@ -118,31 +117,42 @@ export function Settings({ navigate }: { navigate: (r: Route) => void }) {
           Se aplica a las asignaturas nuevas que crees.
         </p>
 
-        {/* Presets + Personalizada */}
-        <div className="mb-4 flex flex-wrap gap-2">
-          {PRESETS.map((p) => (
+        {/* Escalas por país (banderas) */}
+        <div className="mb-3 grid grid-cols-2 gap-2">
+          {COUNTRY_SCALES.map((c) => (
             <motion.button
-              key={p.label}
-              whileTap={{ scale: 0.94 }}
-              onClick={() => setDefaultScale(p.scale)}
-              className={`rounded-2xl border px-3.5 py-2 text-sm font-medium transition-colors ${
-                isPreset(p.scale)
-                  ? 'border-ink/60 bg-ink/20 text-ink'
-                  : 'border-ink/15 bg-ink/5 text-ink/70'
+              key={c.code}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => setDefaultScale(c.scale)}
+              className={`flex flex-col items-start gap-0.5 rounded-2xl border p-3 text-left transition-colors ${
+                isPreset(c.scale)
+                  ? 'border-ink/60 bg-ink/15'
+                  : 'border-ink/15 bg-ink/5'
               }`}
             >
-              {p.label}
+              <img
+                src={flagUrl(c.code)}
+                alt={c.country}
+                className="mb-0.5 h-3.5 rounded-[2px] shadow-sm"
+              />
+              <span className="text-lg font-black tabular-nums text-ink">
+                {c.label}
+              </span>
+              <span className="text-[11px] font-medium text-ink/50">
+                {c.country} · {c.pass}
+              </span>
             </motion.button>
           ))}
-          <div
-            className={`flex items-center gap-1 rounded-2xl border px-3.5 py-2 text-sm font-medium transition-colors ${
-              isCustom
-                ? 'border-ink/60 bg-ink/20 text-ink'
-                : 'border-ink/15 bg-ink/5 text-ink/70'
-            }`}
-          >
-            <PlusIcon className="h-3.5 w-3.5" /> Personalizada
-          </div>
+        </div>
+
+        <div
+          className={`mb-4 inline-flex items-center gap-1 rounded-2xl border px-3.5 py-2 text-sm font-medium transition-colors ${
+            isCustom
+              ? 'border-ink/60 bg-ink/20 text-ink'
+              : 'border-ink/15 bg-ink/5 text-ink/70'
+          }`}
+        >
+          <PlusIcon className="h-3.5 w-3.5" /> Personalizada
         </div>
 
         <p className="mb-3 text-xs text-ink/45">
@@ -177,14 +187,6 @@ export function Settings({ navigate }: { navigate: (r: Route) => void }) {
           </GlassButton>
         </div>
       </section>
-
-      {firebaseReady && (
-        <div className="mt-6">
-          <GlassButton variant="ghost" full onClick={() => auth?.signOut()}>
-            Cerrar sesión
-          </GlassButton>
-        </div>
-      )}
 
       <p className="mt-8 text-center text-xs text-ink/30">
         Brody · v0.1

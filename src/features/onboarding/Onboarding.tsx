@@ -2,22 +2,12 @@ import { useEffect, useState, type ReactElement, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAppStore } from '../../store/useAppStore'
 import { ACCENT_THEMES, accentGhost } from '../../lib/accents'
-import { type GradeScale } from '../../lib/types'
+import { COUNTRY_SCALES, flagUrl } from '../../lib/scales'
 import { ChevronLeft, SunIcon, MoonIcon } from '../../components/ui/Icons'
 import { EASE } from '../../lib/motion'
 
 const STEPS = ['welcome', 'name', 'theme', 'color', 'scale', 'referral', 'done'] as const
 type Step = (typeof STEPS)[number]
-
-// Escalas por país (sin comas). Banderas como imágenes (flagcdn) porque el emoji de
-// bandera no renderiza en todos los dispositivos. El usuario las afina luego en Ajustes.
-const SCALES: { label: string; codes: string[]; pass: string; scale: GradeScale }[] = [
-  { label: '1 - 7', codes: ['cl'], pass: 'Aprueba 4', scale: { min: 1, max: 7, pass: 4 } },
-  { label: '0 - 10', codes: ['mx', 'ar', 'br'], pass: 'Aprueba 6', scale: { min: 0, max: 10, pass: 6 } },
-  { label: '0 - 20', codes: ['pe', 've'], pass: 'Aprueba 11', scale: { min: 0, max: 20, pass: 11 } },
-  { label: '0 - 100', codes: ['us'], pass: 'Aprueba 60', scale: { min: 0, max: 100, pass: 60 } },
-  { label: '0 - 5', codes: ['co'], pass: 'Aprueba 3', scale: { min: 0, max: 5, pass: 3 } },
-]
 
 // Oscurece un "r g b" hacia un tono más profundo del mismo color (para el borde).
 function darken(rgb: string, f = 0.55): string {
@@ -48,7 +38,6 @@ export function Onboarding() {
   const setTheme = useAppStore((s) => s.setTheme)
   const accent = useAppStore((s) => s.accent)
   const setAccent = useAppStore((s) => s.setAccent)
-  const defaultScale = useAppStore((s) => s.defaultScale)
   const setDefaultScale = useAppStore((s) => s.setDefaultScale)
   const setUserName = useAppStore((s) => s.setUserName)
   const setReferral = useAppStore((s) => s.setReferral)
@@ -56,6 +45,7 @@ export function Onboarding() {
 
   const [name, setName] = useState('')
   const [pickedReferral, setPickedReferral] = useState('')
+  const [scaleCode, setScaleCode] = useState('cl')
 
   // Presentación en NEGRO por defecto hasta que el usuario elija su color.
   useEffect(() => {
@@ -75,9 +65,6 @@ export function Onboarding() {
   const qIndex = i - 1
   const totalQ = STEPS.length - 2
   const showProgress = step !== 'welcome' && step !== 'done'
-
-  const isPreset = (p: GradeScale) =>
-    p.min === defaultScale.min && p.max === defaultScale.max && p.pass === defaultScale.pass
 
   return (
     <div className="mx-auto flex h-[100dvh] w-full max-w-md flex-col overflow-y-auto px-6 pb-6 pt-6">
@@ -217,30 +204,28 @@ export function Onboarding() {
                 <h2 className="text-3xl font-bold text-ink">Elige tu escala</h2>
                 <p className="mt-1.5 text-ink/55">La cambias después si quieres.</p>
                 <div className="mt-6 grid grid-cols-2 gap-3">
-                  {SCALES.map((s) => (
+                  {COUNTRY_SCALES.map((s) => (
                     <motion.button
-                      key={s.label}
+                      key={s.code}
                       whileTap={{ scale: 0.96 }}
-                      onClick={() => setDefaultScale(s.scale)}
+                      onClick={() => {
+                        setScaleCode(s.code)
+                        setDefaultScale(s.scale)
+                      }}
                       className={`glass glass-highlight flex flex-col items-start gap-1 rounded-3xl p-4 text-left ${
-                        isPreset(s.scale) ? 'ring-2 ring-ink/60' : ''
+                        scaleCode === s.code ? 'ring-2 ring-ink/60' : ''
                       }`}
                     >
-                      <span className="mb-1 flex gap-1">
-                        {s.codes.map((c) => (
-                          <img
-                            key={c}
-                            src={`https://flagcdn.com/w40/${c}.png`}
-                            alt={c}
-                            className="h-4 rounded-[3px] shadow-sm"
-                          />
-                        ))}
-                      </span>
+                      <img
+                        src={flagUrl(s.code)}
+                        alt={s.country}
+                        className="mb-1 h-4 rounded-[3px] shadow-sm"
+                      />
                       <span className="text-2xl font-black tabular-nums text-ink">
                         {s.label}
                       </span>
                       <span className="mt-0.5 text-xs font-medium text-ink/50">
-                        {s.pass}
+                        {s.country} · {s.pass}
                       </span>
                     </motion.button>
                   ))}
