@@ -115,7 +115,7 @@ export function NavIcon({
       viewBox="0 0 24 24"
       fill={filled ? 'currentColor' : 'none'}
       stroke={filled ? 'none' : 'currentColor'}
-      strokeWidth={1.9}
+      strokeWidth={1.5}
       strokeLinecap="round"
       strokeLinejoin="round"
       fillRule="evenodd"
