@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import type { Route } from '../App'
 import { useAppStore } from '../store/useAppStore'
 import { SubjectCard } from '../features/subjects/SubjectCard'
-import { AddSubjectSheet } from '../features/subjects/AddSubjectSheet'
+import { AddSubjectWizard } from '../features/subjects/AddSubjectWizard'
 import { PlusIcon } from '../components/ui/Icons'
 import { EASE } from '../lib/motion'
 
@@ -20,16 +20,26 @@ export function Calculadora({ navigate }: { navigate: (r: Route) => void }) {
             Calculadora
           </h1>
         </div>
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={() => setAdding(true)}
-          className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink text-surface shadow-glass"
-        >
-          <PlusIcon className="h-6 w-6" />
-        </motion.button>
+        {!adding && (
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setAdding(true)}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink text-surface shadow-glass"
+          >
+            <PlusIcon className="h-6 w-6" />
+          </motion.button>
+        )}
       </header>
 
-      {subjects.length === 0 ? (
+      {adding ? (
+        <AddSubjectWizard
+          onCancel={() => setAdding(false)}
+          onDone={(id) => {
+            setAdding(false)
+            navigate({ name: 'subject', id })
+          }}
+        />
+      ) : subjects.length === 0 ? (
         <EmptyState onAdd={() => setAdding(true)} />
       ) : (
         <motion.div layout className="space-y-3">
@@ -52,12 +62,6 @@ export function Calculadora({ navigate }: { navigate: (r: Route) => void }) {
           </AnimatePresence>
         </motion.div>
       )}
-
-      <AddSubjectSheet
-        open={adding}
-        onClose={() => setAdding(false)}
-        onCreated={(id) => navigate({ name: 'subject', id })}
-      />
     </div>
   )
 }
@@ -74,14 +78,14 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
         Aún no tienes asignaturas
       </h2>
       <p className="mb-6 text-sm text-ink/55">
-        Agrega tu primera asignatura y calcula qué nota necesitas para salvar el
+        Agrega tu primer ramo y calcula qué nota necesitas para salvar el
         semestre.
       </p>
       <button
         onClick={onAdd}
         className="inline-flex items-center gap-2 rounded-3xl bg-ink px-5 py-3 font-semibold text-surface"
       >
-        <PlusIcon className="h-5 w-5" /> Agregar asignatura
+        <PlusIcon className="h-5 w-5" /> Agregar ramo
       </button>
     </motion.div>
   )
