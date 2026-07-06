@@ -1,8 +1,6 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { EASE } from '../lib/motion'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
-import { BellIcon, ClockIcon, StarIcon } from '../components/ui/Icons'
+import { BellIcon, ClockIcon } from '../components/ui/Icons'
 
 const FRASES = [
   'Tú puedes\ncon todo hoy.',
@@ -58,20 +56,12 @@ export function Inicio() {
         </button>
       </div>
 
-      {/* Saludo + estrella */}
-      <div className="relative mb-4">
+      {/* Saludo */}
+      <div className="mb-4">
         <p className="text-sm font-medium text-ink/55">{saludo}, 👋</p>
         <h1 className="mt-1 whitespace-pre-line text-[34px] font-bold leading-[1.05] text-ink">
           {frase}
         </h1>
-        <motion.div
-          initial={{ opacity: 0, rotate: -12, scale: 0.8 }}
-          animate={{ opacity: 1, rotate: 8, scale: 1 }}
-          transition={{ duration: 0.6, ease: EASE.overshoot }}
-          className="glass glass-highlight absolute -top-1 right-1 flex h-20 w-20 items-center justify-center rounded-2xl"
-        >
-          <StarIcon className="h-9 w-9 text-ink/50" />
-        </motion.div>
       </div>
 
       {/* Tira de días */}
