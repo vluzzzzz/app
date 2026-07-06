@@ -132,6 +132,24 @@ body {
   }
 }
 
+/* ===== RENDIMIENTO EN MÓVIL =====
+   En dispositivos táctiles (celu/tablet) el backdrop-filter (blur del vidrio) es
+   carísimo porque recalcula cada frame sobre el fondo en movimiento. Lo desactivamos
+   y usamos un vidrio "sólido" translúcido (sin blur). En PC se mantiene el blur real. */
+@media (hover: none) and (pointer: coarse) {
+  .glass,
+  .glass-strong {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background-color: rgb(255 255 255 / 0.82) !important;
+    background-image: none !important;
+  }
+  .dark .glass,
+  .dark .glass-strong {
+    background-color: rgb(24 24 30 / 0.72) !important;
+  }
+}
+
 /* Jitter barato del granulado (solo transform = GPU). */
 @keyframes grain-jitter {
   0% {
