@@ -10,6 +10,7 @@ import { Calendario } from './pages/Calendario'
 import { Settings } from './pages/Settings'
 import { SubjectDetail } from './features/subjects/SubjectDetail'
 import { ChatPage } from './features/chat/ChatPage'
+import { AuthGate } from './features/auth/AuthGate'
 import { EASE } from './lib/motion'
 import { accentLightRgb, accentRgb } from './lib/accents'
 import { useAppStore } from './store/useAppStore'
@@ -59,6 +60,7 @@ export default function App() {
   return (
     <>
       <AnimatedMesh />
+      <AuthGate>
       <div className="mx-auto h-full w-full max-w-md overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
@@ -96,6 +98,7 @@ export default function App() {
         onClose={() => setMenuOpen(false)}
         navigate={setRoute}
       />
+      </AuthGate>
     </>
   )
 }

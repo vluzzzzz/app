@@ -7,6 +7,7 @@ import { GlassButton } from '../components/ui/GlassButton'
 import { Toggle } from '../components/ui/Toggle'
 import { ChevronLeft, PlusIcon } from '../components/ui/Icons'
 import { useInstallPrompt } from '../lib/useInstallPrompt'
+import { supabase, supabaseReady } from '../lib/supabase'
 
 const PRESETS: { label: string; scale: GradeScale }[] = [
   { label: 'Chile 1,0 – 7,0', scale: { min: 1, max: 7, pass: 4 } },
@@ -177,8 +178,20 @@ export function Settings({ navigate }: { navigate: (r: Route) => void }) {
         </div>
       </section>
 
+      {supabaseReady && (
+        <div className="mt-6">
+          <GlassButton
+            variant="ghost"
+            full
+            onClick={() => supabase?.auth.signOut()}
+          >
+            Cerrar sesión
+          </GlassButton>
+        </div>
+      )}
+
       <p className="mt-8 text-center text-xs text-ink/30">
-        Brody · v0.1 · Tus datos se guardan en este dispositivo.
+        Brody · v0.1
       </p>
     </div>
   )
