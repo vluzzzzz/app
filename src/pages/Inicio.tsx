@@ -117,7 +117,7 @@ export function Inicio() {
             src="/logosombra.png"
             alt="Próxima clase"
             onError={() => setLogoOk(false)}
-            className="h-20 w-20 shrink-0 object-contain drop-shadow-md"
+            className="-my-2 h-36 w-36 shrink-0 object-contain drop-shadow-lg"
           />
         ) : (
           <div className="text-6xl">⏰</div>

@@ -159,15 +159,14 @@ function AppearanceColors() {
           whileTap={{ scale: 0.9 }}
           onClick={() => setAccent(a.id)}
           aria-label={a.label}
-          className={`aspect-square rounded-full ring-2 ring-offset-2 ring-offset-white transition-all ${
-            accent === a.id ? 'ring-ink/70' : 'ring-transparent'
-          }`}
-          style={{
-            // Glossy tipo esfera (brillo arriba-izq + sombra abajo), como stepbro.
-            background: `radial-gradient(120% 120% at 32% 26%, rgba(255,255,255,0.6), rgba(255,255,255,0) 44%), rgb(${a.rgb})`,
-            boxShadow: 'inset 0 -5px 9px rgba(0,0,0,0.25)',
-          }}
-        />
+          className="relative aspect-square rounded-full"
+          style={{ background: `rgb(${a.rgb})` }} // plano, sin bisel
+        >
+          {accent === a.id && (
+            // Anillo de selección redondo (span propio → siempre círculo, nunca cuadrado)
+            <span className="pointer-events-none absolute -inset-[3px] rounded-full ring-2 ring-ink/60" />
+          )}
+        </motion.button>
       ))}
     </div>
   )
