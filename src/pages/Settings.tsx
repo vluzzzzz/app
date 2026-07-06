@@ -1,10 +1,11 @@
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import type { Route } from '../App'
 import { useAppStore } from '../store/useAppStore'
 import { DEFAULT_SCALE, type GradeScale } from '../lib/types'
 import { GlassButton } from '../components/ui/GlassButton'
 import { Toggle } from '../components/ui/Toggle'
-import { ChevronLeft } from '../components/ui/Icons'
+import { ChevronLeft, PlusIcon } from '../components/ui/Icons'
 import { useInstallPrompt } from '../lib/useInstallPrompt'
 
 const PRESETS: { label: string; scale: GradeScale }[] = [
@@ -32,6 +33,8 @@ export function Settings({ navigate }: { navigate: (r: Route) => void }) {
     p.min === defaultScale.min &&
     p.max === defaultScale.max &&
     p.pass === defaultScale.pass
+
+  const isCustom = !PRESETS.some((p) => isPreset(p.scale))
 
   return (
     <div className="h-full overflow-y-auto px-5 pb-24 pt-6">
@@ -114,8 +117,8 @@ export function Settings({ navigate }: { navigate: (r: Route) => void }) {
           Se aplica a las asignaturas nuevas que crees.
         </p>
 
-        {/* Presets */}
-        <div className="mb-5 flex flex-wrap gap-2">
+        {/* Presets + Personalizada */}
+        <div className="mb-4 flex flex-wrap gap-2">
           {PRESETS.map((p) => (
             <motion.button
               key={p.label}
@@ -130,24 +133,37 @@ export function Settings({ navigate }: { navigate: (r: Route) => void }) {
               {p.label}
             </motion.button>
           ))}
+          <div
+            className={`flex items-center gap-1 rounded-2xl border px-3.5 py-2 text-sm font-medium transition-colors ${
+              isCustom
+                ? 'border-ink/60 bg-ink/20 text-ink'
+                : 'border-ink/15 bg-ink/5 text-ink/70'
+            }`}
+          >
+            <PlusIcon className="h-3.5 w-3.5" /> Personalizada
+          </div>
         </div>
+
+        <p className="mb-3 text-xs text-ink/45">
+          O define la tuya: mínima, máxima y para aprobar (acepta comas, ej: 5,5).
+        </p>
 
         {/* Campos */}
         <div className="grid grid-cols-3 gap-3">
           <ScaleField
             label="Mínima"
             value={defaultScale.min}
-            onChange={(v) => patch('min', v)}
+            onCommit={(v) => patch('min', v)}
           />
           <ScaleField
             label="Máxima"
             value={defaultScale.max}
-            onChange={(v) => patch('max', v)}
+            onCommit={(v) => patch('max', v)}
           />
           <ScaleField
             label="Aprobar"
             value={defaultScale.pass}
-            onChange={(v) => patch('pass', v)}
+            onCommit={(v) => patch('pass', v)}
           />
         </div>
 
@@ -171,12 +187,19 @@ export function Settings({ navigate }: { navigate: (r: Route) => void }) {
 function ScaleField({
   label,
   value,
-  onChange,
+  onCommit,
 }: {
   label: string
   value: number
-  onChange: (v: string) => void
+  onCommit: (v: string) => void
 }) {
+  // Estado local para poder escribir decimales con coma (ej: "5,5") sin que el
+  // valor externo lo reinicie en cada tecla. Se confirma al salir del campo.
+  const [text, setText] = useState(String(value).replace('.', ','))
+  useEffect(() => {
+    setText(String(value).replace('.', ','))
+  }, [value])
+
   return (
     <label className="block">
       <span className="mb-1.5 block text-xs uppercase tracking-wide text-ink/45">
@@ -184,8 +207,15 @@ function ScaleField({
       </span>
       <input
         inputMode="decimal"
-        value={String(value).replace('.', ',')}
-        onChange={(e) => onChange(e.target.value)}
+        value={text}
+        onChange={(e) => {
+          const v = e.target.value
+          if (/^[0-9]*[.,]?[0-9]*$/.test(v)) setText(v)
+        }}
+        onBlur={() => onCommit(text)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+        }}
         className="w-full rounded-2xl border border-ink/15 bg-ink/5 px-3 py-3 text-center text-lg font-bold tabular-nums text-ink outline-none focus:border-ink/40"
       />
     </label>

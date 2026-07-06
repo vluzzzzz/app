@@ -42,9 +42,9 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
   const p = PERIODOS[periodo]
 
   return (
-    <div className="flex h-full flex-col overflow-hidden px-5 pb-28 pt-4">
+    <div className="flex h-full flex-col justify-between gap-3 overflow-y-auto px-5 pb-28 pt-4">
       {/* Top: racha + campana */}
-      <div className="mb-4 flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5 rounded-full bg-ink/5 px-3 py-1.5">
           <span className="text-base leading-none">🔥</span>
           <span className="text-sm font-bold tabular-nums text-ink">7</span>
@@ -59,7 +59,7 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
       </div>
 
       {/* Saludo */}
-      <div className="mb-4">
+      <div>
         <p className="text-sm font-medium text-ink/55">{saludo}, 👋</p>
         <h1 className="mt-1 whitespace-pre-line text-[34px] font-bold leading-[1.05] text-ink">
           {frase}
@@ -67,7 +67,7 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
       </div>
 
       {/* Tira de días */}
-      <div className="glass glass-highlight mb-2 rounded-3xl px-2 py-3">
+      <div className="glass glass-highlight rounded-3xl px-2 py-3">
         <div className="flex items-stretch justify-between">
           {week.map((d, i) => {
             const isToday = d.toDateString() === now.toDateString()
@@ -94,7 +94,7 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
       <AiBar onOpen={() => navigate({ name: 'chat' })} />
 
       {/* Próxima clase */}
-      <div className="glass glass-highlight mb-3 flex items-center gap-3 rounded-4xl p-4">
+      <div className="glass glass-highlight flex items-center gap-3 rounded-4xl p-4">
         <div className="min-w-0 flex-1">
           <p className="text-sm text-ink/50">Próxima clase</p>
           <div className="mt-0.5 flex items-center gap-2">
