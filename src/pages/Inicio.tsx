@@ -90,10 +90,6 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
           })}
         </div>
       </div>
-      <div className="mb-2 flex justify-center">
-        <span className="h-1.5 w-1.5 rounded-full bg-ink/20" />
-      </div>
-
       {/* Espacio central: barra que abre el chat con IA */}
       <AiBar onOpen={() => navigate({ name: 'chat' })} />
 
