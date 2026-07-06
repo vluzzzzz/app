@@ -50,9 +50,18 @@ export default function App() {
 
   useEffect(() => {
     const root = document.documentElement
-    root.style.setProperty('--accent', accentRgb(accent))
-    root.style.setProperty('--accent-light', accentLightRgb(accent))
-  }, [accent])
+    // El acento negro en tema oscuro desaparece sobre el fondo → usar tono claro
+    // para que los resaltes (día activo, botones, etc.) sigan visibles.
+    const darkBlack = theme === 'dark' && accent === 'black'
+    root.style.setProperty(
+      '--accent',
+      darkBlack ? '228 228 231' : accentRgb(accent),
+    )
+    root.style.setProperty(
+      '--accent-light',
+      darkBlack ? '244 244 245' : accentLightRgb(accent),
+    )
+  }, [accent, theme])
 
   const showTabBar = TAB_ROUTES.includes(route.name as TabId)
   const key = route.name === 'subject' ? `subject-${route.id}` : route.name

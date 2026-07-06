@@ -5,6 +5,7 @@ import { accentGhost } from '../../lib/accents'
 /** Barra "Pregúntale a la IA…" que vive en el espacio central del Inicio. */
 export function AiBar({ onOpen }: { onOpen: () => void }) {
   const accent = useAppStore((s) => s.accent)
+  const theme = useAppStore((s) => s.theme)
   return (
     <div className="flex items-center justify-center py-1">
       <motion.button
@@ -13,9 +14,9 @@ export function AiBar({ onOpen }: { onOpen: () => void }) {
         className="glass glass-highlight flex w-full items-center gap-3 rounded-full px-5 py-4 text-left"
       >
         <img
-          src={accentGhost(accent)}
+          src={accentGhost(accent, theme === 'dark')}
           alt="Brody"
-          className="h-8 w-8 shrink-0 object-contain"
+          className="h-11 w-11 shrink-0 object-contain"
         />
         <span className="flex-1 text-[15px] font-medium text-ink/50">
           Pregúntale a Brody

@@ -36,7 +36,9 @@ const ACCENT_GHOST: Record<string, string> = {
   pink: 'bropink',
 }
 
-export function accentGhost(id: string): string {
+export function accentGhost(id: string, dark = false): string {
+  // El fantasmita negro se pierde en fondo oscuro → versión especial visible.
+  if (id === 'black' && dark) return '/broblachthemeblack.png'
   return `/${ACCENT_GHOST[id] ?? 'brogray'}.png`
 }
 
