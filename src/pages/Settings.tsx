@@ -7,7 +7,7 @@ import { GlassButton } from '../components/ui/GlassButton'
 import { Toggle } from '../components/ui/Toggle'
 import { ChevronLeft, PlusIcon } from '../components/ui/Icons'
 import { useInstallPrompt } from '../lib/useInstallPrompt'
-import { supabase, supabaseReady } from '../lib/supabase'
+import { auth, firebaseReady } from '../lib/firebase'
 
 const PRESETS: { label: string; scale: GradeScale }[] = [
   { label: 'Chile 1,0 – 7,0', scale: { min: 1, max: 7, pass: 4 } },
@@ -178,13 +178,9 @@ export function Settings({ navigate }: { navigate: (r: Route) => void }) {
         </div>
       </section>
 
-      {supabaseReady && (
+      {firebaseReady && (
         <div className="mt-6">
-          <GlassButton
-            variant="ghost"
-            full
-            onClick={() => supabase?.auth.signOut()}
-          >
+          <GlassButton variant="ghost" full onClick={() => auth?.signOut()}>
             Cerrar sesión
           </GlassButton>
         </div>

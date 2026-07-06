@@ -1,8 +1,38 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { supabase } from '../../lib/supabase'
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+} from 'firebase/auth'
+import { auth, googleProvider } from '../../lib/firebase'
 import { GlassButton } from '../../components/ui/GlassButton'
 import { EASE } from '../../lib/motion'
+
+// Traduce los códigos de error de Firebase a mensajes claros en español.
+function errorEs(code: string): string {
+  switch (code) {
+    case 'auth/invalid-email':
+      return 'El correo no es válido.'
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+      return 'Correo o contraseña incorrectos.'
+    case 'auth/email-already-in-use':
+      return 'Ese correo ya tiene una cuenta. Inicia sesión.'
+    case 'auth/weak-password':
+      return 'La contraseña es muy corta (mínimo 6 caracteres).'
+    case 'auth/popup-closed-by-user':
+    case 'auth/cancelled-popup-request':
+      return 'Cerraste la ventana de Google antes de terminar.'
+    case 'auth/too-many-requests':
+      return 'Demasiados intentos. Espera un momento e intenta de nuevo.'
+    case 'auth/network-request-failed':
+      return 'Sin conexión. Revisa tu internet.'
+    default:
+      return 'No se pudo, intenta de nuevo.'
+  }
+}
 
 export function LoginScreen() {
   const [mode, setMode] = useState<'in' | 'up'>('in')
@@ -12,34 +42,35 @@ export function LoginScreen() {
   const [msg, setMsg] = useState<string | null>(null)
 
   async function google() {
+    if (!auth) return
     setMsg(null)
-    await supabase?.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin },
-    })
+    try {
+      await signInWithPopup(auth, googleProvider)
+    } catch (e) {
+      const code = (e as { code?: string })?.code ?? ''
+      // Cerrar la ventana no es un error real que valga la pena mostrar en rojo.
+      if (
+        code !== 'auth/popup-closed-by-user' &&
+        code !== 'auth/cancelled-popup-request'
+      ) {
+        setMsg(errorEs(code))
+      }
+    }
   }
 
   async function emailAuth() {
-    if (!email.trim() || !password || loading) return
+    if (!auth || !email.trim() || !password || loading) return
     setLoading(true)
     setMsg(null)
     try {
       if (mode === 'in') {
-        const { error } = await supabase!.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        })
-        if (error) throw error
+        await signInWithEmailAndPassword(auth, email.trim(), password)
       } else {
-        const { error } = await supabase!.auth.signUp({
-          email: email.trim(),
-          password,
-        })
-        if (error) throw error
-        setMsg('¡Cuenta creada! Revisa tu correo si te pide confirmar.')
+        await createUserWithEmailAndPassword(auth, email.trim(), password)
       }
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : 'No se pudo, intenta de nuevo.')
+      const code = (e as { code?: string })?.code ?? ''
+      setMsg(errorEs(code))
     } finally {
       setLoading(false)
     }

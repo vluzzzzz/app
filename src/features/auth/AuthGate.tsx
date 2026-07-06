@@ -1,30 +1,27 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import type { Session } from '@supabase/supabase-js'
-import { supabase, supabaseReady } from '../../lib/supabase'
+import { onAuthStateChanged, type User } from 'firebase/auth'
+import { auth, firebaseReady } from '../../lib/firebase'
 import { LoginScreen } from './LoginScreen'
 
 /**
- * Portón de autenticación. Si Supabase está configurado, exige iniciar sesión
+ * Portón de autenticación. Si Firebase está configurado, exige iniciar sesión
  * (login obligatorio). Si aún NO está configurado, deja pasar (la app corre local),
  * así producción no se rompe mientras se termina el setup.
  */
 export function AuthGate({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null)
-  const [loading, setLoading] = useState(supabaseReady)
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(firebaseReady)
 
   useEffect(() => {
-    if (!supabase) return
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
+    if (!auth) return
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u)
       setLoading(false)
     })
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) =>
-      setSession(s),
-    )
-    return () => sub.subscription.unsubscribe()
+    return unsub
   }, [])
 
-  if (!supabaseReady) return <>{children}</>
+  if (!firebaseReady) return <>{children}</>
 
   if (loading) {
     return (
@@ -38,6 +35,6 @@ export function AuthGate({ children }: { children: ReactNode }) {
     )
   }
 
-  if (!session) return <LoginScreen />
+  if (!user) return <LoginScreen />
   return <>{children}</>
 }
