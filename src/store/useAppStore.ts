@@ -19,6 +19,10 @@ type State = {
   accent: string
   /** Modo lite: fondo estático + animaciones reducidas (celus menos potentes). */
   lite: boolean
+  /** TEMP (prueba): variante visual del fondo 1|2|3. Quitar al decidir. */
+  bgVariant: 1 | 2 | 3
+  /** TEMP (prueba): nivel de grano del fondo. Quitar al decidir. */
+  grain: 'marked' | 'subtle'
   /** Historial del chat con la IA. */
   chat: ChatMessage[]
 }
@@ -29,6 +33,8 @@ type Actions = {
   toggleTheme: () => void
   setAccent: (accent: string) => void
   setLite: (lite: boolean) => void
+  setBgVariant: (v: 1 | 2 | 3) => void
+  setGrain: (g: 'marked' | 'subtle') => void
   pushChat: (m: ChatMessage) => void
   clearChat: () => void
 
@@ -114,6 +120,8 @@ export const useAppStore = create<State & Actions>()(
       theme: 'light',
       accent: 'gray',
       lite: false,
+      bgVariant: 1,
+      grain: 'marked',
       chat: [],
 
       setDefaultScale: (scale) => set({ defaultScale: scale }),
@@ -122,6 +130,8 @@ export const useAppStore = create<State & Actions>()(
         set((st) => ({ theme: st.theme === 'light' ? 'dark' : 'light' })),
       setAccent: (accent) => set({ accent }),
       setLite: (lite) => set({ lite }),
+      setBgVariant: (bgVariant) => set({ bgVariant }),
+      setGrain: (grain) => set({ grain }),
       pushChat: (m) => set((st) => ({ chat: [...st.chat, m] })),
       clearChat: () => set({ chat: [] }),
 

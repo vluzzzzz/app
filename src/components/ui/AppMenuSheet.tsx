@@ -116,6 +116,7 @@ export function AppMenuSheet({
                     <span className="text-lg font-bold">Apariencia</span>
                   </div>
                   <AppearanceColors />
+                  <BgTester />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -173,6 +174,61 @@ function AppearanceColors() {
           />
         )
       })}
+    </div>
+  )
+}
+
+// TEMP: selector de prueba de fondo/grano. Quitar cuando Angel elija la variante.
+function BgTester() {
+  const bgVariant = useAppStore((s) => s.bgVariant)
+  const setBgVariant = useAppStore((s) => s.setBgVariant)
+  const grain = useAppStore((s) => s.grain)
+  const setGrain = useAppStore((s) => s.setGrain)
+
+  const chip = (on: boolean) =>
+    `rounded-xl border px-2 py-2 text-sm font-semibold transition-colors ${
+      on
+        ? 'border-ink/60 bg-ink/15 text-ink'
+        : 'border-ink/15 bg-ink/5 text-ink/55'
+    }`
+
+  return (
+    <div className="mt-1 border-t border-ink/10 px-2 pt-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink/45">
+        Fondo (prueba)
+      </p>
+      <div className="grid grid-cols-3 gap-2">
+        {([1, 2, 3] as const).map((v) => (
+          <button
+            key={v}
+            onClick={() => setBgVariant(v)}
+            className={chip(bgVariant === v)}
+          >
+            {v}
+          </button>
+        ))}
+      </div>
+      <p className="mb-2 mt-1.5 text-[11px] leading-tight text-ink/40">
+        1 claro/oscuro · 2 blanco · 3 colorido
+      </p>
+
+      <p className="mb-2 mt-3 text-xs font-semibold uppercase tracking-wide text-ink/45">
+        Grano
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          onClick={() => setGrain('marked')}
+          className={chip(grain === 'marked')}
+        >
+          Marcado
+        </button>
+        <button
+          onClick={() => setGrain('subtle')}
+          className={chip(grain === 'subtle')}
+        >
+          Sutil
+        </button>
+      </div>
     </div>
   )
 }
