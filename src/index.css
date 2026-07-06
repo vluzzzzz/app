@@ -10,8 +10,8 @@
   --accent: 148 163 184; /* color de acento (gris por defecto) */
   --accent-light: 203 213 225; /* versión clara del acento (bordes) */
 
-  --glass-a: 0.55; /* opacidad del vidrio */
-  --glass-strong-a: 0.72;
+  --glass-a: 0.42; /* opacidad del vidrio (más transparente = look liquid) */
+  --glass-strong-a: 0.6;
   --glass-brd: 17 24 39; /* borde */
   --glass-brd-a: 0.1;
   --glass-shadow: 0 10px 34px rgba(17, 24, 39, 0.12);
@@ -132,22 +132,20 @@ body {
   }
 }
 
-/* ===== RENDIMIENTO EN MÓVIL =====
-   En dispositivos táctiles (celu/tablet) el backdrop-filter (blur del vidrio) es
-   carísimo porque recalcula cada frame sobre el fondo en movimiento. Lo desactivamos
-   y usamos un vidrio "sólido" translúcido (sin blur). En PC se mantiene el blur real. */
-@media (hover: none) and (pointer: coarse) {
-  .glass,
-  .glass-strong {
-    -webkit-backdrop-filter: none !important;
-    backdrop-filter: none !important;
-    background-color: rgb(255 255 255 / 0.82) !important;
-    background-image: none !important;
-  }
-  .dark .glass,
-  .dark .glass-strong {
-    background-color: rgb(24 24 30 / 0.72) !important;
-  }
+/* ===== RENDIMIENTO — MODO LITE =====
+   El backdrop-filter (blur del vidrio) es caro sobre el fondo en movimiento. En modo
+   NORMAL lo dejamos activo también en móvil (look liquid). En MODO LITE (celus lentos)
+   lo apagamos y usamos un vidrio "sólido" translúcido, para que vaya 100% fluido. */
+.lite .glass,
+.lite .glass-strong {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background-color: rgb(255 255 255 / 0.82) !important;
+  background-image: none !important;
+}
+.dark.lite .glass,
+.dark.lite .glass-strong {
+  background-color: rgb(24 24 30 / 0.72) !important;
 }
 
 /* Jitter barato del granulado (solo transform = GPU). */

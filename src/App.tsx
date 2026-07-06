@@ -11,6 +11,7 @@ import { Settings } from './pages/Settings'
 import { SubjectDetail } from './features/subjects/SubjectDetail'
 import { ChatPage } from './features/chat/ChatPage'
 import { AuthGate } from './features/auth/AuthGate'
+import { Onboarding } from './features/onboarding/Onboarding'
 import { EASE } from './lib/motion'
 import { accentLightRgb, accentRgb } from './lib/accents'
 import { useAppStore } from './store/useAppStore'
@@ -39,6 +40,7 @@ export default function App() {
   const theme = useAppStore((s) => s.theme)
   const accent = useAppStore((s) => s.accent)
   const lite = useAppStore((s) => s.lite)
+  const onboarded = useAppStore((s) => s.onboarded)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
@@ -70,6 +72,10 @@ export default function App() {
     <>
       <AnimatedMesh />
       <AuthGate>
+      {!onboarded ? (
+        <Onboarding />
+      ) : (
+      <>
       <div className="mx-auto h-full w-full max-w-md overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
@@ -107,6 +113,8 @@ export default function App() {
         onClose={() => setMenuOpen(false)}
         navigate={setRoute}
       />
+      </>
+      )}
       </AuthGate>
     </>
   )

@@ -23,6 +23,12 @@ type State = {
   bgVariant: 1 | 2 | 3
   /** TEMP (prueba): nivel de grano del fondo. Quitar al decidir. */
   grain: 'marked' | 'subtle'
+  /** ¿El usuario ya pasó por el onboarding? (evita repetirlo). */
+  onboarded: boolean
+  /** Nombre del usuario (para el saludo del Inicio). */
+  userName: string
+  /** Cómo conoció Brody (se enviará a Supabase en Fase B; local por ahora). */
+  referral: string
   /** Historial del chat con la IA. */
   chat: ChatMessage[]
 }
@@ -35,6 +41,9 @@ type Actions = {
   setLite: (lite: boolean) => void
   setBgVariant: (v: 1 | 2 | 3) => void
   setGrain: (g: 'marked' | 'subtle') => void
+  setOnboarded: (v: boolean) => void
+  setUserName: (name: string) => void
+  setReferral: (r: string) => void
   pushChat: (m: ChatMessage) => void
   clearChat: () => void
 
@@ -122,6 +131,9 @@ export const useAppStore = create<State & Actions>()(
       lite: false,
       bgVariant: 1,
       grain: 'marked',
+      onboarded: false,
+      userName: '',
+      referral: '',
       chat: [],
 
       setDefaultScale: (scale) => set({ defaultScale: scale }),
@@ -132,6 +144,9 @@ export const useAppStore = create<State & Actions>()(
       setLite: (lite) => set({ lite }),
       setBgVariant: (bgVariant) => set({ bgVariant }),
       setGrain: (grain) => set({ grain }),
+      setOnboarded: (onboarded) => set({ onboarded }),
+      setUserName: (userName) => set({ userName }),
+      setReferral: (referral) => set({ referral }),
       pushChat: (m) => set((st) => ({ chat: [...st.chat, m] })),
       clearChat: () => set({ chat: [] }),
 

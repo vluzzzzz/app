@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Route } from '../App'
+import { useAppStore } from '../store/useAppStore'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import { AiBar } from '../features/chat/AiBar'
 import { BellIcon, ClockIcon } from '../components/ui/Icons'
@@ -21,6 +22,7 @@ const PERIODOS = [
 ]
 
 export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
+  const userName = useAppStore((s) => s.userName)
   const now = new Date()
   const h = now.getHours()
   const saludo =
@@ -60,7 +62,10 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
 
       {/* Saludo */}
       <div>
-        <p className="text-sm font-medium text-ink/55">{saludo}, 👋</p>
+        <p className="text-sm font-medium text-ink/55">
+          {saludo}
+          {userName ? `, ${userName}` : ''} 👋
+        </p>
         <h1 className="mt-1 whitespace-pre-line text-[34px] font-bold leading-[1.05] text-ink">
           {frase}
         </h1>
