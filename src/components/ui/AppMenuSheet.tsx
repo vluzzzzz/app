@@ -153,21 +153,22 @@ function AppearanceColors() {
 
   return (
     <div className="grid grid-cols-4 gap-3.5 px-2 pb-2">
-      {ACCENT_THEMES.map((a) => (
-        <motion.button
-          key={a.id}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => setAccent(a.id)}
-          aria-label={a.label}
-          className="relative aspect-square rounded-full"
-          style={{ background: `rgb(${a.rgb})` }} // plano, sin bisel
-        >
-          {accent === a.id && (
-            // Anillo de selección redondo (span propio → siempre círculo, nunca cuadrado)
-            <span className="pointer-events-none absolute -inset-[3px] rounded-full ring-2 ring-ink/60" />
-          )}
-        </motion.button>
-      ))}
+      {ACCENT_THEMES.map((a) => {
+        const selected = accent === a.id
+        return (
+          <motion.button
+            key={a.id}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setAccent(a.id)}
+            aria-label={a.label}
+            // Círculo por defecto; al seleccionar se MORPHEA a cuadrado redondeado.
+            animate={{ borderRadius: selected ? '30%' : '50%' }}
+            transition={{ type: 'spring', stiffness: 420, damping: 26 }}
+            className="aspect-square"
+            style={{ background: `rgb(${a.rgb})` }}
+          />
+        )
+      })}
     </div>
   )
 }
