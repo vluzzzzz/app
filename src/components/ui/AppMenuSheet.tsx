@@ -14,37 +14,27 @@ import {
   TrashIcon,
 } from './Icons'
 
-// En táctil (móvil) el blur de 22px sobre el fondo en movimiento causa lag → usamos
-// vidrio SÓLIDO (más opaco) solo en móvil; en PC se mantiene el blur.
-const isTouch =
-  typeof window !== 'undefined' &&
-  window.matchMedia('(hover: none) and (pointer: coarse)').matches
-
-// Vidrio oscuro ("plomo") para el menú Opciones.
-const darkGlass = isTouch
-  ? {
-      background: 'rgba(24,24,28,0.94)',
-      border: '1px solid rgba(255,255,255,0.12)',
-    }
-  : ({
-      background: 'rgba(28,28,32,0.62)',
-      backdropFilter: 'blur(22px) saturate(1.4)',
-      WebkitBackdropFilter: 'blur(22px) saturate(1.4)',
-      border: '1px solid rgba(255,255,255,0.12)',
-    } as const)
-
-// Vidrio blanco para Apariencia.
-const lightGlass = isTouch
-  ? {
-      background: 'rgba(255,255,255,0.95)',
-      border: '1px solid rgba(17,24,39,0.1)',
-    }
-  : ({
-      background: 'rgba(255,255,255,0.75)',
-      backdropFilter: 'blur(22px) saturate(1.6)',
-      WebkitBackdropFilter: 'blur(22px) saturate(1.6)',
-      border: '1px solid rgba(17,24,39,0.1)',
-    } as const)
+// NORMAL: vidrio con blur (bonito). LITE: sólido (fluido). Se elige según `lite`.
+const darkBlur = {
+  background: 'rgba(28,28,32,0.62)',
+  backdropFilter: 'blur(22px) saturate(1.4)',
+  WebkitBackdropFilter: 'blur(22px) saturate(1.4)',
+  border: '1px solid rgba(255,255,255,0.12)',
+} as const
+const darkSolid = {
+  background: 'rgba(24,24,28,0.94)',
+  border: '1px solid rgba(255,255,255,0.12)',
+} as const
+const lightBlur = {
+  background: 'rgba(255,255,255,0.75)',
+  backdropFilter: 'blur(22px) saturate(1.6)',
+  WebkitBackdropFilter: 'blur(22px) saturate(1.6)',
+  border: '1px solid rgba(17,24,39,0.1)',
+} as const
+const lightSolid = {
+  background: 'rgba(255,255,255,0.95)',
+  border: '1px solid rgba(17,24,39,0.1)',
+} as const
 
 type View = 'menu' | 'appearance' | 'confirmReset'
 
@@ -59,6 +49,9 @@ export function AppMenuSheet({
 }) {
   const [view, setView] = useState<View>('menu')
   const resetAll = useAppStore((s) => s.resetAll)
+  const lite = useAppStore((s) => s.lite)
+  const darkGlass = lite ? darkSolid : darkBlur
+  const lightGlass = lite ? lightSolid : lightBlur
 
   useEffect(() => {
     if (!open) setView('menu')
