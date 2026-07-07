@@ -4,6 +4,7 @@ import type { Route } from '../../App'
 import { useAppStore } from '../../store/useAppStore'
 import { ACCENT_THEMES } from '../../lib/accents'
 import { auth } from '../../lib/firebase'
+import { deleteProfile } from '../../lib/profile'
 import {
   ChevronLeft,
   ChevronRight,
@@ -12,6 +13,7 @@ import {
   ReloadIcon,
   SettingsIcon,
   TrashIcon,
+  UserIcon,
 } from './Icons'
 
 // NORMAL: vidrio con blur (bonito). LITE: sólido (fluido). Se elige según `lite`.
@@ -92,6 +94,14 @@ export function AppMenuSheet({
                 >
                   <p className="px-3 pb-1 pt-2 text-lg font-bold">Opciones</p>
                   <MenuRow
+                    icon={<UserIcon className="h-5 w-5" />}
+                    label="Perfil"
+                    onClick={() => {
+                      onClose()
+                      navigate({ name: 'profile' })
+                    }}
+                  />
+                  <MenuRow
                     icon={<PaletteIcon className="h-5 w-5" />}
                     label="Apariencia"
                     onClick={() => setView('appearance')}
@@ -165,6 +175,7 @@ export function AppMenuSheet({
                   <div className="flex flex-col gap-2 px-1 pb-1">
                     <button
                       onClick={() => {
+                        deleteProfile()
                         resetAll()
                         onClose()
                       }}

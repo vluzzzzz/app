@@ -10,6 +10,7 @@ import { Calendario } from './pages/Calendario'
 import { Settings } from './pages/Settings'
 import { SubjectDetail } from './features/subjects/SubjectDetail'
 import { ChatPage } from './features/chat/ChatPage'
+import { ProfilePage } from './features/profile/ProfilePage'
 import { AuthGate } from './features/auth/AuthGate'
 import { Onboarding } from './features/onboarding/Onboarding'
 import { FpsMeter } from './components/dev/FpsMeter'
@@ -24,6 +25,7 @@ export type Route =
   | { name: 'calendario' }
   | { name: 'settings' }
   | { name: 'chat' }
+  | { name: 'profile' }
   | { name: 'subject'; id: string }
 
 const TAB_ROUTES: TabId[] = ['inicio', 'calculadora', 'horario', 'calendario']
@@ -100,6 +102,7 @@ export default function App() {
             {route.name === 'horario' && <Horario />}
             {route.name === 'calendario' && <Calendario />}
             {route.name === 'settings' && <Settings navigate={setRoute} />}
+            {route.name === 'profile' && <ProfilePage navigate={setRoute} />}
             {route.name === 'subject' && (
               <SubjectDetail id={route.id} navigate={setRoute} />
             )}

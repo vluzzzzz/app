@@ -27,10 +27,32 @@ type State = {
   onboarded: boolean
   /** Nombre del usuario (para el saludo del Inicio). */
   userName: string
-  /** Cómo conoció Brody (se enviará a Supabase en Fase B; local por ahora). */
+  /** Cómo conoció Brody. */
   referral: string
+  /** --- Perfil (sincronizado con Supabase) --- */
+  country: string
+  ageRange: string
+  career: string
+  avatar: string
+  banner: string
+  /** Control de cambios de nombre (máx 3 por mes). */
+  nameChanges: number
+  nameMonth: string
   /** Historial del chat con la IA. */
   chat: ChatMessage[]
+}
+
+/** Campos del perfil que se hidratan desde Supabase / se editan en Perfil. */
+export type ProfileFields = {
+  userName: string
+  referral: string
+  country: string
+  ageRange: string
+  career: string
+  avatar: string
+  banner: string
+  nameChanges: number
+  nameMonth: string
 }
 
 type Actions = {
@@ -44,6 +66,8 @@ type Actions = {
   setOnboarded: (v: boolean) => void
   setUserName: (name: string) => void
   setReferral: (r: string) => void
+  /** Aplica un conjunto de campos de perfil (hidratar desde nube / editar). */
+  hydrateProfile: (p: Partial<ProfileFields>) => void
   /** Borra todos los datos del usuario y vuelve al onboarding (empezar de 0). */
   resetAll: () => void
   pushChat: (m: ChatMessage) => void
@@ -136,6 +160,13 @@ export const useAppStore = create<State & Actions>()(
       onboarded: false,
       userName: '',
       referral: '',
+      country: '',
+      ageRange: '',
+      career: '',
+      avatar: '',
+      banner: 'esmeralda',
+      nameChanges: 0,
+      nameMonth: '',
       chat: [],
 
       setDefaultScale: (scale) => set({ defaultScale: scale }),
@@ -149,12 +180,20 @@ export const useAppStore = create<State & Actions>()(
       setOnboarded: (onboarded) => set({ onboarded }),
       setUserName: (userName) => set({ userName }),
       setReferral: (referral) => set({ referral }),
+      hydrateProfile: (p) => set(p),
       resetAll: () =>
         set({
           subjects: [],
           chat: [],
           userName: '',
           referral: '',
+          country: '',
+          ageRange: '',
+          career: '',
+          avatar: '',
+          banner: 'esmeralda',
+          nameChanges: 0,
+          nameMonth: '',
           onboarded: false,
           defaultScale: DEFAULT_SCALE,
           accent: 'gray',
