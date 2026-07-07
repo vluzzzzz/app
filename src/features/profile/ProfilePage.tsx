@@ -5,15 +5,14 @@ import { useAppStore } from '../../store/useAppStore'
 import { auth } from '../../lib/firebase'
 import { saveProfile } from '../../lib/profile'
 import { AVATARS, avatarSrc } from '../../lib/avatars'
-import { BANNERS, bannerCss } from '../../lib/banners'
-import { CAREERS } from '../../lib/careers'
+import { BANNERS, bannerCss, BANNER_SHEEN } from '../../lib/banners'
+import { CAREERS, normalizeSearch } from '../../lib/careers'
 import { flagUrl } from '../../lib/scales'
 import { currentGrade } from '../../lib/grades'
 import { formatGrade } from '../../lib/format'
 import { GlassButton } from '../../components/ui/GlassButton'
 import { ChevronLeft } from '../../components/ui/Icons'
 
-// Países de LatAm (+ US/ES) para el dropdown con banderas.
 const COUNTRIES: { code: string; name: string }[] = [
   { code: 'cl', name: 'Chile' },
   { code: 'ar', name: 'Argentina' },
@@ -38,23 +37,24 @@ const COUNTRIES: { code: string; name: string }[] = [
   { code: 'us', name: 'Estados Unidos' },
   { code: 'es', name: 'España' },
 ]
+const countryName = (code: string) => COUNTRIES.find((c) => c.code === code)?.name
 
 const AGES = ['Menos de 15', '15-17', '18-20', '21-24', '25-29', '30+']
-
 const monthKey = () => new Date().toISOString().slice(0, 7)
 
 export function ProfilePage({ navigate }: { navigate: (r: Route) => void }) {
   const store = useAppStore()
   const hydrateProfile = useAppStore((s) => s.hydrateProfile)
 
-  // Estado local de edición (se commitea al Guardar).
+  const [editing, setEditing] = useState(false)
   const [name, setName] = useState(store.userName)
   const [country, setCountry] = useState(store.country)
   const [ageRange, setAgeRange] = useState(store.ageRange)
   const [career, setCareer] = useState(store.career)
-  const [avatar, setAvatar] = useState(store.avatar)
-  const [banner, setBanner] = useState(store.banner || 'esmeralda')
-  const [picker, setPicker] = useState<'none' | 'country' | 'age' | 'career'>('none')
+  const [avatar, setAvatar] = useState(store.avatar || AVATARS[0].id)
+  const [banner, setBanner] = useState(store.banner || BANNERS[0].id)
+  const [showAvatars, setShowAvatars] = useState(false)
+  const [showBanners, setShowBanners] = useState(false)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
 
@@ -71,7 +71,16 @@ export function ProfilePage({ navigate }: { navigate: (r: Route) => void }) {
     ? formatGrade(graded.reduce((a, b) => a + b, 0) / graded.length)
     : '—'
 
-  const countryName = COUNTRIES.find((c) => c.code === country)?.name
+  function startEdit() {
+    setName(store.userName)
+    setCountry(store.country)
+    setAgeRange(store.ageRange)
+    setCareer(store.career)
+    setAvatar(store.avatar || AVATARS[0].id)
+    setBanner(store.banner || BANNERS[0].id)
+    setMsg(null)
+    setEditing(true)
+  }
 
   async function save() {
     if (saving) return
@@ -92,8 +101,12 @@ export function ProfilePage({ navigate }: { navigate: (r: Route) => void }) {
     } else {
       hydrateProfile({ userName: name.trim(), country, ageRange, career, avatar, banner })
     }
-    setMsg(res.nameLimited ? 'Ya cambiaste tu nombre 3 veces este mes 😅' : '¡Guardado! ✅')
     setSaving(false)
+    if (res.nameLimited) {
+      setMsg('Ya cambiaste tu nombre 3 veces este mes 😅')
+    } else {
+      setEditing(false)
+    }
   }
 
   return (
@@ -101,7 +114,7 @@ export function ProfilePage({ navigate }: { navigate: (r: Route) => void }) {
       <header className="mb-5 flex items-center gap-3">
         <motion.button
           whileTap={{ scale: 0.9 }}
-          onClick={() => navigate({ name: 'inicio' })}
+          onClick={() => (editing ? setEditing(false) : navigate({ name: 'inicio' }))}
           className="glass glass-highlight rounded-2xl p-2.5 text-ink/80"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -109,11 +122,11 @@ export function ProfilePage({ navigate }: { navigate: (r: Route) => void }) {
         <h1 className="text-[28px] font-bold text-ink">Perfil</h1>
       </header>
 
-      {/* Tarjeta preview (fachera) */}
+      {/* Tarjeta (banner + avatar circular + nombre + stats) */}
       <div className="glass glass-highlight overflow-hidden rounded-4xl">
         <div className="relative h-28" style={{ background: bannerCss(banner) }}>
-          {/* grano sobre el banner */}
-          <div className="absolute inset-0 opacity-[0.12]">
+          <div className="absolute inset-0" style={{ background: BANNER_SHEEN }} />
+          <div className="absolute inset-0 opacity-[0.10]">
             <svg className="h-full w-full">
               <filter id="prof-grain">
                 <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves={2} stitchTiles="stitch" />
@@ -124,160 +137,183 @@ export function ProfilePage({ navigate }: { navigate: (r: Route) => void }) {
           </div>
         </div>
         <div className="px-5 pb-5">
-          <img
-            src={avatarSrc(avatar)}
-            alt="avatar"
-            className="-mt-10 h-20 w-20 rounded-3xl bg-surface object-contain shadow-lg ring-4 ring-[rgb(var(--surface))]"
-          />
-          <h2 className="mt-2 text-xl font-bold text-ink">{name || 'Tu nombre'}</h2>
-          {handle && <p className="text-sm text-ink/50">{handle}</p>}
+          <div className="-mt-12 mb-2 h-24 w-24 rounded-full bg-white p-2.5 shadow-lg">
+            <img src={avatarSrc(avatar)} alt="avatar" className="h-full w-full rounded-full object-contain" />
+          </div>
+          <h2 className="truncate text-xl font-bold text-ink">{name || 'Tu nombre'}</h2>
+          {handle && <p className="truncate text-sm text-ink/50">{handle}</p>}
           <div className="mt-4 flex gap-6">
             <Stat n={String(ramos)} label="Ramos" />
             <Stat n={promedio} label="Promedio" />
-            {countryName && <Stat n={countryName} label="País" flag={country} />}
+            {country && <Stat n={countryName(country) ?? ''} label="País" flag={country} />}
           </div>
         </div>
       </div>
 
-      {/* Editar */}
-      <div className="mt-6 space-y-4">
-        {/* Nombre */}
-        <Field label={`Nombre · ${usedThisMonth}/3 cambios este mes`}>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            disabled={nameLocked}
-            placeholder="Tu nombre"
-            className="w-full rounded-2xl border border-ink/15 bg-ink/5 px-4 py-3 text-ink outline-none placeholder:text-ink/30 focus:border-ink/40 disabled:opacity-50"
-          />
-          {nameLocked && (
-            <p className="mt-1 text-xs text-ink/45">
-              Podrás cambiarlo de nuevo el próximo mes.
-            </p>
-          )}
-        </Field>
-
-        {/* País */}
-        <Field label="País">
-          <PickerButton onClick={() => setPicker('country')}>
-            {country ? (
-              <span className="flex items-center gap-2">
-                <img src={flagUrl(country)} className="h-4 rounded-[3px]" alt="" />
-                {countryName}
-              </span>
-            ) : (
-              <span className="text-ink/40">Elige tu país</span>
+      {!editing ? (
+        /* ---------- VISTA ---------- */
+        <>
+          <div className="mt-5 space-y-2">
+            {ageRange && <InfoRow label="Edad" value={ageRange} />}
+            {career && <InfoRow label="Carrera" value={career} />}
+            {!ageRange && !career && (
+              <p className="px-1 text-sm text-ink/45">
+                Completa tu perfil para que te conozcamos mejor 👀
+              </p>
             )}
-          </PickerButton>
-        </Field>
-
-        {/* Edad */}
-        <Field label="Edad">
-          <PickerButton onClick={() => setPicker('age')}>
-            {ageRange || <span className="text-ink/40">Elige tu rango de edad</span>}
-          </PickerButton>
-        </Field>
-
-        {/* Carrera */}
-        <Field label="Carrera">
-          <PickerButton onClick={() => setPicker('career')}>
-            {career || <span className="text-ink/40">Elige tu carrera</span>}
-          </PickerButton>
-        </Field>
-
-        {/* Avatar */}
-        <Field label="Avatar">
-          <div className="grid grid-cols-5 gap-3">
-            {AVATARS.map((a) => (
-              <motion.button
-                key={a.id}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setAvatar(a.id)}
-                className={`aspect-square rounded-2xl bg-ink/5 p-1.5 ${
-                  avatar === a.id ? 'ring-2 ring-ink/60' : ''
-                }`}
-              >
-                <img src={a.src} alt="" className="h-full w-full object-contain" />
-              </motion.button>
-            ))}
           </div>
-        </Field>
-
-        {/* Banner */}
-        <Field label="Banner">
-          <div className="grid grid-cols-5 gap-3">
-            {BANNERS.map((b) => (
-              <motion.button
-                key={b.id}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setBanner(b.id)}
-                style={{ background: b.css }}
-                className={`aspect-[3/2] rounded-2xl ${
-                  banner === b.id ? 'ring-2 ring-ink/70' : ''
-                }`}
-              />
-            ))}
+          <div className="mt-6">
+            <GlassButton variant="primary" full onClick={startEdit}>
+              Editar perfil
+            </GlassButton>
           </div>
-        </Field>
-      </div>
+          {/* Debajo, en el futuro, irá el horario u otras cosas del usuario. */}
+        </>
+      ) : (
+        /* ---------- EDITAR ---------- */
+        <div className="mt-6 space-y-4">
+          <Field label={`Nombre · ${usedThisMonth}/3 cambios este mes`}>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={nameLocked}
+              placeholder="Tu nombre"
+              className="w-full rounded-2xl border border-ink/15 bg-ink/5 px-4 py-3 text-ink outline-none placeholder:text-ink/30 focus:border-ink/40 disabled:opacity-50"
+            />
+            {nameLocked && (
+              <p className="mt-1 text-xs text-ink/45">Podrás cambiarlo el próximo mes.</p>
+            )}
+          </Field>
 
-      {msg && <p className="mt-4 text-center text-sm font-medium text-ink/70">{msg}</p>}
+          <Field label="País">
+            <InlineSelect
+              value={country}
+              placeholder="Elige tu país"
+              options={COUNTRIES.map((c) => ({ value: c.code, label: c.name, flag: c.code }))}
+              onPick={setCountry}
+            />
+          </Field>
 
-      <div className="mt-5">
-        <GlassButton variant="primary" full onClick={save} disabled={saving}>
-          {saving ? 'Guardando…' : 'Guardar cambios'}
-        </GlassButton>
-      </div>
+          <Field label="Edad">
+            <InlineSelect
+              value={ageRange}
+              placeholder="Elige tu rango de edad"
+              options={AGES.map((a) => ({ value: a, label: a }))}
+              onPick={setAgeRange}
+            />
+          </Field>
 
-      {/* Pickers */}
-      <PickerOverlay
-        open={picker === 'country'}
-        title="Tu país"
-        onClose={() => setPicker('none')}
-        options={COUNTRIES.map((c) => ({ value: c.code, label: c.name, flag: c.code }))}
-        onPick={(v) => {
-          setCountry(v)
-          setPicker('none')
-        }}
-      />
-      <PickerOverlay
-        open={picker === 'age'}
-        title="Tu edad"
-        onClose={() => setPicker('none')}
-        options={AGES.map((a) => ({ value: a, label: a }))}
-        onPick={(v) => {
-          setAgeRange(v)
-          setPicker('none')
-        }}
-      />
-      <PickerOverlay
-        open={picker === 'career'}
-        title="Tu carrera"
-        search
-        onClose={() => setPicker('none')}
-        options={CAREERS.map((c) => ({ value: c, label: c }))}
-        onPick={(v) => {
-          setCareer(v)
-          setPicker('none')
-        }}
-      />
+          <Field label="Carrera">
+            <InlineSelect
+              value={career}
+              placeholder="Elige tu carrera"
+              options={CAREERS.map((c) => ({ value: c, label: c }))}
+              onPick={setCareer}
+              search
+            />
+          </Field>
+
+          {/* Foto de perfil (detrás de botón) */}
+          <div>
+            <ToggleRow open={showAvatars} onClick={() => setShowAvatars((v) => !v)}>
+              Foto de perfil
+            </ToggleRow>
+            <AnimatePresence initial={false}>
+              {showAvatars && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="grid grid-cols-5 gap-3 pt-3">
+                    {AVATARS.map((a) => (
+                      <motion.button
+                        key={a.id}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => setAvatar(a.id)}
+                        className={`aspect-square rounded-full bg-white p-1.5 shadow ${
+                          avatar === a.id ? 'ring-2 ring-ink/70' : ''
+                        }`}
+                      >
+                        <img src={a.src} alt="" className="h-full w-full rounded-full object-contain" />
+                      </motion.button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Banner (detrás de botón) */}
+          <div>
+            <ToggleRow open={showBanners} onClick={() => setShowBanners((v) => !v)}>
+              Banner
+            </ToggleRow>
+            <AnimatePresence initial={false}>
+              {showBanners && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="grid grid-cols-4 gap-3 pt-3">
+                    {BANNERS.map((b) => (
+                      <motion.button
+                        key={b.id}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => setBanner(b.id)}
+                        style={{ background: b.css }}
+                        className={`aspect-[3/2] rounded-xl ${
+                          banner === b.id ? 'ring-2 ring-ink/70' : ''
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {msg && <p className="text-center text-sm font-medium text-ink/70">{msg}</p>}
+
+          <div className="flex gap-2 pt-1">
+            <GlassButton variant="glass" onClick={() => setEditing(false)}>
+              Cancelar
+            </GlassButton>
+            <GlassButton variant="primary" full onClick={save} disabled={saving}>
+              {saving ? 'Guardando…' : 'Guardar'}
+            </GlassButton>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
 function Stat({ n, label, flag }: { n: string; label: string; flag?: string }) {
   return (
-    <div>
-      <div className="flex items-center gap-1.5 text-lg font-bold text-ink">
+    <div className="min-w-0">
+      <div className="flex items-center gap-1.5 truncate text-lg font-bold text-ink">
         {flag && <img src={flagUrl(flag)} className="h-4 rounded-[3px]" alt="" />}
-        {n}
+        <span className="truncate">{n}</span>
       </div>
       <span className="text-xs text-ink/50">{label}</span>
     </div>
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="glass glass-highlight flex items-center justify-between rounded-2xl px-4 py-3">
+      <span className="text-sm text-ink/50">{label}</span>
+      <span className="font-medium text-ink">{value}</span>
+    </div>
+  )
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink/45">
@@ -288,97 +324,97 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function PickerButton({
+function ToggleRow({
   children,
+  open,
   onClick,
 }: {
   children: ReactNode
+  open: boolean
   onClick: () => void
 }) {
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center justify-between rounded-2xl border border-ink/15 bg-ink/5 px-4 py-3 text-left text-ink"
+      className="flex w-full items-center justify-between rounded-2xl border border-ink/15 bg-ink/5 px-4 py-3 text-left font-medium text-ink"
     >
-      <span className="min-w-0 truncate">{children}</span>
-      <span className="ml-2 text-ink/30">▾</span>
+      {children}
+      <span className={`text-ink/40 transition-transform ${open ? 'rotate-180' : ''}`}>▾</span>
     </button>
   )
 }
 
-function PickerOverlay({
-  open,
-  title,
+/** Dropdown inline (panel blanco limpio que se despliega bajo el campo). */
+function InlineSelect({
+  value,
+  placeholder,
   options,
   onPick,
-  onClose,
   search,
 }: {
-  open: boolean
-  title: string
+  value: string
+  placeholder: string
   options: { value: string; label: string; flag?: string }[]
-  onPick: (value: string) => void
-  onClose: () => void
+  onPick: (v: string) => void
   search?: boolean
 }) {
+  const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
-  const filtered = search
-    ? options.filter((o) => o.label.toLowerCase().includes(q.toLowerCase()))
-    : options
+  const current = options.find((o) => o.value === value)
+  const filtered =
+    search && q
+      ? options.filter((o) => normalizeSearch(o.label).includes(normalizeSearch(q)))
+      : options
 
   return (
-    <AnimatePresence>
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between rounded-2xl border border-ink/15 bg-ink/5 px-4 py-3 text-left text-ink"
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          {current?.flag && <img src={flagUrl(current.flag)} className="h-4 rounded-[3px]" alt="" />}
+          <span className="truncate">
+            {current ? current.label : <span className="text-ink/40">{placeholder}</span>}
+          </span>
+        </span>
+        <span className={`ml-2 text-ink/40 transition-transform ${open ? 'rotate-180' : ''}`}>▾</span>
+      </button>
       {open && (
         <>
-          <motion.div
-            className="fixed inset-0 z-[60] bg-black/40"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-          />
-          <motion.div
-            initial={{ opacity: 0, y: '100%' }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: '100%' }}
-            transition={{ type: 'spring', stiffness: 380, damping: 34 }}
-            className="glass glass-highlight fixed inset-x-0 bottom-0 z-[60] mx-auto flex max-h-[75dvh] w-full max-w-md flex-col rounded-t-4xl p-4"
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-ink">{title}</h3>
-              <button onClick={onClose} className="text-sm font-medium text-ink/50">
-                Cerrar
-              </button>
-            </div>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 right-0 top-full z-20 mt-2 max-h-64 overflow-y-auto rounded-2xl border border-ink/10 bg-[rgb(var(--surface))] p-1.5 shadow-2xl">
             {search && (
               <input
                 autoFocus
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Buscar…"
-                className="mb-3 w-full rounded-2xl border border-ink/15 bg-ink/5 px-4 py-2.5 text-ink outline-none placeholder:text-ink/30 focus:border-ink/40"
+                placeholder="Buscar… (ej: ing civil)"
+                className="mb-1 w-full rounded-xl border border-ink/10 bg-ink/5 px-3 py-2 text-sm text-ink outline-none placeholder:text-ink/30"
               />
             )}
-            <div className="flex-1 space-y-1 overflow-y-auto">
-              {filtered.map((o) => (
-                <button
-                  key={o.value}
-                  onClick={() => onPick(o.value)}
-                  className="flex w-full items-center gap-2.5 rounded-2xl px-3 py-3 text-left text-ink hover:bg-ink/5 active:bg-ink/10"
-                >
-                  {o.flag && (
-                    <img src={flagUrl(o.flag)} className="h-4 rounded-[3px]" alt="" />
-                  )}
-                  <span>{o.label}</span>
-                </button>
-              ))}
-              {filtered.length === 0 && (
-                <p className="py-6 text-center text-sm text-ink/40">Sin resultados</p>
-              )}
-            </div>
-          </motion.div>
+            {filtered.map((o) => (
+              <button
+                key={o.value}
+                onClick={() => {
+                  onPick(o.value)
+                  setOpen(false)
+                  setQ('')
+                }}
+                className={`flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[15px] text-ink hover:bg-ink/5 ${
+                  o.value === value ? 'bg-ink/10' : ''
+                }`}
+              >
+                {o.flag && <img src={flagUrl(o.flag)} className="h-4 rounded-[3px]" alt="" />}
+                <span className="truncate">{o.label}</span>
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <p className="px-3 py-4 text-center text-sm text-ink/40">Sin resultados</p>
+            )}
+          </div>
         </>
       )}
-    </AnimatePresence>
+    </div>
   )
 }

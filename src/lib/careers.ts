@@ -1,32 +1,45 @@
-// Lista curada de carreras de Latinoamérica para el dropdown del perfil.
-// Es un SELECT (no texto libre) → no se puede poner algo inválido.
-// "Estoy en el colegio" y "Otra / Aún no sé" al final como opciones válidas.
+// Carreras de Latinoamérica para el dropdown del perfil (SELECT, no texto libre).
+// Se usa "Ing." abreviado. La búsqueda es flexible (ignora tildes, puntos y mayúsculas).
 export const CAREERS: string[] = [
-  // Ingenierías
-  'Ingeniería Civil',
-  'Ingeniería Civil Industrial',
-  'Ingeniería Comercial',
-  'Ingeniería Industrial',
-  'Ingeniería en Informática',
-  'Ingeniería de Software',
-  'Ingeniería en Computación',
-  'Ingeniería en Sistemas',
-  'Ingeniería Mecánica',
-  'Ingeniería Eléctrica',
-  'Ingeniería Electrónica',
-  'Ingeniería Mecatrónica',
-  'Ingeniería Química',
-  'Ingeniería Ambiental',
-  'Ingeniería Biomédica',
-  'Ingeniería en Telecomunicaciones',
-  'Ingeniería de Minas',
-  'Ingeniería en Construcción',
-  'Ingeniería Agrónoma',
-  'Ingeniería en Alimentos',
+  // Ingenierías Civiles
+  'Ing. Civil',
+  'Ing. Civil Industrial',
+  'Ing. Civil en Computación e Informática',
+  'Ing. Civil Informática',
+  'Ing. Civil Eléctrica',
+  'Ing. Civil Mecánica',
+  'Ing. Civil Química',
+  'Ing. Civil Electrónica',
+  'Ing. Civil en Obras Civiles',
+  'Ing. Civil Ambiental',
+  'Ing. Civil de Minas',
+  'Ing. Civil Matemática',
+  'Ing. Civil Biomédica',
+  // Ingenierías (ejecución / comercial / otras)
+  'Ing. Comercial',
+  'Ing. Industrial',
+  'Ing. en Informática',
+  'Ing. de Software',
+  'Ing. en Computación',
+  'Ing. en Sistemas',
+  'Ing. Mecánica',
+  'Ing. Eléctrica',
+  'Ing. Electrónica',
+  'Ing. Mecatrónica',
+  'Ing. Química',
+  'Ing. Ambiental',
+  'Ing. Biomédica',
+  'Ing. en Telecomunicaciones',
+  'Ing. de Minas',
+  'Ing. en Construcción',
+  'Ing. Agrónoma',
+  'Ing. en Alimentos',
+  'Ing. Comercial en Economía',
   // Tecnología / Datos
   'Ciencia de Datos',
   'Analista Programador',
   'Ciberseguridad',
+  'Técnico en Informática',
   // Salud
   'Medicina',
   'Enfermería',
@@ -96,3 +109,14 @@ export const CAREERS: string[] = [
   'Estoy en el colegio',
   'Otra / Aún no sé',
 ]
+
+/** Normaliza para búsqueda flexible: minúsculas, sin tildes, sin puntos, espacios simples. */
+export function normalizeSearch(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/\./g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}

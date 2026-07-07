@@ -1,18 +1,10 @@
-// Avatares de perfil. Por ahora los fantasmitas de colores (public/bro*.png).
-// Angel enviará avatares propios luego → se agregan aquí (id + src) y aparecen solos.
+// Avatares de perfil (fotos de Brody, negro/plomo → van sobre un CÍRCULO BLANCO en la UI).
+// Angel irá agregando más → solo sumar {id, src} aquí y aparecen solos.
 export type Avatar = { id: string; src: string }
 
 export const AVATARS: Avatar[] = [
-  { id: 'brogray', src: '/brogray.png' },
-  { id: 'broblack', src: '/broblack.png' },
-  { id: 'brored', src: '/brored.png' },
-  { id: 'broorange', src: '/broorange.png' },
-  { id: 'brogreen', src: '/brogreen.png' },
-  { id: 'brocyan', src: '/brocyan.png' },
-  { id: 'broceleste', src: '/broceleste.png' },
-  { id: 'bropurple', src: '/bropurple.png' },
-  { id: 'bropurple2', src: '/bropurple2.png' },
-  { id: 'bropink', src: '/bropink.png' },
+  { id: 'study', src: '/perfilstudy.png' },
+  { id: 'sleep', src: '/perfilsleep.png' },
 ]
 
 export function avatarSrc(id: string): string {
