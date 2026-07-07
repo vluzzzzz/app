@@ -12,6 +12,7 @@ import { SubjectDetail } from './features/subjects/SubjectDetail'
 import { ChatPage } from './features/chat/ChatPage'
 import { AuthGate } from './features/auth/AuthGate'
 import { Onboarding } from './features/onboarding/Onboarding'
+import { FpsMeter } from './components/dev/FpsMeter'
 import { EASE } from './lib/motion'
 import { accentLightRgb, accentRgb } from './lib/accents'
 import { useAppStore } from './store/useAppStore'
@@ -68,8 +69,13 @@ export default function App() {
   const showTabBar = TAB_ROUTES.includes(route.name as TabId)
   const key = route.name === 'subject' ? `subject-${route.id}` : route.name
 
+  const showFps =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).has('fps')
+
   return (
     <>
+      {showFps && <FpsMeter />}
       <AnimatedMesh />
       <AuthGate>
       {!onboarded ? (
