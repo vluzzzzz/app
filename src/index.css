@@ -132,10 +132,25 @@ body {
   }
 }
 
-/* ===== RENDIMIENTO — MODO LITE =====
-   El backdrop-filter (blur del vidrio) es caro sobre el fondo en movimiento. En modo
-   NORMAL lo dejamos activo también en móvil (look liquid). En MODO LITE (celus lentos)
-   lo apagamos y usamos un vidrio "sólido" translúcido, para que vaya 100% fluido. */
+/* ===== RENDIMIENTO =====
+   El backdrop-filter (blur del vidrio) sobre el fondo EN MOVIMIENTO es lo más caro en
+   móvil (recalcula el desenfoque cada frame → lag). En PC hay potencia y se ve liquid;
+   en TÁCTIL (celu/tablet) y en MODO LITE lo apagamos y usamos un vidrio sólido
+   translúcido → 100% fluido en cualquier equipo, casi idéntico visualmente. */
+@media (hover: none) and (pointer: coarse) {
+  .glass,
+  .glass-strong {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background-color: rgb(255 255 255 / 0.72) !important;
+    background-image: none !important;
+  }
+  .dark .glass,
+  .dark .glass-strong {
+    background-color: rgb(24 24 30 / 0.64) !important;
+  }
+}
+
 .lite .glass,
 .lite .glass-strong {
   -webkit-backdrop-filter: none !important;
