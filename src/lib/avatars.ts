@@ -5,6 +5,7 @@ export type Avatar = { id: string; src: string }
 export const AVATARS: Avatar[] = [
   { id: 'study', src: '/perfilstudy.png' },
   { id: 'sleep', src: '/perfilsleep.png' },
+  { id: 'happy', src: '/perfilhappy.png' },
   { id: 'angry', src: '/perfilangry.png' },
 ]
 
