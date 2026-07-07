@@ -28,11 +28,11 @@ export type Route =
 
 const TAB_ROUTES: TabId[] = ['inicio', 'calculadora', 'horario', 'calendario']
 
-// Sin `filter: blur` (animar blur es carísimo en móvil): solo opacidad + desplazamiento.
+// Transición liviana: solo opacidad + un pelín de desplazamiento (composita en GPU).
 const pageVariants = {
-  initial: { opacity: 0, y: 10 },
+  initial: { opacity: 0, y: 8 },
   animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -6 },
+  exit: { opacity: 0, y: -4 },
 }
 
 export default function App() {
@@ -87,11 +87,12 @@ export default function App() {
           <motion.div
             key={key}
             className="h-full"
+            style={{ willChange: 'opacity, transform' }}
             variants={pageVariants}
             initial="initial"
             animate="animate"
             exit="exit"
-            transition={{ duration: 0.4, ease: EASE.smooth }}
+            transition={{ duration: 0.22, ease: EASE.standard }}
           >
             {route.name === 'inicio' && <Inicio navigate={setRoute} />}
             {route.name === 'calculadora' && <Calculadora navigate={setRoute} />}

@@ -132,9 +132,16 @@ export function AnimatedMesh() {
         style={{ background: vignette(bgVariant, isDark) }}
       />
 
-      {/* Micro-ruido ESTÁTICO (mezclar sobre el fondo en movimiento es carísimo en
-          móvil): capa plana de opacidad baja = se compone una vez. */}
-      <div className="absolute inset-0" style={{ opacity: grainOpacity }}>
+      {/* Micro-ruido ESTÁTICO. Se promueve a su propia capa GPU (translateZ) para que
+          se rasterice UNA vez y no se re-dibuje cuando los orbes se mueven / al scrollear. */}
+      <div
+        className="absolute inset-0"
+        style={{
+          opacity: grainOpacity,
+          transform: 'translateZ(0)',
+          willChange: 'transform',
+        }}
+      >
         <svg className="h-full w-full">
           <filter id="grain-filter">
             <feTurbulence
