@@ -79,7 +79,6 @@ export function AnimatedMesh() {
 
   const orbs = (VARIANTS[bgVariant] ?? VARIANTS[1])[isDark ? 'dark' : 'light']
   const wash = bgVariant === 3
-  const spotlight = bgVariant === 3 || (bgVariant === 1 && isDark)
 
   const grainOpacity =
     grain === 'marked' ? (isDark ? 0.1 : 0.13) : isDark ? 0.05 : 0.07
@@ -87,18 +86,6 @@ export function AnimatedMesh() {
 
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden bg-surface">
-      {/* Spotlight suave del acento (glow tipo póster) */}
-      {spotlight && (
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `radial-gradient(60% 50% at 50% 30%, rgb(var(--accent) / ${
-              isDark ? 0.35 : 0.18
-            }) 0%, transparent 70%)`,
-          }}
-        />
-      )}
-
       {/* Orbes que orbitan (o quietos en modo lite) */}
       {orbs.map((b, i) => (
         <div
