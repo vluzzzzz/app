@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useAppStore } from '../../store/useAppStore'
 import { ACCENT_THEMES, accentGhost } from '../../lib/accents'
 import { COUNTRY_SCALES, flagUrl } from '../../lib/scales'
+import { saveProfile } from '../../lib/profile'
 import { ChevronLeft, SunIcon, MoonIcon } from '../../components/ui/Icons'
 import { EASE } from '../../lib/motion'
 
@@ -60,6 +61,9 @@ export function Onboarding() {
     setUserName(name.trim())
     setReferral(pickedReferral)
     setOnboarded(true)
+    // Guarda el perfil en Supabase (país = el de la escala elegida). Fire-and-forget.
+    const pais = COUNTRY_SCALES.find((c) => c.code === scaleCode)?.country ?? ''
+    void saveProfile({ nombre: name.trim(), pais, referral: pickedReferral })
   }
 
   const qIndex = i - 1
