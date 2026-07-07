@@ -31,6 +31,12 @@ export default defineConfig({
       },
     }),
   ],
+  // El build de producción minifica JS/CSS y NO emite source maps → el código
+  // queda ofuscado/ilegible (no se puede "robar" el fuente legible).
+  build: {
+    sourcemap: false,
+    minify: 'esbuild',
+  },
   test: {
     environment: 'jsdom',
     globals: true,
