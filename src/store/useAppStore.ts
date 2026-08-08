@@ -82,6 +82,8 @@ type Actions = {
     count: number,
   ) => void
 
+  /** Reemplaza todos los ramos (para hidratar desde la nube). */
+  setSubjects: (subjects: Subject[]) => void
   addSubject: (input: {
     name: string
     color?: string
@@ -267,6 +269,8 @@ export const useAppStore = create<State & Actions>()(
             }
           }),
         })),
+
+      setSubjects: (subjects) => set({ subjects }),
 
       addSubject: ({ name, color, subdivisions }) => {
         const newId = makeId()

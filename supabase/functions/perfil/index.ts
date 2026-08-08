@@ -132,16 +132,23 @@ Deno.serve(async (req: Request) => {
       nameMonth = month
     }
 
+    // Merge parcial: si el body no trae un campo, se conserva el existente (así una
+    // subida de solo-ramos no borra el perfil, ni una edición de perfil borra los ramos).
+    const keep = (key: string, max: number): string | null =>
+      typeof body[key] === 'string'
+        ? (body[key] as string).slice(0, max)
+        : (existing?.[key] ?? null)
     const row = {
       uid,
-      correo: email,
+      correo: email ?? existing?.correo ?? null,
       nombre: finalName,
-      pais: str(body.pais, 40),
-      referral: str(body.referral, 40),
-      edad: str(body.edad, 20),
-      carrera: str(body.carrera, 60),
-      avatar: str(body.avatar, 40),
-      banner: str(body.banner, 40),
+      pais: keep('pais', 40),
+      referral: keep('referral', 40),
+      edad: keep('edad', 20),
+      carrera: keep('carrera', 60),
+      avatar: keep('avatar', 40),
+      banner: keep('banner', 40),
+      ramos: body.ramos !== undefined ? body.ramos : existing?.ramos ?? null,
       name_changes: nameChanges,
       name_month: nameMonth,
       actualizado: new Date().toISOString(),

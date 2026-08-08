@@ -2,7 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { onAuthStateChanged, type User } from 'firebase/auth'
 import { auth, firebaseReady } from '../../lib/firebase'
 import { useAppStore } from '../../store/useAppStore'
-import { fetchProfile } from '../../lib/profile'
+import { fetchProfile, saveRamos } from '../../lib/profile'
+import { startRamosSync } from '../../lib/sync'
 import { LoginScreen } from './LoginScreen'
 
 /**
@@ -23,14 +24,21 @@ export function AuthGate({ children }: { children: ReactNode }) {
         // Trae el perfil de la nube; si existe, hidrata y marca onboarding hecho.
         setHydrating(true)
         try {
-          const profile = await fetchProfile()
-          if (profile) {
-            useAppStore.getState().hydrateProfile(profile)
-            useAppStore.getState().setOnboarded(true)
+          const result = await fetchProfile()
+          if (result) {
+            const st = useAppStore.getState()
+            st.hydrateProfile(result.profile)
+            // Solo saltar el onboarding si el perfil es "real" (tiene nombre).
+            if (result.profile.userName) st.setOnboarded(true)
+            // Ramos: si la nube tiene → adoptarlos; si no → sembrar con los locales.
+            if (result.ramos) st.setSubjects(result.ramos)
+            else if (st.subjects.length) saveRamos(st.subjects)
           }
         } finally {
           setHydrating(false)
         }
+        // Escuchar cambios de ramos y subirlos (después de hidratar, para no re-subir).
+        startRamosSync()
       }
       setLoading(false)
     })

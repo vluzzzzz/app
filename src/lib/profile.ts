@@ -1,5 +1,6 @@
 import { auth } from './firebase'
 import type { ProfileFields } from '../store/useAppStore'
+import type { Subject } from './types'
 
 // El endpoint de perfil vive junto al de la IA (misma base de Edge Functions),
 // solo cambia el último segmento: .../functions/v1/chat → .../functions/v1/perfil
@@ -49,16 +50,38 @@ export async function saveProfile(
   }
 }
 
-/** Trae el perfil del usuario desde Supabase (para hidratar en otro dispositivo). */
-export async function fetchProfile(): Promise<Partial<ProfileFields> | null> {
+/** Trae el perfil (campos + ramos) del usuario desde Supabase para hidratar. */
+export async function fetchProfile(): Promise<{
+  profile: Partial<ProfileFields>
+  ramos: Subject[] | null
+} | null> {
   if (!ENDPOINT || !auth?.currentUser) return null
   try {
     const res = await fetch(ENDPOINT, { method: 'GET', headers: await authHeaders() })
     if (!res.ok) return null
     const json = await res.json()
-    return json?.profile ? dbToProfile(json.profile) : null
+    if (!json?.profile) return null
+    const row = json.profile
+    return {
+      profile: dbToProfile(row),
+      ramos: Array.isArray(row.ramos) ? (row.ramos as Subject[]) : null,
+    }
   } catch {
     return null
+  }
+}
+
+/** Guarda los ramos del usuario en la nube (sincronización). Fire-and-forget. */
+export async function saveRamos(subjects: Subject[]): Promise<void> {
+  if (!ENDPOINT || !auth?.currentUser) return
+  try {
+    await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify({ ramos: subjects }),
+    })
+  } catch {
+    /* silencioso */
   }
 }
 
