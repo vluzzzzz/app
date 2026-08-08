@@ -7,6 +7,7 @@ export const AVATARS: Avatar[] = [
   { id: 'sleep', src: '/perfilsleep.png' },
   { id: 'happy', src: '/perfilhappy.png' },
   { id: 'angry', src: '/perfilangry.png' },
+  { id: 'focus', src: '/perfilfocus.png' },
 ]
 
 export function avatarSrc(id: string): string {
