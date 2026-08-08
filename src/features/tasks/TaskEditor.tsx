@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Task } from '../../lib/types'
 import { useAppStore } from '../../store/useAppStore'
-import { ACCENTS, gradient } from '../../lib/colors'
 import { GlassSheet } from '../../components/ui/GlassSheet'
 import { TrashIcon } from '../../components/ui/Icons'
 
@@ -20,20 +19,18 @@ export function TaskEditor({ open, onClose, task }: Props) {
 
   const [title, setTitle] = useState('')
   const [time, setTime] = useState('')
-  const [color, setColor] = useState<string | undefined>(undefined)
 
   // Cargar los valores de la tarea (o limpiar) cada vez que se abre.
   useEffect(() => {
     if (!open) return
     setTitle(task?.title ?? '')
     setTime(task?.time ?? '')
-    setColor(task?.color)
   }, [open, task])
 
   const save = () => {
     const t = title.trim()
     if (!t) return
-    const patch = { title: t, time: time || undefined, color }
+    const patch = { title: t, time: time || undefined }
     if (task) updateTask(task.id, patch)
     else addTask(patch)
     onClose()
@@ -68,32 +65,6 @@ export function TaskEditor({ open, onClose, task }: Props) {
             onChange={(e) => setTime(e.target.value)}
             className="glass w-full rounded-2xl px-4 py-3.5 text-[15px] text-ink focus:outline-none"
           />
-        </div>
-
-        {/* Color */}
-        <div>
-          <label className="mb-2 block px-1 text-sm font-medium text-ink/55">Color</label>
-          <div className="flex flex-wrap gap-2.5">
-            {/* Opción negra (sin color) */}
-            <button
-              onClick={() => setColor(undefined)}
-              aria-label="Negro"
-              className={`h-9 w-9 rounded-full bg-ink transition ${
-                color == null ? 'ring-2 ring-ink ring-offset-2 ring-offset-[rgb(var(--card))]' : ''
-              }`}
-            />
-            {ACCENTS.map((a) => (
-              <button
-                key={a.id}
-                onClick={() => setColor(a.id)}
-                aria-label={a.id}
-                className={`h-9 w-9 rounded-full transition ${
-                  color === a.id ? 'ring-2 ring-ink ring-offset-2 ring-offset-[rgb(var(--card))]' : ''
-                }`}
-                style={{ backgroundImage: gradient(a.id) }}
-              />
-            ))}
-          </div>
         </div>
 
         {/* Acciones */}

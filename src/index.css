@@ -6,7 +6,7 @@
 :root {
   color-scheme: light;
   --surface: 243 242 239; /* fondo app: off-white cálido */
-  --ink: 17 24 39; /* texto/acento neutro */
+  --ink: 24 24 27; /* texto/estructura: gris neutro casi negro (sin tinte azul) */
   --accent: 148 163 184; /* color de acento (gris por defecto) */
   --accent-light: 203 213 225; /* versión clara del acento */
 

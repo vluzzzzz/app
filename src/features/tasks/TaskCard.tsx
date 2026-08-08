@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion'
 import type { Task } from '../../lib/types'
 import { useAppStore } from '../../store/useAppStore'
-import { gradient } from '../../lib/colors'
 import { CheckIcon, DotsIcon } from '../../components/ui/Icons'
 
 /** "14:30" → "2:30pm". Devuelve null si no hay hora. */
@@ -19,10 +18,11 @@ export function formatTaskTime(t?: string): string | null {
 /** Tarjeta de una tarea: barra de color, título, estado, hora y menú (editar). */
 export function TaskCard({ task, onEdit }: { task: Task; onEdit: () => void }) {
   const toggleTask = useAppStore((s) => s.toggleTask)
+  const accent = useAppStore((s) => s.accent)
   const time = formatTaskTime(task.time)
-  const bar = task.color
-    ? { backgroundImage: gradient(task.color) }
-    : { background: 'rgb(var(--ink) / 0.85)' }
+  // Barra: negra por defecto (acento gris/negro) o el color elegido en Apariencia.
+  const neutral = accent === 'gray' || accent === 'black'
+  const bar = { background: neutral ? 'rgb(var(--ink))' : 'rgb(var(--accent))' }
 
   return (
     <motion.div layout className="glass relative flex items-stretch gap-3.5 rounded-3xl p-5">

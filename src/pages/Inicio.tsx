@@ -80,27 +80,25 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
         </div>
       </div>
 
-      {/* Tira de la semana */}
-      <div className="flex items-stretch justify-between gap-1 rounded-[26px] bg-ink/[0.04] p-2.5">
+      {/* Tira de la semana (tarjeta blanca, compacta; hoy = caja plomo) */}
+      <div className="glass flex items-stretch justify-between gap-1 rounded-[26px] p-2">
         {week.map((d, i) => {
           const isToday = d.toDateString() === now.toDateString()
           return (
             <div
               key={i}
-              className={`flex flex-1 flex-col items-center justify-center gap-1.5 rounded-2xl py-3 ${
-                isToday
-                  ? '-my-1.5 bg-[rgb(var(--card))] py-[18px] shadow-[0_8px_20px_-8px_rgba(0,0,0,0.3)]'
-                  : ''
+              className={`flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2.5 ${
+                isToday ? 'bg-ink/[0.07]' : ''
               }`}
             >
               <span
-                className={`text-[12px] font-medium ${isToday ? 'text-ink/60' : 'text-ink/35'}`}
+                className={`text-[12px] font-medium ${isToday ? 'text-ink/45' : 'text-ink/35'}`}
               >
                 {DIAS[i]}
               </span>
               <span
                 className={`tabular-nums ${
-                  isToday ? 'text-lg font-bold text-ink' : 'text-[17px] font-semibold text-ink/55'
+                  isToday ? 'text-[17px] font-bold text-ink' : 'text-[16px] font-semibold text-ink/45'
                 }`}
               >
                 {d.getDate()}
@@ -118,7 +116,7 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
             <DashedBox
               rx={26}
               onClick={goAddRamo}
-              className="flex w-full flex-col items-center justify-center gap-3 py-14"
+              className="flex w-full flex-col items-center justify-center gap-2.5 py-9"
             >
               <FileUploadIcon className="h-16 w-16 text-ink" />
               <span className="rounded-lg bg-ink/[0.06] px-3 py-1 text-[17px] font-semibold text-ink">
