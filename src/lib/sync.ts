@@ -22,12 +22,13 @@ export function startRamosSync() {
       state.accent !== prev.accent ||
       state.defaultScale !== prev.defaultScale ||
       state.lite !== prev.lite ||
-      state.chat !== prev.chat
+      state.chat !== prev.chat ||
+      state.tasks !== prev.tasks
     if (!changed) return
     clearTimeout(timer)
     timer = setTimeout(() => {
       const s = useAppStore.getState()
-      pushSync({ ramos: s.subjects, prefs: prefsOf(s), chat: s.chat })
+      pushSync({ ramos: s.subjects, prefs: prefsOf(s), chat: s.chat, tasks: s.tasks })
     }, 1500)
   })
 }

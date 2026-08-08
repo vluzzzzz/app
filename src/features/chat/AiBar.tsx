@@ -21,10 +21,7 @@ export function AiBar({ onOpen }: { onOpen: () => void }) {
         <span className="flex-1 text-[15px] font-medium text-ink/50">
           Pregúntale a Brody
         </span>
-        <span
-          className="flex h-9 w-9 items-center justify-center rounded-full text-surface"
-          style={{ background: 'rgb(var(--accent))' }}
-        >
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ink text-surface">
           <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
             <path d="m3.4 20.4 17.5-8.4a.8.8 0 0 0 0-1.5L3.4 2.1a.7.7 0 0 0-1 .8L4 10l11 2-11 2-1.6 7.1a.7.7 0 0 0 1 .8Z" />
           </svg>

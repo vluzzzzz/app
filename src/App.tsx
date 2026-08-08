@@ -20,7 +20,7 @@ import { useAppStore } from './store/useAppStore'
 
 export type Route =
   | { name: 'inicio' }
-  | { name: 'calculadora' }
+  | { name: 'calculadora'; add?: boolean }
   | { name: 'horario' }
   | { name: 'calendario' }
   | { name: 'settings' }
@@ -97,7 +97,9 @@ export default function App() {
             transition={{ duration: 0.22, ease: EASE.standard }}
           >
             {route.name === 'inicio' && <Inicio navigate={setRoute} />}
-            {route.name === 'calculadora' && <Calculadora navigate={setRoute} />}
+            {route.name === 'calculadora' && (
+              <Calculadora navigate={setRoute} startAdding={route.add} />
+            )}
             {route.name === 'chat' && <ChatPage navigate={setRoute} />}
             {route.name === 'horario' && <Horario />}
             {route.name === 'calendario' && <Calendario />}

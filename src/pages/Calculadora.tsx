@@ -7,9 +7,15 @@ import { AddSubjectWizard } from '../features/subjects/AddSubjectWizard'
 import { PlusIcon } from '../components/ui/Icons'
 import { EASE } from '../lib/motion'
 
-export function Calculadora({ navigate }: { navigate: (r: Route) => void }) {
+export function Calculadora({
+  navigate,
+  startAdding,
+}: {
+  navigate: (r: Route) => void
+  startAdding?: boolean
+}) {
   const subjects = useAppStore((s) => s.subjects)
-  const [adding, setAdding] = useState(false)
+  const [adding, setAdding] = useState(!!startAdding)
 
   return (
     <div className="h-full overflow-y-auto px-5 pb-28 pt-6">

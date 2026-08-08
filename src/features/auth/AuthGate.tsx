@@ -30,10 +30,16 @@ export function AuthGate({ children }: { children: ReactNode }) {
             st.hydrateProfile(result.profile)
             // Solo saltar el onboarding si el perfil es "real" (tiene nombre).
             if (result.profile.userName) st.setOnboarded(true)
-            // Adoptar de la nube lo que exista (ramos, preferencias, chat).
+            // Adoptar de la nube lo que exista (ramos, preferencias, chat, tareas).
             if (result.ramos) st.setSubjects(result.ramos)
             if (result.prefs) st.hydratePrefs(result.prefs)
             if (result.chat) st.setChat(result.chat)
+            if (result.tasks) st.setTasks(result.tasks)
+            // Cuenta nueva (nube sin tareas): sembrar 2 tareas de arranque (guía inicial).
+            else if (!st.tasks.length) {
+              st.addTask({ title: 'Agregar horario de clases', color: 'blue' })
+              st.addTask({ title: 'Organizar calendario académico', color: 'violet' })
+            }
             // Sembrar en la nube lo que aún NO exista allá (primer login en otro equipo).
             const cur = useAppStore.getState()
             const seed: Parameters<typeof pushSync>[0] = {}
@@ -46,6 +52,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                 lite: cur.lite,
               }
             if (!result.chat && cur.chat.length) seed.chat = cur.chat
+            if (!result.tasks && cur.tasks.length) seed.tasks = cur.tasks
             if (Object.keys(seed).length) pushSync(seed)
           }
         } finally {

@@ -51,3 +51,13 @@ export type Subject = {
 }
 
 export type Theme = 'light' | 'dark'
+
+export type Task = {
+  id: string
+  title: string
+  done: boolean
+  /** Hora opcional "HH:mm"; se muestra como "Hoy: 11:00am". */
+  time?: string
+  /** Id de la paleta ACCENTS para la barra lateral (si no hay, va negra/ink). */
+  color?: string
+}

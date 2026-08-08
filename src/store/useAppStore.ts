@@ -7,6 +7,7 @@ import {
   type GradeScale,
   type Subdivision,
   type Subject,
+  type Task,
   type Theme,
 } from '../lib/types'
 import type { ChatMessage } from '../ai/types'
@@ -40,6 +41,8 @@ type State = {
   nameMonth: string
   /** Historial del chat con la IA. */
   chat: ChatMessage[]
+  /** Tareas del usuario (se sincronizan con la nube). */
+  tasks: Task[]
 }
 
 /** Campos del perfil que se hidratan desde Supabase / se editan en Perfil. */
@@ -81,6 +84,16 @@ type Actions = {
   /** Reemplaza todo el historial del chat (para hidratar desde la nube). */
   setChat: (chat: ChatMessage[]) => void
   clearChat: () => void
+
+  /** --- Tareas --- */
+  /** Reemplaza todas las tareas (para hidratar desde la nube). */
+  setTasks: (tasks: Task[]) => void
+  /** Crea una tarea y devuelve su id. */
+  addTask: (input: { title: string; time?: string; color?: string }) => string
+  updateTask: (id: string, patch: Partial<Omit<Task, 'id'>>) => void
+  removeTask: (id: string) => void
+  /** Alterna pendiente/hecha. */
+  toggleTask: (id: string) => void
 
   /** Activa/desactiva % por nota; al activar inicializa pesos repartidos. */
   setWeightedEvals: (subjectId: string, on: boolean) => void
@@ -179,6 +192,7 @@ export const useAppStore = create<State & Actions>()(
       nameChanges: 0,
       nameMonth: '',
       chat: [],
+      tasks: [],
 
       setDefaultScale: (scale) => set({ defaultScale: scale }),
       setTheme: (theme) => set({ theme }),
@@ -204,6 +218,7 @@ export const useAppStore = create<State & Actions>()(
         set({
           subjects: [],
           chat: [],
+          tasks: [],
           userName: '',
           referral: '',
           country: '',
@@ -221,6 +236,24 @@ export const useAppStore = create<State & Actions>()(
       pushChat: (m) => set((st) => ({ chat: [...st.chat, m] })),
       setChat: (chat) => set({ chat }),
       clearChat: () => set({ chat: [] }),
+
+      setTasks: (tasks) => set({ tasks }),
+      addTask: ({ title, time, color }) => {
+        const id = makeId()
+        const task: Task = { id, title: title.trim() || 'Tarea', done: false, time, color }
+        set((st) => ({ tasks: [...st.tasks, task] }))
+        return id
+      },
+      updateTask: (id, patch) =>
+        set((st) => ({
+          tasks: st.tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+        })),
+      removeTask: (id) =>
+        set((st) => ({ tasks: st.tasks.filter((t) => t.id !== id) })),
+      toggleTask: (id) =>
+        set((st) => ({
+          tasks: st.tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
+        })),
 
       setWeightedEvals: (subjectId, on) =>
         set((st) => ({
