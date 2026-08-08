@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { useAppStore } from '../../store/useAppStore'
 import { ACCENT_THEMES } from '../../lib/accents'
 import { defaultEvalTree } from '../../lib/gradeTree'
+import posthog from '../../lib/posthog'
 import { NodeEditor } from './NodeEditor'
 import { CheckIcon, ChevronLeft, ChevronRight } from '../../components/ui/Icons'
 
@@ -76,6 +77,7 @@ export function AddSubjectWizard({
   function finish() {
     if (!createdId) return
     doneRef.current = true
+    posthog.capture('subject_created', { color })
     onDone(createdId)
   }
 

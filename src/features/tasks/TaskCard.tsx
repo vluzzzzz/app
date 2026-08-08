@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import type { Task } from '../../lib/types'
 import { useAppStore } from '../../store/useAppStore'
+import posthog from '../../lib/posthog'
 import { CheckIcon, DotsIcon } from '../../components/ui/Icons'
 
 /** "14:30" → "2:30pm". Devuelve null si no hay hora. */
@@ -28,7 +29,10 @@ export function TaskCard({ task, onEdit }: { task: Task; onEdit: () => void }) {
     <motion.div layout className="glass relative flex items-stretch gap-3.5 rounded-3xl p-5">
       {/* Barra de color (toca para completar) */}
       <button
-        onClick={() => toggleTask(task.id)}
+        onClick={() => {
+          toggleTask(task.id)
+          posthog.capture('task_completion_changed', { completed: !task.done })
+        }}
         aria-label={task.done ? 'Marcar pendiente' : 'Marcar hecha'}
         className="relative my-1 w-1.5 shrink-0 self-stretch rounded-full"
         style={bar}

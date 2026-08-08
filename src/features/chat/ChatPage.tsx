@@ -8,6 +8,7 @@ import { EASE } from '../../lib/motion'
 import { buildSystemPrompt } from '../../ai/prompt'
 import { aiConfigured, askAi } from '../../ai/client'
 import { applyActions } from '../../ai/apply'
+import posthog from '../../lib/posthog'
 import { ChevronLeft } from '../../components/ui/Icons'
 import { useKeyboardInset } from '../../lib/useKeyboardInset'
 
@@ -36,6 +37,7 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
     const text = (textArg ?? input).trim()
     if (!text || loading) return
     setInput('')
+    posthog.capture('ai_message_sent', { source: textArg ? 'suggestion' : 'composer' })
     pushChat({ id: makeId(), role: 'user', text })
     setLoading(true)
     try {
@@ -54,6 +56,7 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
       const res = await askAi(messages)
       const applied =
         res.actions && res.actions.length ? applyActions(res.actions) : []
+      posthog.capture('ai_response_received', { actions_applied: applied.length })
       pushChat({
         id: makeId(),
         role: 'assistant',
@@ -61,6 +64,7 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
         applied: applied.length ? applied : undefined,
       })
     } catch (e) {
+      posthog.capture('ai_response_failed')
       pushChat({
         id: makeId(),
         role: 'assistant',

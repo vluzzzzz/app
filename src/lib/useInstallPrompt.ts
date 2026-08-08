@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import posthog from './posthog'
 
 type BIPEvent = Event & {
   prompt: () => Promise<void>
@@ -50,6 +51,7 @@ export function useInstallPrompt() {
 
   async function promptInstall() {
     if (!deferred) return
+    posthog.capture('pwa_install_prompted')
     await deferred.prompt()
     await deferred.userChoice
     deferred = null

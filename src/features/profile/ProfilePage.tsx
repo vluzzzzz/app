@@ -10,6 +10,7 @@ import { CAREERS, normalizeSearch } from '../../lib/careers'
 import { flagUrl } from '../../lib/scales'
 import { currentGrade } from '../../lib/grades'
 import { formatGrade } from '../../lib/format'
+import posthog from '../../lib/posthog'
 import { GlassButton } from '../../components/ui/GlassButton'
 import { ChevronLeft } from '../../components/ui/Icons'
 
@@ -102,6 +103,7 @@ export function ProfilePage({ navigate }: { navigate: (r: Route) => void }) {
       hydrateProfile({ userName: name.trim(), country, ageRange, career, avatar, banner })
     }
     setSaving(false)
+    posthog.capture('profile_saved', { profile_sync_succeeded: Boolean(res.profile) })
     if (res.nameLimited) {
       setMsg('Ya cambiaste tu nombre 3 veces este mes')
     } else {

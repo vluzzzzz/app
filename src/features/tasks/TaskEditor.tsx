@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Task } from '../../lib/types'
 import { useAppStore } from '../../store/useAppStore'
+import posthog from '../../lib/posthog'
 import { GlassSheet } from '../../components/ui/GlassSheet'
 import { TrashIcon } from '../../components/ui/Icons'
 
@@ -31,13 +32,21 @@ export function TaskEditor({ open, onClose, task }: Props) {
     const t = title.trim()
     if (!t) return
     const patch = { title: t, time: time || undefined }
-    if (task) updateTask(task.id, patch)
-    else addTask(patch)
+    if (task) {
+      updateTask(task.id, patch)
+      posthog.capture('task_updated', { has_time: Boolean(patch.time) })
+    } else {
+      addTask(patch)
+      posthog.capture('task_created', { has_time: Boolean(patch.time) })
+    }
     onClose()
   }
 
   const del = () => {
-    if (task) removeTask(task.id)
+    if (task) {
+      removeTask(task.id)
+      posthog.capture('task_deleted')
+    }
     onClose()
   }
 
