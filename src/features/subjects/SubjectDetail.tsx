@@ -4,6 +4,7 @@ import type { Route } from '../../App'
 import { useAppStore } from '../../store/useAppStore'
 import { accentRgb } from '../../lib/accents'
 import { formatGrade } from '../../lib/format'
+import posthog from '../../lib/posthog'
 import {
   currentGrade,
   gradedEvaluationCount,
@@ -44,6 +45,7 @@ export function SubjectDetail({
 
   function handleDelete() {
     if (confirm(`¿Eliminar "${subject!.name}"? Esta acción no se puede deshacer.`)) {
+      posthog.capture('subject_deleted')
       removeSubject(id)
       navigate({ name: 'calculadora' })
     }

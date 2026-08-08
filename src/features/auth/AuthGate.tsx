@@ -1,9 +1,10 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { onAuthStateChanged, type User } from 'firebase/auth'
 import { auth, firebaseReady } from '../../lib/firebase'
 import { useAppStore } from '../../store/useAppStore'
 import { fetchProfile, pushSync } from '../../lib/profile'
 import { startRamosSync } from '../../lib/sync'
+import posthog from '../../lib/posthog'
 import { LoginScreen } from './LoginScreen'
 
 /**
@@ -15,11 +16,23 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(firebaseReady)
   const [hydrating, setHydrating] = useState(false)
+  const identifiedUserId = useRef<string | null>(null)
 
   useEffect(() => {
     if (!auth) return
     const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u)
+
+      if (u && identifiedUserId.current !== u.uid) {
+        if (identifiedUserId.current) posthog.reset()
+
+        posthog.identify(u.uid, u.email ? { email: u.email } : undefined)
+        identifiedUserId.current = u.uid
+      } else if (!u && identifiedUserId.current) {
+        posthog.reset()
+        identifiedUserId.current = null
+      }
+
       if (u) {
         // Trae el perfil de la nube; si existe, hidrata y marca onboarding hecho.
         setHydrating(true)
