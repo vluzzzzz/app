@@ -5,7 +5,7 @@ import type { Task } from '../lib/types'
 import { useAppStore } from '../store/useAppStore'
 import { avatarSrc } from '../lib/avatars'
 import { AiBar } from '../features/chat/AiBar'
-import { SubjectCard } from '../features/subjects/SubjectCard'
+import { SubjectHomeCard } from '../features/subjects/SubjectHomeCard'
 import { TaskCard } from '../features/tasks/TaskCard'
 import { TaskEditor } from '../features/tasks/TaskEditor'
 import { DashedBox } from '../components/ui/DashedBox'
@@ -126,21 +126,16 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
             </DashedBox>
           </div>
         ) : (
-          <div className="space-y-3">
+          // Carrusel horizontal: un ramo por vista, deslizar para ver el resto.
+          <div className="-mx-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {subjects.map((s) => (
-              <SubjectCard
-                key={s.id}
-                subject={s}
-                onOpen={() => navigate({ name: 'subject', id: s.id })}
-              />
+              <div key={s.id} className="min-w-[86%] snap-center">
+                <SubjectHomeCard
+                  subject={s}
+                  onOpen={() => navigate({ name: 'subject', id: s.id })}
+                />
+              </div>
             ))}
-            <DashedBox
-              rx={22}
-              onClick={goAddRamo}
-              className="flex w-full items-center justify-center gap-2 py-4 text-[15px] font-semibold text-ink/55"
-            >
-              <PlusIcon className="h-5 w-5" /> Agregar Ramo
-            </DashedBox>
           </div>
         )}
       </section>

@@ -14,7 +14,6 @@ import {
 import { NodeEditor } from './NodeEditor'
 import { CalcResultsSheet } from './CalcResultsSheet'
 import { GlassButton } from '../../components/ui/GlassButton'
-import { StatusPill } from '../../components/ui/StatusPill'
 import { ChevronLeft, TrashIcon } from '../../components/ui/Icons'
 
 export function SubjectDetail({
@@ -40,6 +39,8 @@ export function SubjectDetail({
   const graded = gradedEvaluationCount(subject)
   const pct = total === 0 ? 0 : Math.round((graded / total) * 100)
   const invalidWeights = !weightsAreValid(subject)
+  const color = `rgb(${accentRgb(subject.color ?? 'gray')})`
+  const promedio = current == null ? '0,0' : formatGrade(current)
 
   function handleDelete() {
     if (confirm(`¿Eliminar "${subject!.name}"? Esta acción no se puede deshacer.`)) {
@@ -58,7 +59,11 @@ export function SubjectDetail({
       case 'IMPOSIBLE':
         return { label: 'Necesitas', value: 'Ya no alcanza 😕', tone: 'red' as const }
       default:
-        return { label: 'Necesitas', value: 'Agrega notas', tone: 'gray' as const }
+        return {
+          label: 'Necesitas',
+          value: `${formatGrade(subject.scale.pass)} para aprobar`,
+          tone: 'gray' as const,
+        }
     }
   })()
   const toneClass = {
@@ -97,17 +102,13 @@ export function SubjectDetail({
         <h1 className="truncate text-[26px] font-bold text-ink">{subject.name}</h1>
       </div>
 
-      {/* Resumen: promedio + estado + barra + necesitas */}
-      <div className="glass mb-5 rounded-4xl p-5">
-        <div className="flex items-end justify-between">
+      {/* Resumen: promedio + necesitas + barra (línea de color a la izquierda) */}
+      <div className="glass relative mb-5 overflow-hidden rounded-4xl p-5 pl-6">
+        <span className="absolute inset-y-0 left-0 w-1.5" style={{ background: color }} />
+        <div className="flex items-start justify-between">
           <div>
             <p className="text-sm text-ink/50">Promedio actual</p>
-            <div className="flex items-center gap-2">
-              <span className="text-4xl font-black tabular-nums text-ink">
-                {formatGrade(current)}
-              </span>
-              <StatusPill status={res.status} />
-            </div>
+            <span className="text-4xl font-black tabular-nums text-ink">{promedio}</span>
           </div>
           <div className="text-right">
             <p className="text-sm text-ink/50">{needBox.label}</p>
@@ -123,7 +124,8 @@ export function SubjectDetail({
           </div>
           <div className="h-2 w-full overflow-hidden rounded-full bg-ink/10">
             <motion.div
-              className="h-full rounded-full bg-ink"
+              className="h-full rounded-full"
+              style={{ background: color }}
               initial={false}
               animate={{ width: `${pct}%` }}
               transition={{ type: 'spring', stiffness: 220, damping: 30 }}

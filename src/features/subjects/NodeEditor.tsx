@@ -7,26 +7,7 @@ import { GradeInput } from '../../components/ui/GradeInput'
 import { Stepper } from '../../components/ui/Stepper'
 import { ChevronRight, FolderIcon, PlusIcon, TrashIcon } from '../../components/ui/Icons'
 
-/** Colores de identidad por sección (se ciclan). */
-const PALETTE = ['violet', 'blue', 'cyan', 'green', 'orange', 'pink', 'red', 'indigo']
-const sectionColor = (i: number) => `rgb(${accentRgb(PALETTE[i % PALETTE.length])})`
-
-const weightSum = (nodes: GradeNode[]) => nodes.reduce((s, n) => s + (n.weight || 0), 0)
-const areLeaves = (nodes: GradeNode[]) =>
-  nodes.length > 0 && nodes.every((c) => c.children === undefined)
-
-function SumTag({ nodes }: { nodes: GradeNode[] }) {
-  if (nodes.length === 0) return null
-  const sum = Math.round(weightSum(nodes) * 10) / 10
-  const ok = Math.abs(sum - 100) < 0.5
-  return (
-    <span
-      className={`text-xs font-semibold ${ok ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'}`}
-    >
-      Suma: {sum}%
-    </span>
-  )
-}
+const isFolder = (n: GradeNode) => n.children !== undefined
 
 /** % editable, estilo texto limpio (sin caja). */
 function WeightPill({ value, onChange }: { value: number; onChange: (n: number) => void }) {
@@ -128,20 +109,29 @@ function NoteRow({
   )
 }
 
-/** Controles para agregar dentro de una carpeta (nota / subgrupo / stepper). */
-function FolderControls({
-  subjectId,
-  node,
-}: {
-  subjectId: string
-  node: GradeNode
-}) {
+/** Botones de agregar dentro de una carpeta. */
+function FolderControls({ subjectId, node }: { subjectId: string; node: GradeNode }) {
   const addNode = useAppStore((s) => s.addNode)
   const setChildCount = useAppStore((s) => s.setChildCount)
   const children = node.children ?? []
+  const hasSub = children.some(isFolder)
+
+  // Carpeta con subgrupos → solo "Agregar subgrupo" (grande).
+  if (hasSub) {
+    return (
+      <button
+        onClick={() => addNode(subjectId, node.id, { name: 'Subgrupo', folder: true })}
+        className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-ink/5 py-2.5 text-sm font-semibold text-ink/60 active:bg-ink/10"
+      >
+        <PlusIcon className="h-4 w-4" /> Agregar subgrupo
+      </button>
+    )
+  }
+
+  // Carpeta con notas → cantidad + agregar evaluación.
   return (
     <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
-      {areLeaves(children) && (
+      {children.length > 0 && (
         <div className="flex items-center gap-2">
           <span className="text-xs text-ink/45">Notas</span>
           <Stepper value={children.length} onChange={(n) => setChildCount(subjectId, node.id, n)} />
@@ -149,7 +139,6 @@ function FolderControls({
       )}
       <AddLink label="Agregar evaluación" onClick={() => addNode(subjectId, node.id, { name: 'Nota', folder: false })} />
       <AddLink label="Subgrupo" onClick={() => addNode(subjectId, node.id, { name: 'Subgrupo', folder: true })} />
-      <SumTag nodes={children} />
     </div>
   )
 }
@@ -200,9 +189,7 @@ function Subgroup({
           >
             <div className="space-y-0.5 pt-1">
               {children.map((c) =>
-                c.children === undefined ? (
-                  <NoteRow key={c.id} subjectId={subjectId} node={c} scale={scale} color={color} />
-                ) : (
+                isFolder(c) ? (
                   <Subgroup
                     key={c.id}
                     subjectId={subjectId}
@@ -212,6 +199,8 @@ function Subgroup({
                     expanded={expanded}
                     toggle={toggle}
                   />
+                ) : (
+                  <NoteRow key={c.id} subjectId={subjectId} node={c} scale={scale} color={color} />
                 ),
               )}
             </div>
@@ -226,7 +215,7 @@ function Subgroup({
   )
 }
 
-/** Sección tope: tarjeta con ícono de carpeta de color. Siempre expandida. */
+/** Sección tope: tarjeta con ícono de carpeta del color del ramo. Siempre expandida. */
 function Section({
   subjectId,
   node,
@@ -259,9 +248,7 @@ function Section({
 
       <div className="space-y-0.5">
         {children.map((c) =>
-          c.children === undefined ? (
-            <NoteRow key={c.id} subjectId={subjectId} node={c} scale={scale} color={color} />
-          ) : (
+          isFolder(c) ? (
             <Subgroup
               key={c.id}
               subjectId={subjectId}
@@ -271,6 +258,8 @@ function Section({
               expanded={expanded}
               toggle={toggle}
             />
+          ) : (
+            <NoteRow key={c.id} subjectId={subjectId} node={c} scale={scale} color={color} />
           ),
         )}
       </div>
@@ -280,7 +269,7 @@ function Section({
   )
 }
 
-/** Editor del árbol de evaluación (limpio, colapsable, con color por sección). */
+/** Editor del árbol de evaluación (limpio, colapsable, color del ramo). */
 export function NodeEditor({ subjectId }: { subjectId: string }) {
   const subject = useAppStore((s) => s.subjects.find((x) => x.id === subjectId))
   const addNode = useAppStore((s) => s.addNode)
@@ -288,16 +277,18 @@ export function NodeEditor({ subjectId }: { subjectId: string }) {
   const toggle = (id: string) =>
     setExpanded((prev) => {
       const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
       return next
     })
 
   if (!subject) return null
+  const color = `rgb(${accentRgb(subject.color ?? 'gray')})`
 
   return (
     <div className="space-y-3">
       <AnimatePresence initial={false}>
-        {subject.nodes.map((n, i) => (
+        {subject.nodes.map((n) => (
           <motion.div
             key={n.id}
             layout
@@ -309,7 +300,7 @@ export function NodeEditor({ subjectId }: { subjectId: string }) {
               subjectId={subjectId}
               node={n}
               scale={subject.scale}
-              color={sectionColor(i)}
+              color={color}
               expanded={expanded}
               toggle={toggle}
             />
@@ -317,9 +308,8 @@ export function NodeEditor({ subjectId }: { subjectId: string }) {
         ))}
       </AnimatePresence>
 
-      <div className="flex items-center justify-between px-1">
+      <div className="px-1">
         <AddLink label="Agregar sección" onClick={() => addNode(subjectId, null, { name: 'Sección', folder: true })} />
-        <SumTag nodes={subject.nodes} />
       </div>
     </div>
   )
