@@ -28,12 +28,12 @@ export function SubjectCard({
   const promedio = current == null ? '0,0' : formatGrade(current)
   const need =
     res.status === 'ALCANZABLE'
-      ? formatGrade(res.needed)
+      ? { v: formatGrade(res.needed), c: 'text-ink', word: false }
       : res.status === 'SIN_DATOS'
-        ? formatGrade(subject.scale.pass)
+        ? { v: formatGrade(subject.scale.pass), c: 'text-ink', word: false }
         : res.status === 'ASEGURADO'
-          ? '¡Listo!'
-          : '—'
+          ? { v: '¡Listo!', c: 'text-emerald-600 dark:text-emerald-300', word: true }
+          : { v: 'Remedial', c: 'text-rose-500 dark:text-rose-300', word: true }
 
   return (
     <motion.button
@@ -55,8 +55,12 @@ export function SubjectCard({
         </div>
         <div className="text-right">
           <p className="text-sm text-ink/50">Necesitas</p>
-          <p className="text-3xl font-black tabular-nums text-ink">{need}</p>
-          {res.status !== 'ASEGURADO' && <p className="text-xs text-ink/45">para aprobar</p>}
+          <p className={`font-black tabular-nums ${need.word ? 'text-2xl' : 'text-3xl'} ${need.c}`}>
+            {need.v}
+          </p>
+          {res.status === 'ALCANZABLE' || res.status === 'SIN_DATOS' ? (
+            <p className="text-xs text-ink/45">para aprobar</p>
+          ) : null}
         </div>
       </div>
 

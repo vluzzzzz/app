@@ -57,7 +57,7 @@ export function SubjectDetail({
       case 'ASEGURADO':
         return { label: 'Necesitas', value: '¡Ya aprobaste!', tone: 'green' as const }
       case 'IMPOSIBLE':
-        return { label: 'Necesitas', value: 'Ya no alcanza', tone: 'red' as const }
+        return { label: 'Necesitas', value: 'Remedial', tone: 'red' as const }
       default:
         return {
           label: 'Necesitas',
