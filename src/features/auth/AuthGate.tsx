@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { onAuthStateChanged, type User } from 'firebase/auth'
 import { auth, firebaseReady } from '../../lib/firebase'
 import { useAppStore } from '../../store/useAppStore'
-import { fetchProfile, saveRamos } from '../../lib/profile'
+import { fetchProfile, pushSync } from '../../lib/profile'
 import { startRamosSync } from '../../lib/sync'
 import { LoginScreen } from './LoginScreen'
 
@@ -30,9 +30,23 @@ export function AuthGate({ children }: { children: ReactNode }) {
             st.hydrateProfile(result.profile)
             // Solo saltar el onboarding si el perfil es "real" (tiene nombre).
             if (result.profile.userName) st.setOnboarded(true)
-            // Ramos: si la nube tiene → adoptarlos; si no → sembrar con los locales.
+            // Adoptar de la nube lo que exista (ramos, preferencias, chat).
             if (result.ramos) st.setSubjects(result.ramos)
-            else if (st.subjects.length) saveRamos(st.subjects)
+            if (result.prefs) st.hydratePrefs(result.prefs)
+            if (result.chat) st.setChat(result.chat)
+            // Sembrar en la nube lo que aún NO exista allá (primer login en otro equipo).
+            const cur = useAppStore.getState()
+            const seed: Parameters<typeof pushSync>[0] = {}
+            if (!result.ramos && cur.subjects.length) seed.ramos = cur.subjects
+            if (!result.prefs)
+              seed.prefs = {
+                theme: cur.theme,
+                accent: cur.accent,
+                defaultScale: cur.defaultScale,
+                lite: cur.lite,
+              }
+            if (!result.chat && cur.chat.length) seed.chat = cur.chat
+            if (Object.keys(seed).length) pushSync(seed)
           }
         } finally {
           setHydrating(false)

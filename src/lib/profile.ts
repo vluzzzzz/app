@@ -1,6 +1,7 @@
 import { auth } from './firebase'
 import type { ProfileFields } from '../store/useAppStore'
-import type { Subject } from './types'
+import type { GradeScale, Subject, Theme } from './types'
+import type { ChatMessage } from '../ai/types'
 
 // El endpoint de perfil vive junto al de la IA (misma base de Edge Functions),
 // solo cambia el último segmento: .../functions/v1/chat → .../functions/v1/perfil
@@ -17,6 +18,14 @@ export type ProfilePayload = {
   carrera?: string
   avatar?: string
   banner?: string
+}
+
+/** Preferencias del usuario que se sincronizan (tema, acento, escala, lite). */
+export type PrefsPayload = {
+  theme?: Theme
+  accent?: string
+  defaultScale?: GradeScale
+  lite?: boolean
 }
 
 async function authHeaders(): Promise<Record<string, string>> {
@@ -50,10 +59,12 @@ export async function saveProfile(
   }
 }
 
-/** Trae el perfil (campos + ramos) del usuario desde Supabase para hidratar. */
+/** Trae TODO el estado del usuario (perfil + ramos + preferencias + chat) para hidratar. */
 export async function fetchProfile(): Promise<{
   profile: Partial<ProfileFields>
   ramos: Subject[] | null
+  prefs: PrefsPayload | null
+  chat: ChatMessage[] | null
 } | null> {
   if (!ENDPOINT || !auth?.currentUser) return null
   try {
@@ -65,20 +76,30 @@ export async function fetchProfile(): Promise<{
     return {
       profile: dbToProfile(row),
       ramos: Array.isArray(row.ramos) ? (row.ramos as Subject[]) : null,
+      prefs: row.prefs && typeof row.prefs === 'object' ? (row.prefs as PrefsPayload) : null,
+      chat: Array.isArray(row.chat) ? (row.chat as ChatMessage[]) : null,
     }
   } catch {
     return null
   }
 }
 
-/** Guarda los ramos del usuario en la nube (sincronización). Fire-and-forget. */
-export async function saveRamos(subjects: Subject[]): Promise<void> {
+/**
+ * Sube a la nube cualquier parte del estado sincronizable (ramos, preferencias, chat).
+ * Solo manda los campos presentes; el resto se conserva (merge parcial en el servidor).
+ * Fire-and-forget.
+ */
+export async function pushSync(payload: {
+  ramos?: Subject[]
+  prefs?: PrefsPayload
+  chat?: ChatMessage[]
+}): Promise<void> {
   if (!ENDPOINT || !auth?.currentUser) return
   try {
     await fetch(ENDPOINT, {
       method: 'POST',
       headers: await authHeaders(),
-      body: JSON.stringify({ ramos: subjects }),
+      body: JSON.stringify(payload),
     })
   } catch {
     /* silencioso */

@@ -149,6 +149,8 @@ Deno.serve(async (req: Request) => {
       avatar: keep('avatar', 40),
       banner: keep('banner', 40),
       ramos: body.ramos !== undefined ? body.ramos : existing?.ramos ?? null,
+      prefs: body.prefs !== undefined ? body.prefs : existing?.prefs ?? null,
+      chat: body.chat !== undefined ? body.chat : existing?.chat ?? null,
       name_changes: nameChanges,
       name_month: nameMonth,
       actualizado: new Date().toISOString(),

@@ -68,9 +68,18 @@ type Actions = {
   setReferral: (r: string) => void
   /** Aplica un conjunto de campos de perfil (hidratar desde nube / editar). */
   hydrateProfile: (p: Partial<ProfileFields>) => void
+  /** Aplica preferencias sincronizadas desde la nube (tema, acento, escala, lite). */
+  hydratePrefs: (p: {
+    theme?: Theme
+    accent?: string
+    defaultScale?: GradeScale
+    lite?: boolean
+  }) => void
   /** Borra todos los datos del usuario y vuelve al onboarding (empezar de 0). */
   resetAll: () => void
   pushChat: (m: ChatMessage) => void
+  /** Reemplaza todo el historial del chat (para hidratar desde la nube). */
+  setChat: (chat: ChatMessage[]) => void
   clearChat: () => void
 
   /** Activa/desactiva % por nota; al activar inicializa pesos repartidos. */
@@ -183,6 +192,14 @@ export const useAppStore = create<State & Actions>()(
       setUserName: (userName) => set({ userName }),
       setReferral: (referral) => set({ referral }),
       hydrateProfile: (p) => set(p),
+      hydratePrefs: (p) => {
+        const next: Partial<State> = {}
+        if (p.theme != null) next.theme = p.theme
+        if (p.accent != null) next.accent = p.accent
+        if (p.defaultScale != null) next.defaultScale = p.defaultScale
+        if (p.lite != null) next.lite = p.lite
+        set(next)
+      },
       resetAll: () =>
         set({
           subjects: [],
@@ -202,6 +219,7 @@ export const useAppStore = create<State & Actions>()(
           theme: 'light',
         }),
       pushChat: (m) => set((st) => ({ chat: [...st.chat, m] })),
+      setChat: (chat) => set({ chat }),
       clearChat: () => set({ chat: [] }),
 
       setWeightedEvals: (subjectId, on) =>
