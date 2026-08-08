@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AnimatePresence, animate, motion, useMotionValue } from 'framer-motion'
+import { AnimatePresence, animate, motion, useMotionValue, useTransform } from 'framer-motion'
 import { useAppStore } from '../../store/useAppStore'
 import { accentRgb } from '../../lib/accents'
 import type { GradeNode, GradeScale } from '../../lib/types'
@@ -95,7 +95,9 @@ function NoteRow({
   const updateNode = useAppStore((s) => s.updateNode)
   const removeNode = useAppStore((s) => s.removeNode)
   const x = useMotionValue(0)
-  const [armed, setArmed] = useState(false)
+  // La fila entera se va poniendo roja a medida que deslizas (0 → 1).
+  const red = useTransform(x, [-100, 0], [1, 0])
+  const contentOpacity = useTransform(x, [-100, -40], [0, 1])
   const THRESHOLD = 80
 
   return (
@@ -104,40 +106,44 @@ function NoteRow({
       exit={{ opacity: 0, height: 0, marginTop: 0 }}
       className="relative overflow-hidden rounded-xl"
     >
-      {/* Fondo rojo que se revela al deslizar (más intenso al pasar el umbral). */}
-      <div
-        className="absolute inset-0 flex items-center justify-end rounded-xl pr-4 transition-colors"
-        style={{ background: armed ? 'rgb(244 63 94)' : 'rgba(244,63,94,0.55)' }}
-      >
-        <TrashIcon className="h-5 w-5 text-white" />
-      </div>
-
       <motion.div
         drag="x"
         dragDirectionLock
         dragConstraints={{ left: -110, right: 0 }}
         dragElastic={0.05}
         style={{ x }}
-        onDrag={(_, info) => setArmed(info.offset.x < -THRESHOLD)}
         onDragEnd={(_, info) => {
           if (info.offset.x < -THRESHOLD) {
-            animate(x, -400, { duration: 0.18 })
+            animate(x, -110, { duration: 0.12 })
             removeNode(subjectId, node.id)
           } else {
-            setArmed(false)
             animate(x, 0, { type: 'spring', stiffness: 500, damping: 40 })
           }
         }}
-        className="relative flex items-center gap-2.5 rounded-xl bg-[rgb(var(--card))] py-2 pl-1"
+        className="relative rounded-xl bg-[rgb(var(--card))]"
       >
-        <Dot small color={color} />
-        <NameInput value={node.name} onChange={(name) => updateNode(subjectId, node.id, { name })} />
-        <WeightPill value={node.weight} onChange={(weight) => updateNode(subjectId, node.id, { weight })} />
-        <GradeInput
-          value={node.grade ?? null}
-          scale={scale}
-          onChange={(grade) => updateNode(subjectId, node.id, { grade })}
-        />
+        {/* Contenido (se desvanece cuando la fila se pone roja). */}
+        <motion.div
+          style={{ opacity: contentOpacity }}
+          className="flex items-center gap-2.5 py-2 pl-1"
+        >
+          <Dot small color={color} />
+          <NameInput value={node.name} onChange={(name) => updateNode(subjectId, node.id, { name })} />
+          <WeightPill value={node.weight} onChange={(weight) => updateNode(subjectId, node.id, { weight })} />
+          <GradeInput
+            value={node.grade ?? null}
+            scale={scale}
+            onChange={(grade) => updateNode(subjectId, node.id, { grade })}
+          />
+        </motion.div>
+
+        {/* Capa roja que cubre TODA la fila al deslizar. */}
+        <motion.div
+          style={{ opacity: red }}
+          className="pointer-events-none absolute inset-0 flex items-center justify-end rounded-xl bg-rose-500 pr-4"
+        >
+          <TrashIcon className="h-5 w-5 text-white" />
+        </motion.div>
       </motion.div>
     </motion.div>
   )
