@@ -39,7 +39,7 @@ export function SubjectCard({
     <motion.button
       whileTap={{ scale: 0.985 }}
       onClick={onOpen}
-      className="glass relative w-full overflow-hidden rounded-4xl p-5 pl-6 text-left"
+      className="glass relative w-full overflow-hidden rounded-2xl p-5 pl-6 text-left"
     >
       <span className="absolute inset-y-0 left-0 w-1.5" style={{ background: color }} />
 

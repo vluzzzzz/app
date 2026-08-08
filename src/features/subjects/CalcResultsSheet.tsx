@@ -245,7 +245,7 @@ export function CalcResultsSheet({
                           : 'text-rose-500 dark:text-rose-300'
                       }`}
                     >
-                      {passes ? '✅ Apruebas' : '❌ No apruebas'}
+                      {passes ? 'Apruebas' : 'No apruebas'}
                     </p>
                   </div>
                 </ResultCard>

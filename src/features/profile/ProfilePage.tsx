@@ -103,7 +103,7 @@ export function ProfilePage({ navigate }: { navigate: (r: Route) => void }) {
     }
     setSaving(false)
     if (res.nameLimited) {
-      setMsg('Ya cambiaste tu nombre 3 veces este mes 😅')
+      setMsg('Ya cambiaste tu nombre 3 veces este mes')
     } else {
       setEditing(false)
     }

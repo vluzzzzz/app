@@ -4,7 +4,7 @@ import type { Route } from '../App'
 import { useAppStore } from '../store/useAppStore'
 import { SubjectCard } from '../features/subjects/SubjectCard'
 import { AddSubjectWizard } from '../features/subjects/AddSubjectWizard'
-import { PlusIcon } from '../components/ui/Icons'
+import { CalculatorIcon, PlusIcon } from '../components/ui/Icons'
 import { EASE } from '../lib/motion'
 
 export function Calculadora({
@@ -79,7 +79,9 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
       animate={{ opacity: 1, y: 0 }}
       className="glass glass-highlight mt-10 rounded-4xl p-8 text-center"
     >
-      <div className="mb-4 text-5xl">🎓</div>
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-ink/5 text-ink">
+        <CalculatorIcon className="h-7 w-7" />
+      </div>
       <h2 className="mb-1 text-xl font-semibold text-ink">
         Aún no tienes asignaturas
       </h2>

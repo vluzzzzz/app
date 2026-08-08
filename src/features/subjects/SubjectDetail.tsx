@@ -55,9 +55,9 @@ export function SubjectDetail({
       case 'ALCANZABLE':
         return { label: 'Necesitas', value: formatGrade(res.needed), tone: 'amber' as const }
       case 'ASEGURADO':
-        return { label: 'Necesitas', value: '¡Ya aprobaste! 🎉', tone: 'green' as const }
+        return { label: 'Necesitas', value: '¡Ya aprobaste!', tone: 'green' as const }
       case 'IMPOSIBLE':
-        return { label: 'Necesitas', value: 'Ya no alcanza 😕', tone: 'red' as const }
+        return { label: 'Necesitas', value: 'Ya no alcanza', tone: 'red' as const }
       default:
         return {
           label: 'Necesitas',
@@ -103,7 +103,7 @@ export function SubjectDetail({
       </div>
 
       {/* Resumen: promedio + necesitas + barra (línea de color a la izquierda) */}
-      <div className="glass relative mb-5 overflow-hidden rounded-4xl p-5 pl-6">
+      <div className="glass relative mb-5 overflow-hidden rounded-2xl p-5 pl-6">
         <span className="absolute inset-y-0 left-0 w-1.5" style={{ background: color }} />
         <div className="flex items-start justify-between">
           <div>
@@ -147,7 +147,7 @@ export function SubjectDetail({
       {/* Botón Calcular (fijo abajo) */}
       <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md px-5 pb-6 pt-3">
         <GlassButton variant="primary" full onClick={() => setCalcOpen(true)}>
-          Calcular 🧮
+          Calcular
         </GlassButton>
       </div>
 

@@ -4,7 +4,7 @@ import { useAppStore } from '../../store/useAppStore'
 import { ACCENT_THEMES } from '../../lib/accents'
 import { defaultEvalTree } from '../../lib/gradeTree'
 import { NodeEditor } from './NodeEditor'
-import { ChevronLeft, ChevronRight } from '../../components/ui/Icons'
+import { CheckIcon, ChevronLeft, ChevronRight } from '../../components/ui/Icons'
 
 /** Botón negro plano y limpio (sin sombra ni brillo). */
 function FlatButton({
@@ -159,7 +159,9 @@ export function AddSubjectWizard({
 
           {/* Crear ramo (en el flujo, sobre la nav) */}
           <div className="pt-2">
-            <FlatButton onClick={finish}>Crear ramo ✓</FlatButton>
+            <FlatButton onClick={finish}>
+              <CheckIcon className="h-5 w-5" /> Crear ramo
+            </FlatButton>
           </div>
         </div>
       )}

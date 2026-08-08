@@ -21,9 +21,9 @@ function WeightPill({ value, onChange }: { value: number; onChange: (n: number) 
           const v = e.target.value.replace(',', '.')
           if (/^[0-9]*\.?[0-9]*$/.test(v)) onChange(v === '' ? 0 : Number(v))
         }}
-        className="w-8 rounded-md bg-transparent text-right text-sm font-semibold tabular-nums text-ink/60 outline-none focus:bg-ink/5"
+        className="w-6 rounded-md bg-transparent text-right text-xs font-semibold tabular-nums text-ink/55 outline-none focus:bg-ink/5"
       />
-      <span className="text-sm text-ink/40">%</span>
+      <span className="text-xs text-ink/35">%</span>
     </span>
   )
 }
@@ -93,7 +93,6 @@ function NoteRow({
   color: string
 }) {
   const updateNode = useAppStore((s) => s.updateNode)
-  const removeNode = useAppStore((s) => s.removeNode)
   return (
     <div className="flex items-center gap-2.5 py-1">
       <Dot small color={color} />
@@ -104,20 +103,32 @@ function NoteRow({
         scale={scale}
         onChange={(grade) => updateNode(subjectId, node.id, { grade })}
       />
-      <TrashBtn onClick={() => removeNode(subjectId, node.id)} />
     </div>
   )
 }
 
-/** Botones de agregar dentro de una carpeta. */
-function FolderControls({ subjectId, node }: { subjectId: string; node: GradeNode }) {
+/**
+ * Controles de una carpeta:
+ * - Sección o carpeta con subgrupos → botón grande "Agregar subgrupo".
+ * - Subgrupo hoja (contiene notas) → SOLO el control de cantidad (− N +); al restar
+ *   se elimina la última nota, así que no hacen falta trash ni "agregar evaluación".
+ */
+function FolderControls({
+  subjectId,
+  node,
+  depth,
+}: {
+  subjectId: string
+  node: GradeNode
+  depth: number
+}) {
   const addNode = useAppStore((s) => s.addNode)
   const setChildCount = useAppStore((s) => s.setChildCount)
   const children = node.children ?? []
   const hasSub = children.some(isFolder)
+  const showSubgroup = hasSub || (children.length === 0 && depth === 0)
 
-  // Carpeta con subgrupos → solo "Agregar subgrupo" (grande).
-  if (hasSub) {
+  if (showSubgroup) {
     return (
       <button
         onClick={() => addNode(subjectId, node.id, { name: 'Subgrupo', folder: true })}
@@ -128,17 +139,10 @@ function FolderControls({ subjectId, node }: { subjectId: string; node: GradeNod
     )
   }
 
-  // Carpeta con notas → cantidad + agregar evaluación.
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
-      {children.length > 0 && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-ink/45">Notas</span>
-          <Stepper value={children.length} onChange={(n) => setChildCount(subjectId, node.id, n)} />
-        </div>
-      )}
-      <AddLink label="Agregar evaluación" onClick={() => addNode(subjectId, node.id, { name: 'Nota', folder: false })} />
-      <AddLink label="Subgrupo" onClick={() => addNode(subjectId, node.id, { name: 'Subgrupo', folder: true })} />
+    <div className="mt-2 flex items-center gap-2">
+      <span className="text-xs text-ink/45">Notas</span>
+      <Stepper value={children.length} onChange={(n) => setChildCount(subjectId, node.id, n)} />
     </div>
   )
 }
@@ -149,6 +153,7 @@ function Subgroup({
   node,
   scale,
   color,
+  depth,
   expanded,
   toggle,
 }: {
@@ -156,6 +161,7 @@ function Subgroup({
   node: GradeNode
   scale: GradeScale
   color: string
+  depth: number
   expanded: Set<string>
   toggle: (id: string) => void
 }) {
@@ -170,6 +176,7 @@ function Subgroup({
         <Dot color={color} />
         <NameInput value={node.name} onChange={(name) => updateNode(subjectId, node.id, { name })} />
         <WeightPill value={node.weight} onChange={(weight) => updateNode(subjectId, node.id, { weight })} />
+        {isOpen && <TrashBtn onClick={() => removeNode(subjectId, node.id)} />}
         <button
           onClick={() => toggle(node.id)}
           className="shrink-0 rounded-lg p-1 text-ink/40 active:bg-ink/5"
@@ -196,6 +203,7 @@ function Subgroup({
                     node={c}
                     scale={scale}
                     color={color}
+                    depth={depth + 1}
                     expanded={expanded}
                     toggle={toggle}
                   />
@@ -204,10 +212,7 @@ function Subgroup({
                 ),
               )}
             </div>
-            <div className="flex items-center justify-between">
-              <FolderControls subjectId={subjectId} node={node} />
-              <TrashBtn onClick={() => removeNode(subjectId, node.id)} />
-            </div>
+            <FolderControls subjectId={subjectId} node={node} depth={depth} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -255,6 +260,7 @@ function Section({
               node={c}
               scale={scale}
               color={color}
+              depth={1}
               expanded={expanded}
               toggle={toggle}
             />
@@ -264,7 +270,7 @@ function Section({
         )}
       </div>
 
-      <FolderControls subjectId={subjectId} node={node} />
+      <FolderControls subjectId={subjectId} node={node} depth={0} />
     </div>
   )
 }

@@ -288,7 +288,7 @@ export function Onboarding() {
                   {name.trim() ? `¡Listo, ${name.trim()}!` : '¡Todo listo!'}
                 </h1>
                 <p className="mx-auto mt-2 max-w-xs text-base text-ink/55">
-                  Brody quedó a tu pinta. A calcular esas notas. 🚀
+                  Brody quedó a tu pinta. A calcular esas notas.
                 </p>
                 <div className="mt-8">
                   <AccentBtn onClick={finish}>Entrar a Brody</AccentBtn>
