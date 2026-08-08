@@ -37,8 +37,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
             if (result.tasks) st.setTasks(result.tasks)
             // Cuenta nueva (nube sin tareas): sembrar 2 tareas de arranque (guía inicial).
             else if (!st.tasks.length) {
-              st.addTask({ title: 'Agregar horario de clases', color: 'blue' })
-              st.addTask({ title: 'Organizar calendario académico', color: 'violet' })
+              st.addTask({ title: 'Agregar horario de clases' })
+              st.addTask({ title: 'Organizar calendario académico' })
             }
             // Sembrar en la nube lo que aún NO exista allá (primer login en otro equipo).
             const cur = useAppStore.getState()

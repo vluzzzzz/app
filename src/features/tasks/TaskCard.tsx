@@ -20,15 +20,17 @@ export function formatTaskTime(t?: string): string | null {
 export function TaskCard({ task, onEdit }: { task: Task; onEdit: () => void }) {
   const toggleTask = useAppStore((s) => s.toggleTask)
   const time = formatTaskTime(task.time)
-  const bar = task.color ? { backgroundImage: gradient(task.color) } : { background: 'rgb(var(--ink))' }
+  const bar = task.color
+    ? { backgroundImage: gradient(task.color) }
+    : { background: 'rgb(var(--ink) / 0.85)' }
 
   return (
-    <motion.div layout className="glass relative flex items-stretch gap-3 rounded-3xl p-4">
+    <motion.div layout className="glass relative flex items-stretch gap-3.5 rounded-3xl p-5">
       {/* Barra de color (toca para completar) */}
       <button
         onClick={() => toggleTask(task.id)}
         aria-label={task.done ? 'Marcar pendiente' : 'Marcar hecha'}
-        className="relative w-1.5 shrink-0 self-stretch rounded-full"
+        className="relative my-1 w-1.5 shrink-0 self-stretch rounded-full"
         style={bar}
       >
         {task.done && (
@@ -42,24 +44,24 @@ export function TaskCard({ task, onEdit }: { task: Task; onEdit: () => void }) {
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <h3
-              className={`truncate text-[17px] font-semibold text-ink ${
+              className={`truncate text-[18px] font-semibold text-ink ${
                 task.done ? 'line-through opacity-40' : ''
               }`}
             >
               {task.title}
             </h3>
-            <p className="text-sm text-ink/40">{task.done ? 'Hecho' : 'Pendiente'}</p>
+            <p className="text-[15px] text-ink/40">{task.done ? 'Hecho' : 'Pendiente'}</p>
           </div>
           <button
             onClick={onEdit}
             aria-label="Opciones"
-            className="-mr-1 -mt-1 shrink-0 rounded-full p-1.5 text-ink/40 active:bg-ink/5"
+            className="-mr-1 -mt-1 shrink-0 rounded-full p-1.5 text-ink/30 active:bg-ink/5"
           >
             <DotsIcon className="h-5 w-5" />
           </button>
         </div>
         {time && (
-          <p className="mt-2 text-right text-sm text-ink/40">Hoy: {time}</p>
+          <p className="mt-3 text-right text-[15px] text-ink/40">Hoy: {time}</p>
         )}
       </div>
     </motion.div>

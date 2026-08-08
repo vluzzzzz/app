@@ -8,6 +8,7 @@ import { AiBar } from '../features/chat/AiBar'
 import { SubjectCard } from '../features/subjects/SubjectCard'
 import { TaskCard } from '../features/tasks/TaskCard'
 import { TaskEditor } from '../features/tasks/TaskEditor'
+import { DashedBox } from '../components/ui/DashedBox'
 import { BellIcon, CalendarIcon, FileUploadIcon, PlusIcon } from '../components/ui/Icons'
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -44,11 +45,11 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
   const goAddRamo = () => navigate({ name: 'calculadora', add: true })
 
   return (
-    <div className="flex h-full flex-col gap-6 overflow-y-auto px-5 pb-28 pt-4">
+    <div className="flex h-full flex-col gap-7 overflow-y-auto px-5 pb-36 pt-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white shadow-[var(--card-shadow)]">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white shadow-[var(--card-shadow)] ring-1 ring-ink/5">
             <img
               src={avatarSrc(avatar || 'happy')}
               alt="Avatar"
@@ -62,13 +63,16 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
             </h1>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <button className="glass rounded-full p-2.5 text-ink/70" aria-label="Notificaciones">
+        <div className="flex shrink-0 items-center gap-2.5">
+          <button
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-ink/[0.02] text-ink/60"
+            aria-label="Notificaciones"
+          >
             <BellIcon className="h-5 w-5" />
           </button>
           <button
             onClick={() => navigate({ name: 'calendario' })}
-            className="glass rounded-full p-2.5 text-ink/70"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-ink/[0.02] text-ink/60"
             aria-label="Calendario"
           >
             <CalendarIcon className="h-5 w-5" />
@@ -77,26 +81,26 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
       </div>
 
       {/* Tira de la semana */}
-      <div className="flex items-stretch justify-between gap-1 rounded-3xl bg-ink/[0.04] p-2">
+      <div className="flex items-stretch justify-between gap-1 rounded-[26px] bg-ink/[0.04] p-2.5">
         {week.map((d, i) => {
           const isToday = d.toDateString() === now.toDateString()
           return (
             <div
               key={i}
-              className={`flex flex-1 flex-col items-center gap-1 rounded-2xl py-2.5 ${
+              className={`flex flex-1 flex-col items-center justify-center gap-1.5 rounded-2xl py-3 ${
                 isToday
-                  ? 'bg-[rgb(var(--card))] shadow-[0_4px_14px_-6px_rgba(0,0,0,0.25)]'
+                  ? '-my-1.5 bg-[rgb(var(--card))] py-[18px] shadow-[0_8px_20px_-8px_rgba(0,0,0,0.3)]'
                   : ''
               }`}
             >
               <span
-                className={`text-[11px] font-medium ${isToday ? 'text-ink/60' : 'text-ink/35'}`}
+                className={`text-[12px] font-medium ${isToday ? 'text-ink/60' : 'text-ink/35'}`}
               >
                 {DIAS[i]}
               </span>
               <span
-                className={`text-[15px] tabular-nums ${
-                  isToday ? 'font-bold text-ink' : 'font-semibold text-ink/60'
+                className={`tabular-nums ${
+                  isToday ? 'text-lg font-bold text-ink' : 'text-[17px] font-semibold text-ink/55'
                 }`}
               >
                 {d.getDate()}
@@ -107,19 +111,22 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
       </div>
 
       {/* Ramos */}
-      <section className="space-y-3">
-        <h2 className="px-1 text-[17px] font-bold text-ink">Ramos</h2>
+      <section className="space-y-4">
+        <h2 className="px-1 text-[17px] font-bold text-ink/70">Ramos</h2>
         {subjects.length === 0 ? (
-          <button
-            onClick={goAddRamo}
-            className="flex w-full flex-col items-center justify-center gap-2 rounded-4xl border-2 border-dashed border-ink/15 bg-[rgb(var(--card))] py-12"
-          >
-            <FileUploadIcon className="h-14 w-14 text-ink" />
-            <span className="rounded-lg bg-ink/5 px-2.5 py-1 text-[15px] font-semibold text-ink">
-              Agregar Ramo
-            </span>
-            <span className="text-sm text-ink/40">Cálculo, Álgebra, etc.</span>
-          </button>
+          <div className="glass rounded-[32px] p-2.5">
+            <DashedBox
+              rx={26}
+              onClick={goAddRamo}
+              className="flex w-full flex-col items-center justify-center gap-3 py-14"
+            >
+              <FileUploadIcon className="h-16 w-16 text-ink" />
+              <span className="rounded-lg bg-ink/[0.06] px-3 py-1 text-[17px] font-semibold text-ink">
+                Agregar Ramo
+              </span>
+              <span className="text-[13px] text-ink/40">Cálculo, Álgebra, etc.</span>
+            </DashedBox>
+          </div>
         ) : (
           <div className="space-y-3">
             {subjects.map((s) => (
@@ -129,22 +136,23 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
                 onOpen={() => navigate({ name: 'subject', id: s.id })}
               />
             ))}
-            <button
+            <DashedBox
+              rx={22}
               onClick={goAddRamo}
-              className="flex w-full items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-ink/15 py-4 text-[15px] font-semibold text-ink/55 active:bg-ink/5"
+              className="flex w-full items-center justify-center gap-2 py-4 text-[15px] font-semibold text-ink/55"
             >
               <PlusIcon className="h-5 w-5" /> Agregar Ramo
-            </button>
+            </DashedBox>
           </div>
         )}
       </section>
 
-      {/* Barra de Brody */}
+      {/* Barra de Brody (chica y centrada) */}
       <AiBar onOpen={() => navigate({ name: 'chat' })} />
 
       {/* Tareas */}
-      <section className="space-y-3">
-        <h2 className="px-1 text-[17px] font-bold text-ink">Tareas</h2>
+      <section className="space-y-4">
+        <h2 className="px-1 text-[17px] font-bold text-ink/70">Tareas</h2>
         <motion.div layout className="space-y-3">
           <AnimatePresence initial={false}>
             {tasks.map((t) => (
@@ -160,12 +168,13 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
             ))}
           </AnimatePresence>
         </motion.div>
-        <button
+        <DashedBox
+          rx={22}
           onClick={openNew}
-          className="flex w-full items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-ink/15 py-3.5 text-[15px] font-semibold text-ink/55 active:bg-ink/5"
+          className="flex w-full items-center justify-center gap-2 py-3.5 text-[15px] font-semibold text-ink/55"
         >
           <PlusIcon className="h-5 w-5" /> Agregar tarea
-        </button>
+        </DashedBox>
       </section>
 
       <TaskEditor open={editorOpen} onClose={() => setEditorOpen(false)} task={editing} />

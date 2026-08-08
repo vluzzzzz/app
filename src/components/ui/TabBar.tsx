@@ -34,8 +34,8 @@ export function TabBar({
                   layoutId="nav-active"
                   className="absolute inset-y-1 -inset-x-0.5 rounded-full"
                   style={{
-                    background: 'rgb(var(--accent))',
-                    boxShadow: '0 0 26px -8px rgb(var(--accent))',
+                    background: 'rgb(var(--ink))',
+                    boxShadow: '0 8px 20px -8px rgba(0,0,0,0.45)',
                   }}
                   transition={{ type: 'spring', stiffness: 380, damping: 32 }}
                 />
@@ -44,7 +44,7 @@ export function TabBar({
                 name={id}
                 filled={isActive}
                 className={`relative z-10 h-8 w-8 transition-colors ${
-                  isActive ? 'text-white' : 'text-ink/40'
+                  isActive ? 'text-[rgb(var(--surface))]' : 'text-ink/35'
                 }`}
               />
             </motion.button>
@@ -56,7 +56,7 @@ export function TabBar({
       <motion.button
         whileTap={{ scale: 0.88 }}
         onClick={onOpenMenu}
-        className="flex h-[80px] w-[80px] shrink-0 items-center justify-center rounded-full bg-black text-white shadow-glass-lg"
+        className="flex h-[80px] w-[80px] shrink-0 items-center justify-center rounded-full bg-ink text-surface shadow-glass-lg"
       >
         <PlusIcon className="h-8 w-8" />
       </motion.button>

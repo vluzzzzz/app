@@ -112,6 +112,11 @@ export default function App() {
         </AnimatePresence>
       </div>
 
+      {/* Velo degradado: el contenido se desvanece detrás de la nav flotante. */}
+      {showTabBar && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 h-32 bg-gradient-to-t from-[rgb(var(--surface))] via-[rgb(var(--surface))]/85 to-transparent" />
+      )}
+
       {showTabBar && (
         <TabBar
           active={route.name as TabId}
