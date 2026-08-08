@@ -16,26 +16,16 @@ import {
   UserIcon,
 } from './Icons'
 
-// NORMAL: vidrio con blur (bonito). LITE: sólido (fluido). Se elige según `lite`.
-const darkBlur = {
-  background: 'rgba(28,28,32,0.62)',
-  backdropFilter: 'blur(22px) saturate(1.4)',
-  WebkitBackdropFilter: 'blur(22px) saturate(1.4)',
-  border: '1px solid rgba(255,255,255,0.12)',
+// Popover sólido minimal (blanco / carbón), coherente con las tarjetas nuevas.
+const darkGlass = {
+  background: 'rgb(23 23 27)',
+  border: '1px solid rgba(255,255,255,0.08)',
+  boxShadow: '0 16px 44px -14px rgba(0,0,0,0.6)',
 } as const
-const darkSolid = {
-  background: 'rgba(24,24,28,0.94)',
-  border: '1px solid rgba(255,255,255,0.12)',
-} as const
-const lightBlur = {
-  background: 'rgba(255,255,255,0.75)',
-  backdropFilter: 'blur(22px) saturate(1.6)',
-  WebkitBackdropFilter: 'blur(22px) saturate(1.6)',
-  border: '1px solid rgba(17,24,39,0.1)',
-} as const
-const lightSolid = {
-  background: 'rgba(255,255,255,0.95)',
-  border: '1px solid rgba(17,24,39,0.1)',
+const lightGlass = {
+  background: 'rgb(255 255 255)',
+  border: '1px solid rgba(17,24,39,0.08)',
+  boxShadow: '0 16px 44px -14px rgba(17,24,39,0.22)',
 } as const
 
 type View = 'menu' | 'appearance' | 'confirmReset'
@@ -51,9 +41,6 @@ export function AppMenuSheet({
 }) {
   const [view, setView] = useState<View>('menu')
   const resetAll = useAppStore((s) => s.resetAll)
-  const lite = useAppStore((s) => s.lite)
-  const darkGlass = lite ? darkSolid : darkBlur
-  const lightGlass = lite ? lightSolid : lightBlur
 
   useEffect(() => {
     if (!open) setView('menu')

@@ -1,20 +1,14 @@
 import { useState } from 'react'
 import type { Route } from '../App'
 import { useAppStore } from '../store/useAppStore'
+import { currentGrade } from '../lib/grades'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import { AiBar } from '../features/chat/AiBar'
-import { BellIcon, ClockIcon } from '../components/ui/Icons'
+import { BellIcon } from '../components/ui/Icons'
 
-const FRASES = [
-  'Tú puedes\ncon todo hoy.',
-  'Un paso\na la vez.',
-  'Enfócate en lo\nque controlas.',
-  'Hoy es buen día\npara avanzar.',
-]
+const DIAS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
-const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
-
-// Datos placeholder por período (mientras no exista Horario/Calendario).
+// Placeholder por período (mientras no exista Horario/Calendario).
 const PERIODOS = [
   { label: 'HOY TIENES', clases: 2, examenes: 1, tareas: 3 },
   { label: 'ESTA SEMANA TIENES', clases: 9, examenes: 2, tareas: 7 },
@@ -23,13 +17,13 @@ const PERIODOS = [
 
 export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
   const userName = useAppStore((s) => s.userName)
+  const subjects = useAppStore((s) => s.subjects)
   const now = new Date()
   const h = now.getHours()
   const saludo =
     h < 12 ? 'Buenos días' : h < 20 ? 'Buenas tardes' : 'Buenas noches'
-  const frase = FRASES[now.getDate() % FRASES.length]
 
-  // Semana actual (lunes → domingo) con el día de hoy resaltado.
+  // Semana actual (lunes → domingo) con hoy resaltado.
   const dow = (now.getDay() + 6) % 7
   const monday = new Date(now)
   monday.setDate(now.getDate() - dow)
@@ -39,100 +33,111 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
     return d
   })
 
+  // Mini-gráfico de rendimiento: una barra por ramo (nota normalizada a su escala).
+  const bars = subjects.slice(0, 8).map((s) => {
+    const g = currentGrade(s)
+    if (g == null) return { pct: 10, muted: true }
+    const range = s.scale.max - s.scale.min || 1
+    const pct = Math.max(8, Math.min(100, ((g - s.scale.min) / range) * 100))
+    return { pct, muted: false }
+  })
+
   const [periodo, setPeriodo] = useState(0)
-  const [logoOk, setLogoOk] = useState(true)
   const p = PERIODOS[periodo]
 
   return (
-    <div className="flex h-full flex-col gap-4 overflow-y-auto px-5 pb-28 pt-4">
-      {/* Top: racha + campana */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 rounded-full bg-ink/5 px-3 py-1.5">
-          <span className="text-base leading-none">🔥</span>
-          <span className="text-sm font-bold tabular-nums text-ink">7</span>
+    <div className="flex h-full flex-col gap-5 overflow-y-auto px-5 pb-28 pt-4">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-ink/45">{saludo} 👋</p>
+          <h1 className="truncate text-3xl font-bold text-ink">
+            {userName || 'Hola'}
+          </h1>
         </div>
-        <button className="glass glass-highlight relative rounded-full p-2.5 text-ink/70">
-          <BellIcon className="h-5 w-5" />
-          <span
-            className="absolute right-2 top-2 h-2 w-2 rounded-full"
-            style={{ background: 'rgb(var(--accent))' }}
-          />
-        </button>
-      </div>
-
-      {/* Saludo */}
-      <div>
-        <p className="text-sm font-medium text-ink/55">
-          {saludo}
-          {userName ? `, ${userName}` : ''} 👋
-        </p>
-        <h1 className="mt-1 whitespace-pre-line text-[34px] font-bold leading-[1.05] text-ink">
-          {frase}
-        </h1>
-      </div>
-
-      {/* Tira de días */}
-      <div className="glass glass-highlight rounded-3xl px-2 py-3">
-        <div className="flex items-stretch justify-between">
-          {week.map((d, i) => {
-            const isToday = d.toDateString() === now.toDateString()
-            return (
-              <div
-                key={i}
-                className={`flex flex-1 flex-col items-center gap-1 rounded-2xl py-1.5 ${
-                  isToday ? 'text-surface' : 'text-ink/60'
-                }`}
-                style={
-                  isToday ? { background: 'rgb(var(--accent))' } : undefined
-                }
-              >
-                <span className="text-[11px] font-medium">{DIAS[i]}</span>
-                <span className="text-[15px] font-bold tabular-nums">
-                  {d.getDate()}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-      {/* Espacio central: barra que abre el chat con IA */}
-      <AiBar onOpen={() => navigate({ name: 'chat' })} />
-
-      {/* Próxima clase */}
-      <div className="glass glass-highlight flex flex-1 items-center gap-3 rounded-4xl p-5">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm text-ink/50">Próxima clase</p>
-          <div className="mt-0.5 flex items-center gap-2">
-            <h3 className="text-xl font-bold text-ink">Cálculo I</h3>
+        <div className="flex shrink-0 items-center gap-2">
+          <div className="flex items-center gap-1.5 rounded-full bg-ink/5 px-3 py-2">
+            <span className="text-sm leading-none">🔥</span>
+            <span className="text-sm font-bold tabular-nums text-ink">7</span>
+          </div>
+          <button className="glass relative rounded-full p-2.5 text-ink/70">
+            <BellIcon className="h-5 w-5" />
             <span
-              className="h-2 w-2 rounded-full"
+              className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full"
               style={{ background: 'rgb(var(--accent))' }}
             />
-          </div>
-          <p className="mt-0.5 text-sm text-ink/60">10:30 AM • Aula 204</p>
-          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-ink/10 px-3 py-1.5">
-            <ClockIcon className="h-4 w-4 text-ink/70" />
-            <span className="text-sm font-semibold text-ink">En 45 min</span>
-          </div>
+          </button>
         </div>
-        {logoOk ? (
-          <img
-            src="/logosombra.png"
-            alt="Próxima clase"
-            onError={() => setLogoOk(false)}
-            className="-my-1 h-28 w-28 shrink-0 object-contain drop-shadow-lg"
-          />
+      </div>
+
+      {/* Barra de Brody */}
+      <AiBar onOpen={() => navigate({ name: 'chat' })} />
+
+      {/* Tarjeta de rendimiento */}
+      <div className="glass rounded-4xl p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-ink/50">Tu rendimiento</p>
+            <h3 className="text-xl font-bold text-ink">
+              {subjects.length} {subjects.length === 1 ? 'ramo' : 'ramos'}
+            </h3>
+          </div>
+          <button
+            onClick={() => navigate({ name: 'calculadora' })}
+            className="rounded-full bg-ink px-4 py-2.5 text-sm font-semibold text-surface active:opacity-80"
+          >
+            Ver ramos →
+          </button>
+        </div>
+
+        {bars.length > 0 ? (
+          <div className="mt-5 flex h-20 items-end gap-2">
+            {bars.map((b, i) => (
+              <div key={i} className="flex-1">
+                <div
+                  className="w-full rounded-md"
+                  style={{
+                    height: `${b.pct}%`,
+                    minHeight: 6,
+                    background: b.muted ? 'rgb(var(--ink) / 0.1)' : 'rgb(var(--accent))',
+                  }}
+                />
+              </div>
+            ))}
+          </div>
         ) : (
-          <div className="text-6xl">⏰</div>
+          <p className="mt-4 text-sm text-ink/45">
+            Aún no tienes ramos. Toca “Ver ramos” para crear el primero. 📚
+          </p>
         )}
       </div>
 
-      {/* Hoy tienes (ciclable + números animados) */}
+      {/* Tira de la semana */}
+      <div className="flex items-center justify-between px-1">
+        {week.map((d, i) => {
+          const isToday = d.toDateString() === now.toDateString()
+          return (
+            <div key={i} className="flex flex-col items-center gap-1.5">
+              <span className="text-[11px] font-medium text-ink/40">{DIAS[i]}</span>
+              <span
+                className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold tabular-nums ${
+                  isToday ? 'text-surface' : 'text-ink/70'
+                }`}
+                style={isToday ? { background: 'rgb(var(--accent))' } : undefined}
+              >
+                {d.getDate()}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Hoy tienes */}
       <button
         onClick={() => setPeriodo((v) => (v + 1) % PERIODOS.length)}
-        className="glass glass-highlight flex w-full flex-1 flex-col justify-center rounded-4xl p-5 text-left"
+        className="glass w-full rounded-4xl p-5 text-left"
       >
-        <p className="mb-2 text-sm font-semibold tracking-wide text-ink/60">
+        <p className="mb-3 text-sm font-semibold tracking-wide text-ink/55">
           {p.label}
         </p>
         <div className="grid grid-cols-3 divide-x divide-ink/10">

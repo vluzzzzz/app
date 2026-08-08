@@ -5,31 +5,27 @@
 /* ===== Tema CLARO (por defecto) ===== */
 :root {
   color-scheme: light;
-  --surface: 255 255 255; /* fondo app: blanco puro */
+  --surface: 243 242 239; /* fondo app: off-white cálido */
   --ink: 17 24 39; /* texto/acento neutro */
   --accent: 148 163 184; /* color de acento (gris por defecto) */
-  --accent-light: 203 213 225; /* versión clara del acento (bordes) */
+  --accent-light: 203 213 225; /* versión clara del acento */
 
-  --glass-a: 0.42; /* opacidad del vidrio (más transparente = look liquid) */
-  --glass-strong-a: 0.6;
-  --glass-brd: 17 24 39; /* borde */
-  --glass-brd-a: 0.1;
-  --glass-shadow: 0 10px 34px rgba(17, 24, 39, 0.12);
-  --glass-highlight: rgba(255, 255, 255, 0.7);
+  --card: 255 255 255; /* tarjeta sólida blanca */
+  --card-brd: 17 24 39; /* borde hairline (con alpha) */
+  --card-shadow: 0 1px 2px rgba(17, 24, 39, 0.04),
+    0 10px 30px -18px rgba(17, 24, 39, 0.16);
 }
 
 /* ===== Tema OSCURO ===== */
 .dark {
   color-scheme: dark;
-  --surface: 11 11 18;
+  --surface: 14 14 16;
   --ink: 255 255 255;
 
-  --glass-a: 0.1;
-  --glass-strong-a: 0.16;
-  --glass-brd: 255 255 255;
-  --glass-brd-a: 0.15;
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-  --glass-highlight: rgba(255, 255, 255, 0.3);
+  --card: 23 23 27; /* carbón */
+  --card-brd: 255 255 255;
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3),
+    0 12px 30px -18px rgba(0, 0, 0, 0.55);
 }
 
 html,
@@ -62,42 +58,13 @@ body {
 }
 
 @layer components {
-  /* Tarjeta de vidrio líquido base. El saturate hace el vidrio más vibrante. */
-  .glass {
-    background-color: rgb(255 255 255 / var(--glass-a));
-    border: 1px solid rgb(var(--glass-brd) / var(--glass-brd-a));
-    -webkit-backdrop-filter: blur(10px) saturate(1.4);
-    backdrop-filter: blur(10px) saturate(1.4);
-    box-shadow: var(--glass-shadow);
-  }
-  .dark .glass {
-    background-image: linear-gradient(
-      145deg,
-      rgba(255, 255, 255, 0.14),
-      rgba(255, 255, 255, 0.04)
-    );
-  }
-
-  .glass-strong {
-    background-color: rgb(255 255 255 / var(--glass-strong-a));
-    border: 1px solid rgb(var(--glass-brd) / calc(var(--glass-brd-a) + 0.05));
-    -webkit-backdrop-filter: blur(16px) saturate(1.6);
-    backdrop-filter: blur(16px) saturate(1.6);
-    box-shadow: var(--glass-shadow);
-  }
-  .dark .glass-strong {
-    background-image: linear-gradient(
-      145deg,
-      rgba(255, 255, 255, 0.2),
-      rgba(255, 255, 255, 0.06)
-    );
-  }
-
-  /* Highlight interno tipo reflejo de cristal */
+  /* Tarjeta sólida minimal (reemplaza el liquid glass): sin blur → limpio y fluido. */
+  .glass,
+  .glass-strong,
   .glass-highlight {
-    box-shadow:
-      inset 0 1px 1px var(--glass-highlight),
-      var(--glass-shadow);
+    background-color: rgb(var(--card));
+    border: 1px solid rgb(var(--card-brd) / 0.06);
+    box-shadow: var(--card-shadow);
   }
 
   /* Resplandor de color: se controla con la variable --glow. */
@@ -130,21 +97,6 @@ body {
   to {
     transform: translateX(100%);
   }
-}
-
-/* ===== RENDIMIENTO — MODO LITE =====
-   NORMAL: vidrio con blur liquid (también en móvil) — más bonito.
-   LITE: apaga el blur y usa vidrio sólido translúcido → 100% fluido (celus lentos). */
-.lite .glass,
-.lite .glass-strong {
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-  background-color: rgb(255 255 255 / 0.82) !important;
-  background-image: none !important;
-}
-.dark.lite .glass,
-.dark.lite .glass-strong {
-  background-color: rgb(24 24 30 / 0.72) !important;
 }
 
 /* Jitter barato del granulado (solo transform = GPU). */
