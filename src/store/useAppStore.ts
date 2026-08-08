@@ -3,14 +3,26 @@ import { persist } from 'zustand/middleware'
 import { makeId } from '../lib/format'
 import {
   DEFAULT_SCALE,
-  type Evaluation,
+  type GradeNode,
   type GradeScale,
-  type Subdivision,
   type Subject,
   type Task,
   type Theme,
 } from '../lib/types'
+import {
+  distributeChildren,
+  makeFolder,
+  makeNote,
+  mapNodeById,
+  normalizeSubject,
+  resizeChildren,
+  withChildAdded,
+  withNodeRemoved,
+} from '../lib/gradeTree'
 import type { ChatMessage } from '../ai/types'
+
+/** Tareas de arranque (cuenta nueva / empezar de 0). */
+export const STARTER_TASKS = ['Agregar horario de clases', 'Organizar calendario académico']
 
 type State = {
   defaultScale: GradeScale
@@ -95,54 +107,31 @@ type Actions = {
   /** Alterna pendiente/hecha. */
   toggleTask: (id: string) => void
 
-  /** Activa/desactiva % por nota; al activar inicializa pesos repartidos. */
-  setWeightedEvals: (subjectId: string, on: boolean) => void
-  /** Ajusta la cantidad de notas de una sección creando/quitando espacios vacíos. */
-  setEvalCount: (
-    subjectId: string,
-    subId: string | null,
-    count: number,
-  ) => void
-
-  /** Reemplaza todos los ramos (para hidratar desde la nube). */
+  /** Reemplaza todos los ramos (para hidratar desde la nube). Normaliza el shape. */
   setSubjects: (subjects: Subject[]) => void
-  addSubject: (input: {
-    name: string
-    color?: string
-    subdivisions?: { name: string; weight: number }[]
-  }) => string
+  addSubject: (input: { name: string; color?: string; nodes?: GradeNode[] }) => string
   updateSubject: (id: string, patch: Partial<Omit<Subject, 'id'>>) => void
   removeSubject: (id: string) => void
   getSubject: (id: string) => Subject | undefined
 
-  addSubdivision: (subjectId: string, name: string, weight: number) => void
-  updateSubdivision: (
+  /** --- Árbol de evaluación (nodos anidados) --- */
+  /** Agrega un nodo bajo `parentId` (null = sección tope). Reparte pesos parejos. */
+  addNode: (
     subjectId: string,
-    subId: string,
-    patch: Partial<Omit<Subdivision, 'id'>>,
+    parentId: string | null,
+    input: { name: string; folder: boolean },
   ) => void
-  removeSubdivision: (subjectId: string, subId: string) => void
-
-  /** subId = null => evaluación suelta (sin subdivisiones). */
-  addEvaluation: (subjectId: string, subId: string | null, name: string) => void
-  /** Igual que addEvaluation pero creando ya con nota (para la IA). */
-  addEvaluationWith: (
+  /** Edita un nodo (nombre / peso / nota). */
+  updateNode: (
     subjectId: string,
-    subId: string | null,
-    name: string,
-    grade: number | null,
+    nodeId: string,
+    patch: Partial<Pick<GradeNode, 'name' | 'weight' | 'grade'>>,
   ) => void
-  updateEvaluation: (
-    subjectId: string,
-    subId: string | null,
-    evalId: string,
-    patch: Partial<Omit<Evaluation, 'id'>>,
-  ) => void
-  removeEvaluation: (
-    subjectId: string,
-    subId: string | null,
-    evalId: string,
-  ) => void
+  removeNode: (subjectId: string, nodeId: string) => void
+  /** Cambia la cantidad de notas (hojas) bajo `parentId` (null = tope). */
+  setChildCount: (subjectId: string, parentId: string | null, count: number) => void
+  /** Reparte 100% parejo entre los hijos de `parentId` (null = tope). */
+  distributeEven: (subjectId: string, parentId: string | null) => void
 }
 
 /** Aplica una transformación a una asignatura concreta de forma inmutable. */
@@ -154,21 +143,13 @@ function mapSubject(
   return subjects.map((s) => (s.id === id ? fn(s) : s))
 }
 
-/** Aplica una transformación a una lista de evaluaciones (suelta o de subdivisión). */
-function mapEvaluations(
-  subject: Subject,
-  subId: string | null,
-  fn: (evals: Evaluation[]) => Evaluation[],
-): Subject {
-  if (subId == null) {
-    return { ...subject, looseEvaluations: fn(subject.looseEvaluations) }
-  }
-  return {
-    ...subject,
-    subdivisions: subject.subdivisions.map((d) =>
-      d.id === subId ? { ...d, evaluations: fn(d.evaluations) } : d,
-    ),
-  }
+/** Actualiza los nodos de un ramo. */
+function withNodes(
+  subjects: Subject[],
+  subjectId: string,
+  fn: (nodes: GradeNode[]) => GradeNode[],
+): Subject[] {
+  return mapSubject(subjects, subjectId, (s) => ({ ...s, nodes: fn(s.nodes) }))
 }
 
 export const useAppStore = create<State & Actions>()(
@@ -218,7 +199,8 @@ export const useAppStore = create<State & Actions>()(
         set({
           subjects: [],
           chat: [],
-          tasks: [],
+          // Re-sembrar las tareas de arranque (como en una cuenta nueva).
+          tasks: STARTER_TASKS.map((title) => ({ id: makeId(), title, done: false })),
           userName: '',
           referral: '',
           country: '',
@@ -255,89 +237,17 @@ export const useAppStore = create<State & Actions>()(
           tasks: st.tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
         })),
 
-      setWeightedEvals: (subjectId, on) =>
-        set((st) => ({
-          subjects: mapSubject(st.subjects, subjectId, (s) => {
-            if (!on) return { ...s, weightedEvals: false }
-            // Reparte pesos parejos (100/n) en cada grupo al activar.
-            const distribute = (evals: Evaluation[]): Evaluation[] => {
-              if (evals.length === 0) return evals
-              const base = Math.round((100 / evals.length) * 10) / 10
-              return evals.map((e, i) => ({
-                ...e,
-                weight:
-                  i === evals.length - 1
-                    ? Math.round((100 - base * (evals.length - 1)) * 10) / 10
-                    : base,
-              }))
-            }
-            return {
-              ...s,
-              weightedEvals: true,
-              subdivisions: s.subdivisions.map((d) => ({
-                ...d,
-                evaluations: distribute(d.evaluations),
-              })),
-              looseEvaluations: distribute(s.looseEvaluations),
-            }
-          }),
-        })),
+      setSubjects: (subjects) =>
+        set({ subjects: (subjects as unknown[]).map(normalizeSubject) }),
 
-      setEvalCount: (subjectId, subId, count) =>
-        set((st) => ({
-          subjects: mapSubject(st.subjects, subjectId, (s) => {
-            const prefix =
-              subId != null
-                ? s.subdivisions.find((d) => d.id === subId)?.name || 'Nota'
-                : 'Nota'
-            const resize = (evals: Evaluation[]): Evaluation[] => {
-              const next = [...evals]
-              while (next.length < count) {
-                next.push({
-                  id: makeId(),
-                  name: `${prefix} ${next.length + 1}`,
-                  grade: null,
-                })
-              }
-              while (next.length > count) {
-                // Quita primero las pendientes (sin nota), desde el final.
-                const idx = [...next]
-                  .map((e, i) => ({ e, i }))
-                  .reverse()
-                  .find((x) => x.e.grade == null)?.i
-                next.splice(idx ?? next.length - 1, 1)
-              }
-              return next
-            }
-            if (subId == null) {
-              return { ...s, looseEvaluations: resize(s.looseEvaluations) }
-            }
-            return {
-              ...s,
-              subdivisions: s.subdivisions.map((d) =>
-                d.id === subId ? { ...d, evaluations: resize(d.evaluations) } : d,
-              ),
-            }
-          }),
-        })),
-
-      setSubjects: (subjects) => set({ subjects }),
-
-      addSubject: ({ name, color, subdivisions }) => {
+      addSubject: ({ name, color, nodes }) => {
         const newId = makeId()
         const subject: Subject = {
           id: newId,
           name: name.trim() || 'Asignatura',
-          color,
+          color: color ?? 'gray',
           scale: get().defaultScale,
-          subdivisions: (subdivisions ?? []).map((d) => ({
-            id: makeId(),
-            name: d.name.trim() || 'Sección',
-            weight: d.weight,
-            evaluations: [],
-          })),
-          looseEvaluations: [],
-          weightedEvals: false,
+          nodes: nodes ?? [],
         }
         set((st) => ({ subjects: [...st.subjects, subject] }))
         return newId
@@ -353,85 +263,74 @@ export const useAppStore = create<State & Actions>()(
 
       getSubject: (id) => get().subjects.find((s) => s.id === id),
 
-      addSubdivision: (subjectId, name, weight) =>
+      addNode: (subjectId, parentId, { name, folder }) =>
         set((st) => ({
-          subjects: mapSubject(st.subjects, subjectId, (s) => ({
-            ...s,
-            subdivisions: [
-              ...s.subdivisions,
-              {
-                id: makeId(),
-                name: name.trim() || 'Sección',
-                weight,
-                evaluations: [],
-              },
-            ],
-          })),
-        })),
-
-      updateSubdivision: (subjectId, subId, patch) =>
-        set((st) => ({
-          subjects: mapSubject(st.subjects, subjectId, (s) => ({
-            ...s,
-            subdivisions: s.subdivisions.map((d) =>
-              d.id === subId ? { ...d, ...patch } : d,
-            ),
-          })),
-        })),
-
-      removeSubdivision: (subjectId, subId) =>
-        set((st) => ({
-          subjects: mapSubject(st.subjects, subjectId, (s) => ({
-            ...s,
-            subdivisions: s.subdivisions.filter((d) => d.id !== subId),
-          })),
-        })),
-
-      addEvaluation: (subjectId, subId, name) =>
-        set((st) => ({
-          subjects: mapSubject(st.subjects, subjectId, (s) =>
-            mapEvaluations(s, subId, (evals) => [
-              ...evals,
-              { id: makeId(), name: name.trim() || `Nota ${evals.length + 1}`, grade: null },
-            ]),
-          ),
-        })),
-
-      addEvaluationWith: (subjectId, subId, name, grade) =>
-        set((st) => ({
-          subjects: mapSubject(st.subjects, subjectId, (s) =>
-            mapEvaluations(s, subId, (evals) => [
-              ...evals,
-              {
-                id: makeId(),
-                name: name.trim() || `Nota ${evals.length + 1}`,
-                grade,
-              },
-            ]),
-          ),
-        })),
-
-      updateEvaluation: (subjectId, subId, evalId, patch) =>
-        set((st) => ({
-          subjects: mapSubject(st.subjects, subjectId, (s) =>
-            mapEvaluations(s, subId, (evals) =>
-              evals.map((e) => (e.id === evalId ? { ...e, ...patch } : e)),
+          subjects: withNodes(st.subjects, subjectId, (nodes) =>
+            withChildAdded(
+              nodes,
+              parentId,
+              folder ? makeFolder(name.trim() || 'Sección') : makeNote(name.trim() || 'Nota'),
             ),
           ),
         })),
 
-      removeEvaluation: (subjectId, subId, evalId) =>
+      updateNode: (subjectId, nodeId, patch) =>
         set((st) => ({
-          subjects: mapSubject(st.subjects, subjectId, (s) =>
-            mapEvaluations(s, subId, (evals) =>
-              evals.filter((e) => e.id !== evalId),
-            ),
+          subjects: withNodes(st.subjects, subjectId, (nodes) =>
+            mapNodeById(nodes, nodeId, (n) => ({ ...n, ...patch })),
           ),
+        })),
+
+      removeNode: (subjectId, nodeId) =>
+        set((st) => ({
+          subjects: withNodes(st.subjects, subjectId, (nodes) => withNodeRemoved(nodes, nodeId)),
+        })),
+
+      setChildCount: (subjectId, parentId, count) =>
+        set((st) => ({
+          subjects: withNodes(st.subjects, subjectId, (nodes) => {
+            const prefix =
+              (parentId
+                ? findNode(nodes, parentId)?.name
+                : undefined) || 'Nota'
+            return resizeChildren(nodes, parentId, count, prefix)
+          }),
+        })),
+
+      distributeEven: (subjectId, parentId) =>
+        set((st) => ({
+          subjects: withNodes(st.subjects, subjectId, (nodes) => {
+            if (parentId === null) return distributeChildren(nodes)
+            return mapNodeById(nodes, parentId, (n) => ({
+              ...n,
+              children: distributeChildren(n.children ?? []),
+            }))
+          }),
         })),
     }),
     {
       name: 'salva-semestres',
-      version: 3,
+      version: 4,
+      // v3 (2 niveles) → v4 (árbol): normaliza cada ramo al nuevo modelo.
+      migrate: (persisted: unknown, version: number) => {
+        const state = persisted as Record<string, unknown>
+        if (version < 4 && state && Array.isArray(state.subjects)) {
+          state.subjects = (state.subjects as unknown[]).map(normalizeSubject)
+        }
+        return state as never
+      },
     },
   ),
 )
+
+/** Busca un nodo por id en el árbol (para leer su nombre, etc.). */
+function findNode(nodes: GradeNode[], id: string): GradeNode | undefined {
+  for (const n of nodes) {
+    if (n.id === id) return n
+    if (n.children) {
+      const found = findNode(n.children, id)
+      if (found) return found
+    }
+  }
+  return undefined
+}

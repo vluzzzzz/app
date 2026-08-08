@@ -9,45 +9,31 @@ export type GradeScale = {
 
 export const DEFAULT_SCALE: GradeScale = { min: 1, max: 7, pass: 4 }
 
-export type Evaluation = {
+/**
+ * Nodo del árbol de evaluación de un ramo.
+ * - Si tiene `children`, es una CARPETA (sección o subgrupo); los pesos de sus
+ *   hijos suman 100 entre ellos.
+ * - Si NO tiene `children`, es una NOTA (hoja) con su `grade` (null = pendiente).
+ */
+export type GradeNode = {
   id: string
   name: string
-  /**
-   * Ponderación (%) de esta evaluación dentro de su subdivisión.
-   * Si es undefined/null, todas las evaluaciones de la subdivisión se
-   * promedian por igual.
-   */
-  weight?: number
-  /** Nota obtenida. null = pendiente (aún no se rinde). */
-  grade: number | null
-}
-
-export type Subdivision = {
-  id: string
-  name: string
-  /** Ponderación (%) de esta subdivisión sobre el total de la asignatura. */
+  /** Ponderación (%) dentro de su padre (los hermanos suman 100). */
   weight: number
-  evaluations: Evaluation[]
+  /** Hijos: si está presente (aunque sea []), el nodo es una carpeta. */
+  children?: GradeNode[]
+  /** Nota obtenida (solo hojas). null = pendiente. */
+  grade?: number | null
 }
 
 export type Subject = {
   id: string
   name: string
-  /** Color de acento (índice de la paleta o hex). */
+  /** Id del color (paleta de Apariencia, ver src/lib/accents.ts). */
   color?: string
   scale: GradeScale
-  /**
-   * Si está vacío, la asignatura funciona como una lista simple de
-   * evaluaciones promediadas por igual (usando `looseEvaluations`).
-   */
-  subdivisions: Subdivision[]
-  /** Evaluaciones sueltas cuando no hay subdivisiones. */
-  looseEvaluations: Evaluation[]
-  /**
-   * Si es true, cada evaluación tiene su propio % dentro de la subdivisión.
-   * Si es false/undefined, las evaluaciones se promedian por igual.
-   */
-  weightedEvals?: boolean
+  /** Secciones tope del ramo (sus pesos suman 100). Árbol anidado de GradeNode. */
+  nodes: GradeNode[]
 }
 
 export type Theme = 'light' | 'dark'

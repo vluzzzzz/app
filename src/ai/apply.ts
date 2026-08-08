@@ -1,6 +1,8 @@
 import { useAppStore } from '../store/useAppStore'
-import type { Subject } from '../lib/types'
-import type { AiAction } from './types'
+import { makeId } from '../lib/format'
+import { distributeChildren } from '../lib/gradeTree'
+import type { GradeNode, Subject } from '../lib/types'
+import type { AiAction, AiNode } from './types'
 
 const norm = (s: string) => s.trim().toLowerCase()
 
@@ -8,45 +10,37 @@ function findSubject(subjects: Subject[], name: string): Subject | undefined {
   return subjects.find((s) => norm(s.name) === norm(name))
 }
 
-function findSubdivisionId(
-  subject: Subject,
-  name?: string | null,
-): string | null {
-  if (!name) return null
-  const d = subject.subdivisions.find((x) => norm(x.name) === norm(name))
-  return d ? d.id : null
+/** Camina el árbol por una ruta de nombres. Devuelve el nodo o null. */
+function findByPath(nodes: GradeNode[], path: string[]): GradeNode | null {
+  if (!path.length) return null
+  let curr: GradeNode | undefined = nodes.find((n) => norm(n.name) === norm(path[0]))
+  for (let i = 1; i < path.length && curr; i++) {
+    curr = (curr.children ?? []).find((n) => norm(n.name) === norm(path[i]))
+  }
+  return curr ?? null
 }
 
-/** Busca una evaluación por nombre en toda la asignatura. */
-function findEval(
-  subject: Subject,
-  evalName: string,
-  subName?: string | null,
-): { subId: string | null; evalId: string } | null {
-  const match = (arr: { id: string; name: string }[]) =>
-    arr.find((e) => norm(e.name) === norm(evalName))
-  if (subject.subdivisions.length > 0) {
-    for (const d of subject.subdivisions) {
-      if (subName && norm(d.name) !== norm(subName)) continue
-      const e = match(d.evaluations)
-      if (e) return { subId: d.id, evalId: e.id }
-    }
-    return null
-  }
-  const e = match(subject.looseEvaluations)
-  return e ? { subId: null, evalId: e.id } : null
+/** Convierte el árbol que manda la IA en GradeNode[] (con ids y pesos parejos si faltan). */
+function buildTree(aiNodes: AiNode[]): GradeNode[] {
+  const mapped: GradeNode[] = aiNodes.map((a) =>
+    a.children && a.children.length
+      ? { id: makeId(), name: a.name || 'Sección', weight: a.weight ?? 0, children: buildTree(a.children) }
+      : { id: makeId(), name: a.name || 'Nota', weight: a.weight ?? 0, grade: a.grade ?? null },
+  )
+  const sum = mapped.reduce((s, n) => s + (n.weight || 0), 0)
+  return Math.abs(sum - 100) < 0.5 ? mapped : distributeChildren(mapped)
 }
 
 /**
  * Ejecuta las acciones de la IA sobre el store. Devuelve un resumen legible de lo
- * aplicado (para mostrar chips). Ignora acciones que no se puedan resolver.
+ * aplicado (para chips). Ignora acciones que no se puedan resolver.
  */
 export function applyActions(actions: AiAction[]): string[] {
   const applied: string[] = []
   const store = useAppStore.getState()
 
   for (const a of actions) {
-    // Estado fresco tras cada acción (para resolver ids recién creados).
+    // Estado fresco tras cada acción (para resolver nodos recién creados).
     const subjects = useAppStore.getState().subjects
 
     switch (a.type) {
@@ -54,53 +48,58 @@ export function applyActions(actions: AiAction[]): string[] {
         store.addSubject({
           name: a.name,
           color: a.color,
-          subdivisions: a.subdivisions,
+          nodes: a.nodes ? buildTree(a.nodes) : [],
         })
         applied.push(`Creé ${a.name}`)
         break
       }
-      case 'add_evaluation': {
+      case 'add_note': {
         const s = findSubject(subjects, a.subject)
         if (!s) break
-        const subId = findSubdivisionId(s, a.subdivision)
-        store.addEvaluationWith(s.id, subId, a.name, a.grade ?? null)
-        applied.push(
-          `Agregué ${a.name}${a.grade != null ? ` (${a.grade})` : ''} en ${a.subject}`,
-        )
+        const path = a.path ?? []
+        const parent = path.length ? findByPath(s.nodes, path) : null
+        const parentId = parent ? parent.id : null
+        store.addNode(s.id, parentId, { name: a.name, folder: false })
+        // Poner nota si vino: buscar la recién creada por nombre bajo el padre.
+        if (a.grade != null) {
+          const fresh = useAppStore.getState().getSubject(s.id)
+          if (fresh) {
+            const siblings = parentId ? findByPath(fresh.nodes, path)?.children ?? [] : fresh.nodes
+            const created = [...siblings].reverse().find((n) => norm(n.name) === norm(a.name))
+            if (created) store.updateNode(s.id, created.id, { grade: a.grade })
+          }
+        }
+        applied.push(`Agregué ${a.name}${a.grade != null ? ` (${a.grade})` : ''} en ${a.subject}`)
         break
       }
       case 'set_grade': {
         const s = findSubject(subjects, a.subject)
         if (!s) break
-        const found = findEval(s, a.evaluation, a.subdivision)
-        if (!found) break
-        store.updateEvaluation(s.id, found.subId, found.evalId, {
-          grade: a.grade,
-        })
-        applied.push(`Puse ${a.grade} en ${a.evaluation}`)
+        const node = findByPath(s.nodes, a.path)
+        if (!node || node.children !== undefined) break
+        store.updateNode(s.id, node.id, { grade: a.grade })
+        applied.push(`Puse ${a.grade} en ${a.path[a.path.length - 1] ?? a.subject}`)
         break
       }
-      case 'update_subdivision': {
+      case 'update_node': {
         const s = findSubject(subjects, a.subject)
         if (!s) break
-        const d = s.subdivisions.find(
-          (x) => norm(x.name) === norm(a.subdivision),
-        )
-        if (!d) break
-        store.updateSubdivision(s.id, d.id, {
+        const node = findByPath(s.nodes, a.path)
+        if (!node) break
+        store.updateNode(s.id, node.id, {
           ...(a.weight != null ? { weight: a.weight } : {}),
           ...(a.name ? { name: a.name } : {}),
         })
-        applied.push(`Actualicé ${a.subdivision}`)
+        applied.push(`Actualicé ${a.path[a.path.length - 1] ?? a.subject}`)
         break
       }
-      case 'remove_evaluation': {
+      case 'remove_node': {
         const s = findSubject(subjects, a.subject)
         if (!s) break
-        const found = findEval(s, a.evaluation, a.subdivision)
-        if (!found) break
-        store.removeEvaluation(s.id, found.subId, found.evalId)
-        applied.push(`Borré ${a.evaluation}`)
+        const node = findByPath(s.nodes, a.path)
+        if (!node) break
+        store.removeNode(s.id, node.id)
+        applied.push(`Borré ${a.path[a.path.length - 1] ?? ''}`.trim())
         break
       }
       case 'remove_subject': {

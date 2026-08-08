@@ -1,38 +1,22 @@
-/** Catálogo de acciones que la IA puede pedir (todas por NOMBRE, no por id). */
+/** Nodo del árbol que la IA puede mandar al crear un ramo (carpeta si trae children). */
+export type AiNode = {
+  name: string
+  weight?: number
+  grade?: number | null
+  children?: AiNode[]
+}
+
+/**
+ * Catálogo de acciones que la IA puede pedir (todo por NOMBRE / RUTA de nombres).
+ * `path` = ruta de carpetas desde la sección tope hasta el nodo (ej:
+ * ["Cátedra","Pruebas","Prueba 1"]). Para add_note, `path` es la carpeta destino.
+ */
 export type AiAction =
-  | {
-      type: 'create_subject'
-      name: string
-      color?: string
-      subdivisions?: { name: string; weight: number }[]
-    }
-  | {
-      type: 'add_evaluation'
-      subject: string
-      subdivision?: string | null
-      name: string
-      grade?: number | null
-    }
-  | {
-      type: 'set_grade'
-      subject: string
-      subdivision?: string | null
-      evaluation: string
-      grade: number
-    }
-  | {
-      type: 'update_subdivision'
-      subject: string
-      subdivision: string
-      weight?: number
-      name?: string
-    }
-  | {
-      type: 'remove_evaluation'
-      subject: string
-      subdivision?: string | null
-      evaluation: string
-    }
+  | { type: 'create_subject'; name: string; color?: string; nodes?: AiNode[] }
+  | { type: 'add_note'; subject: string; path?: string[]; name: string; grade?: number | null }
+  | { type: 'set_grade'; subject: string; path: string[]; grade: number }
+  | { type: 'update_node'; subject: string; path: string[]; weight?: number; name?: string }
+  | { type: 'remove_node'; subject: string; path: string[] }
   | { type: 'remove_subject'; subject: string }
 
 /** Respuesta esperada de la IA (JSON). */

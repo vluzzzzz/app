@@ -1,23 +1,21 @@
-import { AnimatePresence, motion } from 'framer-motion'
-import { useEffect, useState, type ReactNode } from 'react'
+import { motion } from 'framer-motion'
+import { useEffect, useState } from 'react'
 import type { Route } from '../../App'
 import { useAppStore } from '../../store/useAppStore'
-import { gradient } from '../../lib/colors'
+import { accentRgb } from '../../lib/accents'
 import { formatGrade } from '../../lib/format'
 import {
   currentGrade,
-  evalWeightsValid,
+  gradedEvaluationCount,
   minGradeToPass,
+  realEvaluationCount,
   weightsAreValid,
 } from '../../lib/grades'
-import type { Evaluation, GradeScale } from '../../lib/types'
-import { EvaluationRow } from './EvaluationRow'
+import { NodeEditor } from './NodeEditor'
 import { CalcResultsSheet } from './CalcResultsSheet'
 import { GlassButton } from '../../components/ui/GlassButton'
-import { Toggle } from '../../components/ui/Toggle'
-import { Stepper } from '../../components/ui/Stepper'
 import { StatusPill } from '../../components/ui/StatusPill'
-import { ChevronLeft, PlusIcon, TrashIcon } from '../../components/ui/Icons'
+import { ChevronLeft, TrashIcon } from '../../components/ui/Icons'
 
 export function SubjectDetail({
   id,
@@ -27,13 +25,7 @@ export function SubjectDetail({
   navigate: (r: Route) => void
 }) {
   const subject = useAppStore((s) => s.subjects.find((x) => x.id === id))
-  const addEvaluation = useAppStore((s) => s.addEvaluation)
-  const updateEvaluation = useAppStore((s) => s.updateEvaluation)
-  const removeEvaluation = useAppStore((s) => s.removeEvaluation)
   const removeSubject = useAppStore((s) => s.removeSubject)
-  const setWeightedEvals = useAppStore((s) => s.setWeightedEvals)
-  const setEvalCount = useAppStore((s) => s.setEvalCount)
-
   const [calcOpen, setCalcOpen] = useState(false)
 
   useEffect(() => {
@@ -42,11 +34,12 @@ export function SubjectDetail({
 
   if (!subject) return null
 
-  const hasSubs = subject.subdivisions.length > 0
-  const invalidWeights = hasSubs && !weightsAreValid(subject)
-  const invalidEvalWeights = !evalWeightsValid(subject)
   const current = currentGrade(subject)
   const res = minGradeToPass(subject)
+  const total = realEvaluationCount(subject)
+  const graded = gradedEvaluationCount(subject)
+  const pct = total === 0 ? 0 : Math.round((graded / total) * 100)
+  const invalidWeights = !weightsAreValid(subject)
 
   function handleDelete() {
     if (confirm(`¿Eliminar "${subject!.name}"? Esta acción no se puede deshacer.`)) {
@@ -55,14 +48,34 @@ export function SubjectDetail({
     }
   }
 
+  // Texto del campo "Necesitas" según el estado.
+  const needBox = (() => {
+    switch (res.status) {
+      case 'ALCANZABLE':
+        return { label: 'Necesitas', value: formatGrade(res.needed), tone: 'amber' as const }
+      case 'ASEGURADO':
+        return { label: 'Necesitas', value: '¡Ya aprobaste! 🎉', tone: 'green' as const }
+      case 'IMPOSIBLE':
+        return { label: 'Necesitas', value: 'Ya no alcanza 😕', tone: 'red' as const }
+      default:
+        return { label: 'Necesitas', value: 'Agrega notas', tone: 'gray' as const }
+    }
+  })()
+  const toneClass = {
+    green: 'text-emerald-600 dark:text-emerald-300',
+    amber: 'text-amber-600 dark:text-amber-300',
+    red: 'text-rose-600 dark:text-rose-300',
+    gray: 'text-ink/40',
+  }[needBox.tone]
+
   return (
-    <div className="h-full overflow-y-auto px-5 pb-28 pt-6">
+    <div className="h-full overflow-y-auto px-5 pb-36 pt-6">
       {/* Header */}
       <header className="mb-5 flex items-center justify-between">
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={() => navigate({ name: 'calculadora' })}
-          className="glass glass-highlight rounded-2xl p-2.5 text-ink/80"
+          className="glass rounded-2xl p-2.5 text-ink/80"
         >
           <ChevronLeft className="h-5 w-5" />
         </motion.button>
@@ -75,125 +88,59 @@ export function SubjectDetail({
         </motion.button>
       </header>
 
-      {/* Título + nota actual pequeña */}
-      <div className="mb-5 flex items-center gap-3">
+      {/* Título */}
+      <div className="mb-4 flex items-center gap-3">
         <div
-          className="h-11 w-11 rounded-2xl shadow-glass"
-          style={{ backgroundImage: gradient(subject.color) }}
+          className="h-11 w-11 shrink-0 rounded-2xl shadow-[var(--card-shadow)]"
+          style={{ background: `rgb(${accentRgb(subject.color ?? 'gray')})` }}
         />
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-[26px] font-bold text-ink">
-            {subject.name}
-          </h1>
-          <div className="flex items-center gap-2 text-sm text-ink/55">
-            <span>
-              Nota actual{' '}
-              <b className="tabular-nums text-ink/80">{formatGrade(current)}</b>
-            </span>
-            <StatusPill status={res.status} />
-          </div>
-        </div>
+        <h1 className="truncate text-[26px] font-bold text-ink">{subject.name}</h1>
       </div>
 
-      {/* Opción: porcentaje por nota */}
-      <div className="glass glass-highlight mb-4 flex items-center justify-between rounded-3xl p-4">
-        <div className="min-w-0 pr-3">
-          <p className="font-medium text-ink">Porcentaje por nota</p>
-          <p className="text-xs text-ink/50">
-            Cada evaluación con su propio %. Si no, se promedian igual.
-          </p>
+      {/* Resumen: promedio + estado + barra + necesitas */}
+      <div className="glass mb-5 rounded-4xl p-5">
+        <div className="flex items-end justify-between">
+          <div>
+            <p className="text-sm text-ink/50">Promedio actual</p>
+            <div className="flex items-center gap-2">
+              <span className="text-4xl font-black tabular-nums text-ink">
+                {formatGrade(current)}
+              </span>
+              <StatusPill status={res.status} />
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-ink/50">{needBox.label}</p>
+            <p className={`text-lg font-bold ${toneClass}`}>{needBox.value}</p>
+          </div>
         </div>
-        <Toggle
-          on={!!subject.weightedEvals}
-          onToggle={() => setWeightedEvals(id, !subject.weightedEvals)}
-        />
+
+        {/* Barra de progreso de notas puestas */}
+        <div className="mt-4">
+          <div className="mb-1.5 flex items-center justify-between text-xs text-ink/45">
+            <span>{total === 0 ? 'Sin notas aún' : `${graded}/${total} notas puestas`}</span>
+            <span className="tabular-nums">{pct}%</span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-ink/10">
+            <motion.div
+              className="h-full rounded-full bg-ink"
+              initial={false}
+              animate={{ width: `${pct}%` }}
+              transition={{ type: 'spring', stiffness: 220, damping: 30 }}
+            />
+          </div>
+        </div>
       </div>
 
       {invalidWeights && (
-        <Warning>
-          Las ponderaciones de las secciones no suman 100%. El cálculo se ajusta
-          proporcionalmente igual.
-        </Warning>
-      )}
-      {invalidEvalWeights && (
-        <Warning>
-          Los % por nota no suman 100% en alguna sección. Revisa los valores.
-        </Warning>
-      )}
-
-      {/* Secciones / evaluaciones */}
-      {hasSubs ? (
-        <div className="space-y-4">
-          {subject.subdivisions.map((sub) => (
-            <div key={sub.id} className="glass glass-highlight rounded-4xl p-4">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <h3 className="text-base font-semibold text-ink">{sub.name}</h3>
-                <span className="rounded-full bg-ink/10 px-2.5 py-1 text-xs font-semibold text-ink/70">
-                  {sub.weight}%
-                </span>
-              </div>
-
-              <div className="mb-3 flex items-center justify-between rounded-2xl bg-ink/5 px-3 py-2">
-                <span className="text-sm text-ink/60">Cantidad de notas</span>
-                <Stepper
-                  value={sub.evaluations.length}
-                  onChange={(n) => setEvalCount(id, sub.id, n)}
-                />
-              </div>
-
-              <EvalList
-                evals={sub.evaluations}
-                scale={subject.scale}
-                weighted={subject.weightedEvals}
-                onName={(evalId, name) =>
-                  updateEvaluation(id, sub.id, evalId, { name })
-                }
-                onGrade={(evalId, grade) =>
-                  updateEvaluation(id, sub.id, evalId, { grade })
-                }
-                onWeight={(evalId, weight) =>
-                  updateEvaluation(id, sub.id, evalId, { weight })
-                }
-                onRemove={(evalId) => removeEvaluation(id, sub.id, evalId)}
-              />
-
-              <AddEvalButton
-                onClick={() =>
-                  addEvaluation(id, sub.id, `${sub.name} ${sub.evaluations.length + 1}`)
-                }
-              />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="glass glass-highlight rounded-4xl p-4">
-          <div className="mb-3 flex items-center justify-between rounded-2xl bg-ink/5 px-3 py-2">
-            <span className="text-sm text-ink/60">Cantidad de notas</span>
-            <Stepper
-              value={subject.looseEvaluations.length}
-              onChange={(n) => setEvalCount(id, null, n)}
-            />
-          </div>
-          <EvalList
-            evals={subject.looseEvaluations}
-            scale={subject.scale}
-            weighted={subject.weightedEvals}
-            onName={(evalId, name) => updateEvaluation(id, null, evalId, { name })}
-            onGrade={(evalId, grade) =>
-              updateEvaluation(id, null, evalId, { grade })
-            }
-            onWeight={(evalId, weight) =>
-              updateEvaluation(id, null, evalId, { weight })
-            }
-            onRemove={(evalId) => removeEvaluation(id, null, evalId)}
-          />
-          <AddEvalButton
-            onClick={() =>
-              addEvaluation(id, null, `Nota ${subject.looseEvaluations.length + 1}`)
-            }
-          />
+        <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-400/15 px-4 py-3 text-sm text-amber-700 dark:text-amber-100">
+          Los porcentajes de alguna sección no suman 100%. El cálculo se ajusta
+          proporcional igual, pero revisa los valores.
         </div>
       )}
+
+      {/* Editor del árbol de evaluación */}
+      <NodeEditor subjectId={id} />
 
       {/* Botón Calcular (fijo abajo) */}
       <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md px-5 pb-6 pt-3">
@@ -202,73 +149,7 @@ export function SubjectDetail({
         </GlassButton>
       </div>
 
-      <CalcResultsSheet
-        subject={subject}
-        open={calcOpen}
-        onClose={() => setCalcOpen(false)}
-      />
-    </div>
-  )
-}
-
-function EvalList({
-  evals,
-  scale,
-  weighted,
-  onName,
-  onGrade,
-  onWeight,
-  onRemove,
-}: {
-  evals: Evaluation[]
-  scale: GradeScale
-  weighted?: boolean
-  onName: (evalId: string, name: string) => void
-  onGrade: (evalId: string, grade: number | null) => void
-  onWeight: (evalId: string, weight: number) => void
-  onRemove: (evalId: string) => void
-}) {
-  if (evals.length === 0) {
-    return (
-      <p className="px-1 py-2 text-sm text-ink/40">
-        Sin evaluaciones. Usa la cantidad de arriba o el botón de abajo.
-      </p>
-    )
-  }
-  return (
-    <div className="space-y-2">
-      <AnimatePresence initial={false}>
-        {evals.map((ev) => (
-          <EvaluationRow
-            key={ev.id}
-            evaluation={ev}
-            scale={scale}
-            weighted={weighted}
-            onName={(name) => onName(ev.id, name)}
-            onGrade={(grade) => onGrade(ev.id, grade)}
-            onWeight={(weight) => onWeight(ev.id, weight)}
-            onRemove={() => onRemove(ev.id)}
-          />
-        ))}
-      </AnimatePresence>
-    </div>
-  )
-}
-
-function AddEvalButton({ onClick }: { onClick: () => void }) {
-  return (
-    <div className="mt-3">
-      <GlassButton variant="ghost" onClick={onClick} className="!px-3 !py-2">
-        <PlusIcon className="h-4 w-4" /> Agregar evaluación
-      </GlassButton>
-    </div>
-  )
-}
-
-function Warning({ children }: { children: ReactNode }) {
-  return (
-    <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-400/15 px-4 py-3 text-sm text-amber-700 dark:text-amber-100">
-      {children}
+      <CalcResultsSheet subject={subject} open={calcOpen} onClose={() => setCalcOpen(false)} />
     </div>
   )
 }

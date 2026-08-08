@@ -1,6 +1,19 @@
-import type { Subject } from '../lib/types'
+import type { GradeNode, Subject } from '../lib/types'
 import { currentGrade, minGradeToPass } from '../lib/grades'
 import { formatGrade } from '../lib/format'
+
+/** Renderiza el árbol de un ramo indentado (carpetas y notas con su %). */
+function renderNodes(nodes: GradeNode[], indent: number): string {
+  const pad = '  '.repeat(indent)
+  return nodes
+    .map((n) => {
+      if (n.children === undefined) {
+        return `${pad}- ${n.name} (${n.weight}%): ${n.grade == null ? 'pendiente' : n.grade}`
+      }
+      return `${pad}- ${n.name} (${n.weight}%):\n${renderNodes(n.children, indent + 1)}`
+    })
+    .join('\n')
+}
 
 /** Resumen compacto del estado actual para que la IA responda con datos reales. */
 function stateSnapshot(subjects: Subject[]): string {
@@ -9,28 +22,10 @@ function stateSnapshot(subjects: Subject[]): string {
     .map((s) => {
       const cur = currentGrade(s)
       const res = minGradeToPass(s)
-      const groups =
-        s.subdivisions.length > 0
-          ? s.subdivisions
-              .map(
-                (d) =>
-                  `${d.name} (${d.weight}%): ` +
-                  (d.evaluations.length
-                    ? d.evaluations
-                        .map(
-                          (e) =>
-                            `${e.name}=${e.grade == null ? 'pendiente' : e.grade}`,
-                        )
-                        .join(', ')
-                    : 'sin evaluaciones'),
-              )
-              .join(' | ')
-          : s.looseEvaluations
-              .map((e) => `${e.name}=${e.grade == null ? 'pendiente' : e.grade}`)
-              .join(', ') || 'sin evaluaciones'
+      const tree = s.nodes.length ? `\n${renderNodes(s.nodes, 1)}` : ' (sin evaluaciones)'
       return `- ${s.name}: nota actual ${formatGrade(cur)}, estado ${res.status}${
         res.needed != null ? `, necesita ~${formatGrade(res.needed)} en lo pendiente` : ''
-      }. ${groups}`
+      }.${tree}`
     })
     .join('\n')
 }
@@ -92,26 +87,45 @@ REGLAS IMPORTANTES:
   deja actions vacío y responde en "reply".
 - Refiérete a las asignaturas/evaluaciones por su NOMBRE tal como aparecen.
 
+MODELO DE UN RAMO (árbol anidado): un ramo tiene "nodos". Un nodo con "children" es una
+CARPETA (sección o subgrupo, ej. Cátedra, Controles); un nodo SIN children es una NOTA (con
+"grade", null = pendiente). Los pesos ("weight", en %) de los hermanos suman 100 en su nivel.
+Para apuntar a un nodo se usa una RUTA de nombres ("path") desde la sección tope, ej:
+["Cátedra","Pruebas","Prueba 1"].
+
 ACCIONES disponibles (cada una es un objeto con "type"):
-- create_subject: { type, name, color?, subdivisions?: [{name, weight}] }  (pesos suman 100)
-- add_evaluation: { type, subject, subdivision?, name, grade? }
-- set_grade: { type, subject, subdivision?, evaluation, grade }
-- update_subdivision: { type, subject, subdivision, weight?, name? }
-- remove_evaluation: { type, subject, subdivision?, evaluation }
+- create_subject: { type, name, color?, nodes?: Nodo[] }
+    Nodo = { name, weight?, grade?, children?: Nodo[] }  (carpeta si trae children; nota si no).
+    Si omites los weight, se reparten parejos.
+- add_note: { type, subject, path?: [carpetas...], name, grade? }  (path vacío = al tope)
+- set_grade: { type, subject, path: [ruta completa hasta la nota], grade }
+- update_node: { type, subject, path, weight?, name? }
+- remove_node: { type, subject, path }
 - remove_subject: { type, subject }
 
-EJEMPLO 1 (crear + nota):
-Usuario: "crea Cálculo con controles 20% y pruebas 80%, saqué 5,5 en el control 1"
-Respuesta: {"reply":"¡Listo! Te dejé Cálculo armado y le puse el 5,5 en el control 1 👍","actions":[
- {"type":"create_subject","name":"Cálculo","subdivisions":[{"name":"Controles","weight":20},{"name":"Pruebas","weight":80}]},
- {"type":"add_evaluation","subject":"Cálculo","subdivision":"Controles","name":"Control 1","grade":5.5}
+EJEMPLO 1 (crear estructurado + nota):
+Usuario: "crea Cálculo: cátedra 60 (controles 40, pruebas 60) y laboratorio 40; saqué 5,5 en control 1"
+Respuesta: {"reply":"¡Listo! Te armé Cálculo con esa estructura y le puse el 5,5 al Control 1 👍","actions":[
+ {"type":"create_subject","name":"Cálculo","nodes":[
+   {"name":"Cátedra","weight":60,"children":[
+     {"name":"Controles","weight":40,"children":[{"name":"Control 1","grade":5.5},{"name":"Control 2"}]},
+     {"name":"Pruebas","weight":60,"children":[{"name":"Prueba 1"},{"name":"Prueba 2"}]}
+   ]},
+   {"name":"Laboratorio","weight":40,"children":[{"name":"Informe"}]}
+ ]}
 ]}
 
-EJEMPLO 2 (nota baja + ramo que no existe → cálido y proactivo):
+EJEMPLO 2 (poner nota en un ramo que ya existe):
+Usuario: "saqué 4,8 en la prueba 1 de cálculo"
+Respuesta: {"reply":"¡Anotado! Te puse el 4,8 en la Prueba 1 de Cálculo 📝","actions":[
+ {"type":"set_grade","subject":"Cálculo","path":["Cátedra","Pruebas","Prueba 1"],"grade":4.8}
+]}
+
+EJEMPLO 3 (nota baja + ramo que no existe → cálido y proactivo):
 Usuario: "en cálculo saqué un 2"
-Respuesta: {"reply":"Uy, tranqui, un 2 no define nada — para la próxima se da mejor 💪 Veo que no tenías Cálculo creado, así que te lo creo y le agrego esa nota para ir siguiéndole el ritmo.","actions":[
+Respuesta: {"reply":"Uy, tranqui, un 2 no define nada — para la próxima se da mejor 💪 Veo que no tenías Cálculo, te lo creo y le agrego la nota.","actions":[
  {"type":"create_subject","name":"Cálculo"},
- {"type":"add_evaluation","subject":"Cálculo","name":"Nota 1","grade":2}
+ {"type":"add_note","subject":"Cálculo","name":"Nota 1","grade":2}
 ]}
 
 ESTADO ACTUAL DEL USUARIO:
