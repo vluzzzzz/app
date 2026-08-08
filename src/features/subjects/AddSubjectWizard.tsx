@@ -1,11 +1,32 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { useAppStore } from '../../store/useAppStore'
 import { ACCENT_THEMES } from '../../lib/accents'
 import { defaultEvalTree } from '../../lib/gradeTree'
 import { NodeEditor } from './NodeEditor'
-import { GlassButton } from '../../components/ui/GlassButton'
 import { ChevronLeft, ChevronRight } from '../../components/ui/Icons'
+
+/** Botón negro plano y limpio (sin sombra ni brillo). */
+function FlatButton({
+  children,
+  onClick,
+  disabled,
+}: {
+  children: ReactNode
+  onClick: () => void
+  disabled?: boolean
+}) {
+  return (
+    <motion.button
+      whileTap={{ scale: disabled ? 1 : 0.98 }}
+      onClick={onClick}
+      disabled={disabled}
+      className="flex w-full items-center justify-center gap-1.5 rounded-2xl bg-ink py-4 text-[15px] font-semibold text-surface transition-opacity active:opacity-90 disabled:opacity-30"
+    >
+      {children}
+    </motion.button>
+  )
+}
 
 const norm = (s: string) =>
   s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -113,9 +134,7 @@ export function AddSubjectWizard({
                     className="aspect-square"
                     style={{
                       background: `radial-gradient(110% 110% at 32% 28%, rgba(255,255,255,0.4), rgba(255,255,255,0) 52%), rgb(${a.rgb})`,
-                      boxShadow: selected
-                        ? '0 0 0 2px rgb(var(--surface)), 0 0 0 4px rgb(var(--ink)), inset 0 -3px 6px rgba(0,0,0,0.14)'
-                        : 'inset 0 -3px 6px rgba(0,0,0,0.14)',
+                      boxShadow: 'inset 0 -3px 6px rgba(0,0,0,0.14)',
                     }}
                   />
                 )
@@ -123,12 +142,12 @@ export function AddSubjectWizard({
             </div>
           </div>
 
-          <GlassButton variant="primary" full onClick={goStep2} disabled={!canNext}>
+          <FlatButton onClick={goStep2} disabled={!canNext}>
             Siguiente <ChevronRight className="h-5 w-5" />
-          </GlassButton>
+          </FlatButton>
         </div>
       ) : (
-        <div className="space-y-5 pb-24">
+        <div className="space-y-5">
           <div>
             <h2 className="px-1 text-[19px] font-bold text-ink">¿Cómo se evalúa este ramo?</h2>
             <p className="px-1 text-sm text-ink/45">
@@ -138,11 +157,9 @@ export function AddSubjectWizard({
 
           {createdId && <NodeEditor subjectId={createdId} />}
 
-          {/* Crear ramo (fijo abajo) */}
-          <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md px-5 pb-6 pt-3">
-            <GlassButton variant="primary" full onClick={finish}>
-              Crear ramo ✓
-            </GlassButton>
+          {/* Crear ramo (en el flujo, sobre la nav) */}
+          <div className="pt-2">
+            <FlatButton onClick={finish}>Crear ramo ✓</FlatButton>
           </div>
         </div>
       )}

@@ -10,12 +10,11 @@ type Props = Omit<HTMLMotionProps<'button'>, 'children'> & {
 }
 
 const VARIANTS: Record<Variant, string> = {
-  primary:
-    'shimmer bg-ink text-surface font-semibold shadow-glass-lg',
-  glass:
-    'glass glass-highlight text-ink font-medium',
+  // Negro plano y limpio: sin brillo (shimmer) ni sombra fuerte.
+  primary: 'bg-ink text-surface font-semibold',
+  glass: 'glass glass-highlight text-ink font-medium',
   ghost: 'text-ink/70 font-medium',
-  danger: 'bg-rose-500/90 text-ink font-semibold shadow-glass',
+  danger: 'bg-rose-500/90 text-ink font-semibold',
 }
 
 export function GlassButton({
