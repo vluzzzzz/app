@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, animate, motion, useMotionValue } from 'framer-motion'
 import { useAppStore } from '../../store/useAppStore'
 import { accentRgb } from '../../lib/accents'
 import type { GradeNode, GradeScale } from '../../lib/types'
@@ -80,7 +80,7 @@ function AddLink({ label, onClick }: { label: string; onClick: () => void }) {
   )
 }
 
-/** Fila de nota (hoja): puntito + nombre + % + input de nota. */
+/** Fila de nota (hoja): puntito + nombre + % + input. Deslizar a la izquierda = borrar. */
 function NoteRow({
   subjectId,
   node,
@@ -93,17 +93,53 @@ function NoteRow({
   color: string
 }) {
   const updateNode = useAppStore((s) => s.updateNode)
+  const removeNode = useAppStore((s) => s.removeNode)
+  const x = useMotionValue(0)
+  const [armed, setArmed] = useState(false)
+  const THRESHOLD = 80
+
   return (
-    <div className="flex items-center gap-2.5 py-1">
-      <Dot small color={color} />
-      <NameInput value={node.name} onChange={(name) => updateNode(subjectId, node.id, { name })} />
-      <WeightPill value={node.weight} onChange={(weight) => updateNode(subjectId, node.id, { weight })} />
-      <GradeInput
-        value={node.grade ?? null}
-        scale={scale}
-        onChange={(grade) => updateNode(subjectId, node.id, { grade })}
-      />
-    </div>
+    <motion.div
+      layout
+      exit={{ opacity: 0, height: 0, marginTop: 0 }}
+      className="relative overflow-hidden rounded-xl"
+    >
+      {/* Fondo rojo que se revela al deslizar (más intenso al pasar el umbral). */}
+      <div
+        className="absolute inset-0 flex items-center justify-end rounded-xl pr-4 transition-colors"
+        style={{ background: armed ? 'rgb(244 63 94)' : 'rgba(244,63,94,0.55)' }}
+      >
+        <TrashIcon className="h-5 w-5 text-white" />
+      </div>
+
+      <motion.div
+        drag="x"
+        dragDirectionLock
+        dragConstraints={{ left: -110, right: 0 }}
+        dragElastic={0.05}
+        style={{ x }}
+        onDrag={(_, info) => setArmed(info.offset.x < -THRESHOLD)}
+        onDragEnd={(_, info) => {
+          if (info.offset.x < -THRESHOLD) {
+            animate(x, -400, { duration: 0.18 })
+            removeNode(subjectId, node.id)
+          } else {
+            setArmed(false)
+            animate(x, 0, { type: 'spring', stiffness: 500, damping: 40 })
+          }
+        }}
+        className="relative flex items-center gap-2.5 rounded-xl bg-[rgb(var(--card))] py-2 pl-1"
+      >
+        <Dot small color={color} />
+        <NameInput value={node.name} onChange={(name) => updateNode(subjectId, node.id, { name })} />
+        <WeightPill value={node.weight} onChange={(weight) => updateNode(subjectId, node.id, { weight })} />
+        <GradeInput
+          value={node.grade ?? null}
+          scale={scale}
+          onChange={(grade) => updateNode(subjectId, node.id, { grade })}
+        />
+      </motion.div>
+    </motion.div>
   )
 }
 
@@ -195,22 +231,24 @@ function Subgroup({
             className="ml-1 overflow-hidden border-l border-ink/10 pl-3"
           >
             <div className="space-y-0.5 pt-1">
-              {children.map((c) =>
-                isFolder(c) ? (
-                  <Subgroup
-                    key={c.id}
-                    subjectId={subjectId}
-                    node={c}
-                    scale={scale}
-                    color={color}
-                    depth={depth + 1}
-                    expanded={expanded}
-                    toggle={toggle}
-                  />
-                ) : (
-                  <NoteRow key={c.id} subjectId={subjectId} node={c} scale={scale} color={color} />
-                ),
-              )}
+              <AnimatePresence initial={false}>
+                {children.map((c) =>
+                  isFolder(c) ? (
+                    <Subgroup
+                      key={c.id}
+                      subjectId={subjectId}
+                      node={c}
+                      scale={scale}
+                      color={color}
+                      depth={depth + 1}
+                      expanded={expanded}
+                      toggle={toggle}
+                    />
+                  ) : (
+                    <NoteRow key={c.id} subjectId={subjectId} node={c} scale={scale} color={color} />
+                  ),
+                )}
+              </AnimatePresence>
             </div>
             <FolderControls subjectId={subjectId} node={node} depth={depth} />
           </motion.div>
@@ -252,22 +290,24 @@ function Section({
       </div>
 
       <div className="space-y-0.5">
-        {children.map((c) =>
-          isFolder(c) ? (
-            <Subgroup
-              key={c.id}
-              subjectId={subjectId}
-              node={c}
-              scale={scale}
-              color={color}
-              depth={1}
-              expanded={expanded}
-              toggle={toggle}
-            />
-          ) : (
-            <NoteRow key={c.id} subjectId={subjectId} node={c} scale={scale} color={color} />
-          ),
-        )}
+        <AnimatePresence initial={false}>
+          {children.map((c) =>
+            isFolder(c) ? (
+              <Subgroup
+                key={c.id}
+                subjectId={subjectId}
+                node={c}
+                scale={scale}
+                color={color}
+                depth={1}
+                expanded={expanded}
+                toggle={toggle}
+              />
+            ) : (
+              <NoteRow key={c.id} subjectId={subjectId} node={c} scale={scale} color={color} />
+            ),
+          )}
+        </AnimatePresence>
       </div>
 
       <FolderControls subjectId={subjectId} node={node} depth={0} />

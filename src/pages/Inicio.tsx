@@ -5,16 +5,13 @@ import type { Task } from '../lib/types'
 import { useAppStore } from '../store/useAppStore'
 import { avatarSrc } from '../lib/avatars'
 import { AiBar } from '../features/chat/AiBar'
-import { SubjectHomeCard } from '../features/subjects/SubjectHomeCard'
+import { RamosCarousel } from '../features/subjects/RamosCarousel'
 import { TaskCard } from '../features/tasks/TaskCard'
 import { TaskEditor } from '../features/tasks/TaskEditor'
 import { DashedBox } from '../components/ui/DashedBox'
 import { BellIcon, CalendarIcon, FileUploadIcon, PlusIcon } from '../components/ui/Icons'
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
-
-// Grises para las tarjetas de ramo en la Home (oscuro / plomo, intercalados).
-const HOME_GRAYS = ['rgb(39 39 42)', 'rgb(82 82 91)']
 
 export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
   const userName = useAppStore((s) => s.userName)
@@ -25,7 +22,6 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
   // Editor de tareas (null = crear nueva).
   const [editorOpen, setEditorOpen] = useState(false)
   const [editing, setEditing] = useState<Task | null>(null)
-  const [ramoIdx, setRamoIdx] = useState(0)
   const openNew = () => {
     setEditing(null)
     setEditorOpen(true)
@@ -130,39 +126,10 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
             </DashedBox>
           </div>
         ) : (
-          // Carrusel: un ramo por vista, deslizar para el resto (puntos como pista).
-          <div>
-            <div
-              onScroll={(e) =>
-                setRamoIdx(
-                  Math.round(e.currentTarget.scrollLeft / (e.currentTarget.clientWidth || 1)),
-                )
-              }
-              className="flex snap-x snap-mandatory overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-              {subjects.map((s, i) => (
-                <div key={s.id} className="w-full shrink-0 snap-start">
-                  <SubjectHomeCard
-                    subject={s}
-                    bg={HOME_GRAYS[i % HOME_GRAYS.length]}
-                    onOpen={() => navigate({ name: 'subject', id: s.id })}
-                  />
-                </div>
-              ))}
-            </div>
-            {subjects.length > 1 && (
-              <div className="mt-3 flex justify-center gap-1.5">
-                {subjects.map((_, i) => (
-                  <span
-                    key={i}
-                    className={`h-1.5 rounded-full transition-all ${
-                      i === ramoIdx ? 'w-5 bg-ink/70' : 'w-1.5 bg-ink/20'
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+          <RamosCarousel
+            subjects={subjects}
+            onOpen={(id) => navigate({ name: 'subject', id })}
+          />
         )}
       </section>
 
