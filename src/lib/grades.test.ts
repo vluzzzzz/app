@@ -1,12 +1,18 @@
 import { describe, it, expect } from 'vitest'
 import {
+  analyzeSituation,
   ceilTo,
   combinationsFor,
   currentGrade,
+  evaluationsBreakdown,
+  impactTable,
+  maxPossibleFinal,
   minGradeToPass,
+  minPossibleFinal,
   pendingEvaluations,
   projectedFinal,
   projectedGrade,
+  scenariosFor,
   weightsAreValid,
 } from './grades'
 import { DEFAULT_SCALE, type GradeNode, type Subject } from './types'
@@ -208,5 +214,69 @@ describe('notas que faltan (pendientes) y combinaciones', () => {
   it('combinationsFor devuelve null si no faltan exactamente 2', () => {
     const s = subject([note('N1', 100, null, 'n1')])
     expect(combinationsFor(s)).toBeNull()
+  })
+})
+
+describe('análisis de Calcular', () => {
+  it('máximo y mínimo posible (escala chilena)', () => {
+    const s = subject([
+      folder('Controles', 20, [note('C1', 100, 4.0)]),
+      folder('Pruebas', 80, [note('P1', 100, null)]),
+    ])
+    expect(maxPossibleFinal(s)).toBeCloseTo(0.2 * 4 + 0.8 * 7) // 6.4
+    expect(minPossibleFinal(s)).toBeCloseTo(0.2 * 4 + 0.8 * 1) // 1.6
+  })
+
+  it('evaluationsBreakdown expone el peso global de cada nota', () => {
+    const s = subject([
+      folder('Cátedra', 60, [
+        folder('Controles', 40, [note('C1', 100, 5.0)]),
+        folder('Pruebas', 60, [note('P1', 100, null)]),
+      ]),
+      folder('Laboratorio', 40, [note('Informe', 100, null)]),
+    ])
+    const b = evaluationsBreakdown(s)
+    const c1 = b.find((x) => x.name === 'C1')!
+    expect(c1.weightPct).toBeCloseTo(24) // 60% * 40% = 24%
+    expect(b.find((x) => x.name === 'Informe')!.weightPct).toBeCloseTo(40)
+  })
+
+  it('analyzeSituation clasifica bien', () => {
+    // imposible: ni con 7 alcanza
+    const imp = subject([
+      folder('C', 20, [note('C1', 100, 1.0)]),
+      folder('P', 80, [note('P1', 50, 1.0), note('P2', 50, null)]),
+    ])
+    expect(analyzeSituation(imp)).toBe('imposible')
+    // sin datos
+    expect(analyzeSituation(subject([]))).toBe('sin_datos')
+  })
+
+  it('scenariosFor da parejo y sesgados para 2 pendientes', () => {
+    const s = subject([
+      folder('Controles', 20, [note('C1', 100, 4.0, 'c1'), note('C2', 100, null, 'c2')]),
+      folder('Pruebas', 80, [note('P1', 100, null, 'p1')]),
+    ])
+    const sc = scenariosFor(s)
+    expect(sc).not.toBeNull()
+    expect(sc!.balanced).not.toBeNull()
+    // el promedio final de cada escenario alcanza a aprobar
+    for (const k of ['balanced', 'higherFirst', 'higherSecond'] as const) {
+      if (sc![k]) expect(sc![k]!.final).toBeGreaterThanOrEqual(4.0 - 1e-9)
+    }
+  })
+
+  it('funciona con una escala distinta (0–10, aprueba 5)', () => {
+    const s: Subject = {
+      id: 'x',
+      name: 'Otra',
+      scale: { min: 0, max: 10, pass: 5 },
+      nodes: [folder('Notas', 100, [note('A', 50, 6.0), note('B', 50, null, 'b')])],
+    }
+    expect(currentGrade(s)).toBeCloseTo(6.0)
+    expect(maxPossibleFinal(s)).toBeCloseTo(0.5 * 6 + 0.5 * 10) // 8
+    expect(minGradeToPass(s).needed).toBe(4.0) // (5 - 0.5*6)/0.5 = 4
+    expect(analyzeSituation(s)).toBe('facil')
+    expect(impactTable(s, 'b').length).toBeGreaterThan(0)
   })
 })

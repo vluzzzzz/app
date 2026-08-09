@@ -233,6 +233,71 @@ export function FileUploadIcon({ className }: IconProps) {
   )
 }
 
+export function TrendingUpIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 17l6-6 4 4 8-8" />
+      <path d="M17 7h4v4" />
+    </svg>
+  )
+}
+
+export function PercentIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 5 5 19" />
+      <circle cx="7.5" cy="7.5" r="2.5" />
+      <circle cx="16.5" cy="16.5" r="2.5" />
+    </svg>
+  )
+}
+
+export function ScaleIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3v18M7 21h10M12 5 5 8m7-3 7 3" />
+      <path d="M2 12 5 8l3 4a3 3 0 0 1-6 0ZM16 12l3-4 3 4a3 3 0 0 1-6 0Z" />
+    </svg>
+  )
+}
+
+export function TargetIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+export function AlertIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+      <path d="M12 9v4M12 17h.01" />
+    </svg>
+  )
+}
+
+export function XCircleIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="m15 9-6 6M9 9l6 6" />
+    </svg>
+  )
+}
+
+export function CheckCircleIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="m8.5 12 2.5 2.5 4.5-5" />
+    </svg>
+  )
+}
+
 export function FolderIcon({ className }: IconProps) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">

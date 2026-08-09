@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Route } from '../../App'
 import { useAppStore } from '../../store/useAppStore'
 import { accentRgb } from '../../lib/accents'
@@ -12,7 +12,7 @@ import {
   weightsAreValid,
 } from '../../lib/grades'
 import { NodeEditor } from './NodeEditor'
-import { CalcResultsSheet } from './CalcResultsSheet'
+import { CalcAnalysis } from './CalcAnalysis'
 import { GlassButton } from '../../components/ui/GlassButton'
 import { ChevronLeft, TrashIcon } from '../../components/ui/Icons'
 
@@ -25,7 +25,19 @@ export function SubjectDetail({
 }) {
   const subject = useAppStore((s) => s.subjects.find((x) => x.id === id))
   const removeSubject = useAppStore((s) => s.removeSubject)
-  const [calcOpen, setCalcOpen] = useState(false)
+  const [showCalc, setShowCalc] = useState(false)
+  const calcRef = useRef<HTMLDivElement>(null)
+
+  const toggleCalc = () => {
+    setShowCalc((v) => {
+      const next = !v
+      if (next) {
+        // Bajar suave hasta el análisis cuando se abre.
+        setTimeout(() => calcRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
+      }
+      return next
+    })
+  }
 
   useEffect(() => {
     if (!subject) navigate({ name: 'calculadora' })
@@ -144,14 +156,25 @@ export function SubjectDetail({
       {/* Editor del árbol de evaluación */}
       <NodeEditor subjectId={id} />
 
-      {/* Botón Calcular (fijo abajo) */}
-      <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md px-5 pb-6 pt-3">
-        <GlassButton variant="primary" full onClick={() => setCalcOpen(true)}>
-          Calcular
+      {/* Botón Calcular (inline) */}
+      <div className="mt-6">
+        <GlassButton variant="primary" full onClick={toggleCalc}>
+          {showCalc ? 'Ocultar análisis' : 'Calcular'}
         </GlassButton>
       </div>
 
-      <CalcResultsSheet subject={subject} open={calcOpen} onClose={() => setCalcOpen(false)} />
+      {/* Análisis completo, desplegado abajo */}
+      {showCalc && (
+        <motion.div
+          ref={calcRef}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="mt-4 scroll-mt-4"
+        >
+          <CalcAnalysis subject={subject} />
+        </motion.div>
+      )}
     </div>
   )
 }

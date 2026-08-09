@@ -198,6 +198,115 @@ function round1(n: number) {
   return Math.round(n * 10) / 10
 }
 
+/** Promedio final MÁXIMO posible (nota máxima en todo lo pendiente). */
+export function maxPossibleFinal(subject: Subject): number {
+  return projectedGrade(subject, subject.scale.max)
+}
+
+/** Promedio final MÍNIMO posible (nota mínima en todo lo pendiente). */
+export function minPossibleFinal(subject: Subject): number {
+  return projectedGrade(subject, subject.scale.min)
+}
+
+/** Desglose de TODAS las notas con su peso GLOBAL (%). */
+export type LeafBreakdown = {
+  id: string | null
+  name: string
+  subName: string | null
+  weightPct: number
+  grade: number | null
+}
+export function evaluationsBreakdown(subject: Subject): LeafBreakdown[] {
+  return effectiveLeaves(subject).map((e) => ({
+    id: e.id,
+    name: e.name,
+    subName: e.path,
+    weightPct: Math.round(e.weight * 1000) / 10,
+    grade: e.grade,
+  }))
+}
+
+/** Clasificación automática de la situación del ramo. */
+export type Situation =
+  | 'sin_datos'
+  | 'cerrado_aprobado'
+  | 'cerrado_reprobado'
+  | 'asegurado'
+  | 'facil'
+  | 'medio'
+  | 'dificil'
+  | 'imposible'
+
+export function analyzeSituation(subject: Subject): Situation {
+  const { scale } = subject
+  if (realEvaluationCount(subject) === 0) return 'sin_datos'
+  const res = minGradeToPass(subject)
+  if (pendingWeight(subject) <= EPS) {
+    return (res.final ?? 0) + EPS >= scale.pass ? 'cerrado_aprobado' : 'cerrado_reprobado'
+  }
+  if (res.status === 'ASEGURADO') return 'asegurado'
+  if (res.status === 'IMPOSIBLE') return 'imposible'
+  const needed = res.needed ?? scale.pass
+  const hardCut = scale.pass + 0.6 * (scale.max - scale.pass)
+  if (needed <= scale.pass + EPS) return 'facil'
+  if (needed >= hardCut) return 'dificil'
+  return 'medio'
+}
+
+/** Escenario de 2 notas pendientes que alcanza a aprobar. */
+export type Scenario = { a: number; b: number; final: number }
+
+/** Escenarios destacados cuando quedan EXACTAMENTE 2 pendientes. */
+export function scenariosFor(subject: Subject): {
+  first: PendingEval
+  second: PendingEval
+  balanced: Scenario | null
+  higherFirst: Scenario | null
+  higherSecond: Scenario | null
+} | null {
+  const pend = pendingEvaluations(subject)
+  if (pend.length !== 2) return null
+  const [first, second] = pend
+  const { scale } = subject
+  const K = knownContribution(subject)
+  const wa = first.weight
+  const wb = second.weight
+  const clamp = (v: number) => Math.min(scale.max, Math.max(scale.min, v))
+  const make = (a: number, b: number): Scenario | null => {
+    const ca = clamp(a)
+    const cb = clamp(b)
+    const final = projectedFinal(subject, { [first.id]: ca, [second.id]: cb })
+    return final + EPS >= scale.pass
+      ? { a: round1(ca), b: round1(cb), final: round1(final) }
+      : null
+  }
+  const t = ceilTo((scale.pass - K) / (wa + wb), 0.1)
+  const balanced = make(t, t)
+  const higherFirst = make(scale.max, ceilTo((scale.pass - K - wa * scale.max) / wb, 0.1))
+  const higherSecond = make(ceilTo((scale.pass - K - wb * scale.max) / wa, 0.1), scale.max)
+  return { first, second, balanced, higherFirst, higherSecond }
+}
+
+/**
+ * "Si sacas X en esta nota, tu promedio final sería Y" — mantiene las OTRAS
+ * pendientes en la nota mínima necesaria (uniforme).
+ */
+export function impactTable(subject: Subject, evalId: string): { x: number; final: number }[] {
+  const { scale } = subject
+  const res = minGradeToPass(subject)
+  const others = res.needed ?? scale.pass
+  const base: Record<string, number> = {}
+  for (const p of pendingEvaluations(subject)) {
+    if (p.id !== evalId) base[p.id] = others
+  }
+  const step = scale.max - scale.min <= 10 ? 1 : 5
+  const rows: { x: number; final: number }[] = []
+  for (let x = scale.min; x <= scale.max + EPS; x += step) {
+    rows.push({ x: round1(x), final: round1(projectedFinal(subject, { ...base, [evalId]: x })) })
+  }
+  return rows
+}
+
 /**
  * ¿Los pesos de cada carpeta suman ~100? (para banners de aviso).
  * Revisa el nivel tope y, recursivamente, cada carpeta con hijos.
