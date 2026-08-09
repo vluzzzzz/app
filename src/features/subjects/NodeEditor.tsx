@@ -102,7 +102,6 @@ function NoteRow({
 
   return (
     <motion.div
-      layout
       exit={{ opacity: 0, height: 0, marginTop: 0 }}
       className="relative overflow-hidden rounded-xl"
     >
@@ -343,7 +342,6 @@ export function NodeEditor({ subjectId }: { subjectId: string }) {
         {subject.nodes.map((n) => (
           <motion.div
             key={n.id}
-            layout
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97 }}

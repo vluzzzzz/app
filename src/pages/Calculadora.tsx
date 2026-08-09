@@ -48,16 +48,15 @@ export function Calculadora({
       ) : subjects.length === 0 ? (
         <EmptyState onAdd={() => setAdding(true)} />
       ) : (
-        <motion.div layout className="space-y-3">
+        <motion.div className="space-y-3">
           <AnimatePresence initial={false}>
             {subjects.map((s, i) => (
               <motion.div
                 key={s.id}
-                layout
-                initial={{ opacity: 0, y: 12, scale: 0.985, filter: 'blur(8px)' }}
-                animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.94 }}
-                transition={{ duration: 0.5, ease: EASE.overshoot, delay: i * 0.05 }}
+                transition={{ duration: 0.4, ease: EASE.standard, delay: i * 0.04 }}
               >
                 <SubjectCard
                   subject={s}
