@@ -17,7 +17,8 @@ export function ApprovalConditions({ subjectId }: { subjectId: string }) {
 
   if (!subject) return null
   const sections = sectionOptions(subject)
-  if (sections.length === 0) return null // sin secciones no aplica
+  // "Más opciones" solo tiene sentido con 2+ secciones (para comparar/condicionar).
+  if (sections.length < 2) return null
 
   const conds = subject.conditions ?? []
   const nameOf = (id: string) => sections.find((s) => s.id === id)?.name ?? 'Sección'

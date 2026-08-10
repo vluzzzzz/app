@@ -107,11 +107,7 @@ export function SubjectDetail({
       </header>
 
       {/* Título */}
-      <div className="mb-4 flex items-center gap-3">
-        <div
-          className="h-11 w-11 shrink-0 rounded-2xl shadow-[var(--card-shadow)]"
-          style={{ background: `rgb(${accentRgb(subject.color ?? 'gray')})` }}
-        />
+      <div className="mb-4">
         <h1 className="truncate text-[26px] font-bold text-ink">{subject.name}</h1>
       </div>
 
@@ -125,7 +121,12 @@ export function SubjectDetail({
           </div>
           <div className="text-right">
             <p className="text-sm text-ink/50">{needBox.label}</p>
-            <p className={`text-lg font-bold ${toneClass}`}>{needBox.value}</p>
+            <p
+              className={`text-lg font-bold ${res.status === 'ALCANZABLE' ? '' : toneClass}`}
+              style={res.status === 'ALCANZABLE' ? { color } : undefined}
+            >
+              {needBox.value}
+            </p>
           </div>
         </div>
 

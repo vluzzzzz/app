@@ -295,9 +295,10 @@ export function scenariosFor(subject: Subject): {
   const make = (a: number, b: number): Scenario | null => {
     const ca = clamp(a)
     const cb = clamp(b)
-    const final = projectedFinal(subject, { [first.id]: ca, [second.id]: cb })
-    return final + EPS >= scale.pass
-      ? { a: round1(ca), b: round1(cb), final: round1(final) }
+    const assign = { [first.id]: ca, [second.id]: cb }
+    // Debe cumplir el promedio final Y todas las condiciones de aprobación.
+    return meetsAll(subject, assign)
+      ? { a: round1(ca), b: round1(cb), final: round1(projectedFinal(subject, assign)) }
       : null
   }
   const t = ceilTo((scale.pass - K) / (wa + wb), 0.1)

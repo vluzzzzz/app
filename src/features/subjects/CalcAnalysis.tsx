@@ -1,13 +1,12 @@
 import { useState, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
-import type { Subject } from '../../lib/types'
+import type { GradeNode, Subject } from '../../lib/types'
 import {
   analyzeSituation,
   combinationsFor,
   conditionResults,
   conditionsAllFeasible,
   currentGrade,
-  evaluationsBreakdown,
   impactTable,
   maxPossibleFinal,
   meetsAll,
@@ -109,7 +108,6 @@ export function CalcAnalysis({ subject }: { subject: Subject }) {
   const maxFinal = maxPossibleFinal(subject)
   const minFinal = minPossibleFinal(subject)
   const situation = analyzeSituation(subject)
-  const breakdown = evaluationsBreakdown(subject)
   const conds = conditionResults(subject)
   const canPass = maxFinal + 1e-9 >= scale.pass && conditionsAllFeasible(subject)
 
@@ -202,15 +200,6 @@ export function CalcAnalysis({ subject }: { subject: Subject }) {
               sub={`Si sacas ${formatGrade(scale.max)} en todo lo que queda.`}
               value={formatGrade(maxFinal)}
             />
-            {res.status === 'ALCANZABLE' && (
-              <InsightRow
-                icon={<CalculatorIcon className="h-5 w-5" />}
-                tone="blue"
-                title="Necesitas en promedio"
-                sub="En cada evaluación que te falta."
-                value={formatGrade(res.needed)}
-              />
-            )}
             <InsightRow
               icon={<PercentIcon className="h-5 w-5" />}
               tone="amber"
@@ -262,9 +251,6 @@ export function CalcAnalysis({ subject }: { subject: Subject }) {
           {/* Escenarios destacados (2 pendientes) */}
           {pend.length === 2 && <Escenarios subject={subject} />}
 
-          {/* Qué pasa si saco X (2 pendientes) */}
-          {pend.length === 2 && <QuePasaSiX subject={subject} />}
-
           {/* Posibilidades cuando faltan 3 o más (combinación sugerida) */}
           {pend.length >= 3 && res.status === 'ALCANZABLE' && res.needed != null && (
             <Card>
@@ -287,26 +273,13 @@ export function CalcAnalysis({ subject }: { subject: Subject }) {
             </Card>
           )}
 
-          {/* Impacto por evaluación */}
-          <Impacto subject={subject} pend={pend} tab={tab} setTab={setTab} />
+          {/* Impacto: solo cuando queda UNA nota (para saber exactamente) */}
+          {pend.length === 1 && <Impacto subject={subject} pend={pend} tab={tab} setTab={setTab} />}
 
-          {/* Evaluaciones actuales */}
+          {/* Evaluaciones actuales (árbol: secciones/subgrupos como carpetas) */}
           <Card>
             <Title>Tus evaluaciones actuales</Title>
-            <div className="space-y-1">
-              {breakdown.map((e, i) => (
-                <div key={e.id ?? i} className="flex items-center gap-2.5 py-1.5">
-                  <span
-                    className={`h-2.5 w-2.5 shrink-0 rounded-full ${e.grade == null ? 'bg-ink/25' : 'bg-emerald-500'}`}
-                  />
-                  <span className="min-w-0 flex-1 truncate text-[15px] text-ink">{nameOf(e)}</span>
-                  <span className="w-12 text-right text-sm tabular-nums text-ink/45">{e.weightPct}%</span>
-                  <span className="w-10 text-right text-[15px] font-bold tabular-nums text-ink">
-                    {e.grade == null ? '—' : formatGrade(e.grade)}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <EvalTree nodes={subject.nodes} depth={0} />
           </Card>
         </>
       )}
@@ -411,30 +384,6 @@ function Escenarios({ subject }: { subject: Subject }) {
               </p>
               <p className="text-[11px] text-ink/40">Final</p>
             </div>
-          </div>
-        ))}
-      </div>
-    </Card>
-  )
-}
-
-function QuePasaSiX({ subject }: { subject: Subject }) {
-  const combos = combinationsFor(subject)
-  if (!combos) return null
-  const rows = combos.rows.filter((r) => r.b != null && Number.isInteger(r.a))
-  if (rows.length === 0) return null
-  return (
-    <Card>
-      <Title sub="Nota que necesitarías en la otra evaluación">¿Qué pasa si saco X?</Title>
-      <div className="grid grid-cols-2 gap-x-2 border-b border-ink/10 pb-2 text-xs font-semibold uppercase tracking-wide text-ink/40">
-        <span className="truncate">Si sacas en {combos.first.name}</span>
-        <span className="truncate text-right">Necesitas en {combos.second.name}</span>
-      </div>
-      <div className="mt-1">
-        {rows.map((r, i) => (
-          <div key={i} className="grid grid-cols-2 gap-x-2 py-1.5 text-[15px]">
-            <span className="font-semibold tabular-nums text-ink">{formatGrade(r.a)}</span>
-            <span className="text-right font-semibold tabular-nums text-ink">{formatGrade(r.b)}</span>
           </div>
         ))}
       </div>
@@ -562,6 +511,33 @@ function ConditionsCard({ conds, pass }: { conds: ConditionResult[]; pass: numbe
         })}
       </div>
     </Card>
+  )
+}
+
+/** Árbol de solo lectura: secciones/subgrupos como carpetas, notas con su nota. */
+function EvalTree({ nodes, depth }: { nodes: GradeNode[]; depth: number }) {
+  return (
+    <div className={depth > 0 ? 'ml-1.5 border-l border-ink/10 pl-3' : ''}>
+      {nodes.map((n) =>
+        n.children === undefined ? (
+          <div key={n.id} className="flex items-center gap-2.5 py-1">
+            <span className={`h-2 w-2 shrink-0 rounded-full ${n.grade == null ? 'bg-ink/25' : 'bg-emerald-500'}`} />
+            <span className="min-w-0 flex-1 truncate text-[15px] text-ink/90">{n.name}</span>
+            <span className="text-[15px] font-bold tabular-nums text-ink">
+              {n.grade == null ? '—' : formatGrade(n.grade)}
+            </span>
+          </div>
+        ) : (
+          <div key={n.id}>
+            <div className="flex items-center gap-2 pb-0.5 pt-1.5">
+              <FolderIcon className="h-4 w-4 shrink-0 text-ink/70" />
+              <span className="text-[15px] font-semibold text-ink">{n.name}</span>
+            </div>
+            <EvalTree nodes={n.children} depth={depth + 1} />
+          </div>
+        ),
+      )}
+    </div>
   )
 }
 
