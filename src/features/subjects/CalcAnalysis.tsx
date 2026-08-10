@@ -23,6 +23,7 @@ import {
   CalculatorIcon,
   CheckCircleIcon,
   ChevronRight,
+  FolderIcon,
   PercentIcon,
   ScaleIcon,
   TargetIcon,
@@ -177,10 +178,14 @@ export function CalcAnalysis({ subject }: { subject: Subject }) {
           <Card>
             <Title>Análisis general</Title>
             <InsightRow
-              icon={canPass ? <CheckCircleIcon className="h-5 w-5" /> : <XCircleIcon className="h-5 w-5" />}
-              tone={canPass ? 'green' : 'red'}
-              title={canPass ? 'Sí puedes aprobar' : 'No alcanza'}
-              sub={canPass ? `Aún tienes forma de llegar a ${formatGrade(scale.pass)}.` : 'Ninguna combinación llega al mínimo.'}
+              icon={canPass ? <CheckCircleIcon className="h-5 w-5" /> : <AlertIcon className="h-5 w-5" />}
+              tone={canPass ? 'green' : 'amber'}
+              title={canPass ? 'Sí puedes aprobar' : 'Necesitas Remedial'}
+              sub={
+                canPass
+                  ? `Aún tienes forma de llegar a ${formatGrade(scale.pass)}.`
+                  : 'Con lo que queda no alcanzas: para aprobar te quedaría Remedial u Optativa.'
+              }
             />
             <InsightRow
               icon={<TrendingUpIcon className="h-5 w-5" />}
@@ -214,7 +219,7 @@ export function CalcAnalysis({ subject }: { subject: Subject }) {
             />
           </Card>
 
-          {/* Te quedan N evaluaciones */}
+          {/* Te quedan N evaluaciones (agrupadas por sección: carpeta + círculos) */}
           <Card>
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-[17px] font-bold text-ink">
@@ -222,12 +227,22 @@ export function CalcAnalysis({ subject }: { subject: Subject }) {
               </h3>
               <span className="text-sm font-semibold text-ink/45">{pendPct}% del ramo</span>
             </div>
-            <div className="space-y-1">
-              {pend.map((p) => (
-                <div key={p.id} className="flex items-center gap-2.5 py-1.5">
-                  <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-ink/60" />
-                  <span className="min-w-0 flex-1 truncate text-[15px] text-ink">{nameOf(p)}</span>
-                  <span className="text-sm font-semibold tabular-nums text-ink/55">{pctOf(p)}%</span>
+            <div className="space-y-2">
+              {groupBySection(pend).map((g, gi) => (
+                <div key={gi}>
+                  {g.section && (
+                    <div className="flex items-center gap-2 pb-0.5 pt-1">
+                      <FolderIcon className="h-4 w-4 shrink-0 text-ink" />
+                      <span className="text-sm font-semibold text-ink">{g.section}</span>
+                    </div>
+                  )}
+                  {g.items.map((p) => (
+                    <div key={p.id} className={`flex items-center gap-2.5 py-1 ${g.section ? 'pl-1.5' : ''}`}>
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-ink/45" />
+                      <span className="min-w-0 flex-1 truncate text-[15px] text-ink/90">{p.name}</span>
+                      <span className="text-sm font-semibold tabular-nums text-ink/55">{pctOf(p)}%</span>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
@@ -241,6 +256,28 @@ export function CalcAnalysis({ subject }: { subject: Subject }) {
 
           {/* Qué pasa si saco X (2 pendientes) */}
           {pend.length === 2 && <QuePasaSiX subject={subject} />}
+
+          {/* Posibilidades cuando faltan 3 o más (combinación sugerida) */}
+          {pend.length >= 3 && res.status === 'ALCANZABLE' && res.needed != null && (
+            <Card>
+              <Title sub="Una combinación simple que te hace aprobar">Posibilidades para aprobar</Title>
+              <p className="mb-2 text-sm text-ink/60">
+                Si en cada evaluación que te queda sacas al menos{' '}
+                <b className="text-ink">{formatGrade(res.needed)}</b>, apruebas.
+              </p>
+              <div className="space-y-1">
+                {pend.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center justify-between rounded-xl bg-ink/[0.04] px-3 py-2 text-[15px]"
+                  >
+                    <span className="min-w-0 truncate text-ink/90">{nameOf(p)}</span>
+                    <span className="font-bold tabular-nums text-ink">{formatGrade(res.needed)}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
 
           {/* Impacto por evaluación */}
           <Impacto subject={subject} pend={pend} tab={tab} setTab={setTab} />
@@ -449,6 +486,23 @@ function Impacto({
 
 /* ---------- helpers ---------- */
 
+/** Agrupa las pendientes por su sección (nombre del padre), para carpeta + círculos. */
+function groupBySection(
+  pend: PendingEval[],
+): { section: string | null; items: PendingEval[] }[] {
+  const out: { section: string | null; items: PendingEval[] }[] = []
+  for (const p of pend) {
+    const key = p.subName ?? null
+    let g = out.find((x) => x.section === key)
+    if (!g) {
+      g = { section: key, items: [] }
+      out.push(g)
+    }
+    g.items.push(p)
+  }
+  return out
+}
+
 function pickEven<T>(arr: T[], n: number): T[] {
   if (arr.length <= n) return arr
   const out: T[] = []
@@ -479,7 +533,7 @@ function situationCard(
     case 'dificil':
       return { icon: <AlertIcon className="h-6 w-6" />, tone: 'amber', title: 'Situación difícil', sub: `Necesitas ${need} (nota alta) en lo que queda.` }
     case 'imposible':
-      return { icon: <XCircleIcon className="h-6 w-6" />, tone: 'red', title: 'Imposible aprobar', sub: `Ni con ${formatGrade(scale.max)} en todo lo que queda pasas: tu máximo es ${formatGrade(maxFinal)}.` }
+      return { icon: <AlertIcon className="h-6 w-6" />, tone: 'amber', title: 'Necesitas Remedial', sub: `Con lo que queda tu máximo es ${formatGrade(maxFinal)}. Para aprobar te quedaría dar Remedial u Optativa.` }
     default:
       return { icon: <CalculatorIcon className="h-6 w-6" />, tone: 'ink', title: 'Sin datos', sub: 'Agrega notas para calcular.' }
   }
