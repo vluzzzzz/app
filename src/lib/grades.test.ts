@@ -3,16 +3,19 @@ import {
   analyzeSituation,
   ceilTo,
   combinationsFor,
+  conditionResults,
   currentGrade,
   evaluationsBreakdown,
   impactTable,
   maxPossibleFinal,
+  meetsAll,
   minGradeToPass,
   minPossibleFinal,
   pendingEvaluations,
   projectedFinal,
   projectedGrade,
   scenariosFor,
+  sectionGrade,
   weightsAreValid,
 } from './grades'
 import { DEFAULT_SCALE, type GradeNode, type Subject } from './types'
@@ -264,6 +267,56 @@ describe('análisis de Calcular', () => {
     for (const k of ['balanced', 'higherFirst', 'higherSecond'] as const) {
       if (sc![k]) expect(sc![k]!.final).toBeGreaterThanOrEqual(4.0 - 1e-9)
     }
+  })
+
+  it('condición no factible: final pasa pero la sección quedó bajo el mínimo', () => {
+    const s: Subject = {
+      id: 's',
+      name: 'P',
+      scale: DEFAULT_SCALE,
+      nodes: [
+        { id: 'cat', name: 'Cátedra', weight: 70, children: [{ id: 'c1', name: 'C1', weight: 100, grade: 3.8 }] },
+        { id: 'lab', name: 'Laboratorio', weight: 30, children: [{ id: 'l1', name: 'L1', weight: 100, grade: 7.0 }] },
+      ],
+      conditions: [{ id: 'k', scopeId: 'cat', min: 4.0 }],
+    }
+    expect(sectionGrade(s, 'cat')).toBeCloseTo(3.8)
+    expect(meetsAll(s, {})).toBe(false)
+    const cr = conditionResults(s)[0]
+    expect(cr.met).toBe(false)
+    expect(cr.feasible).toBe(false)
+    // Ramo cerrado (sin pendientes) + condición no cumplida → reprobado.
+    expect(analyzeSituation(s)).toBe('cerrado_reprobado')
+  })
+
+  it('condición alcanzable: calcula la nota necesaria en la sección', () => {
+    const s: Subject = {
+      id: 's',
+      name: 'P',
+      scale: DEFAULT_SCALE,
+      nodes: [
+        {
+          id: 'cat',
+          name: 'Cátedra',
+          weight: 70,
+          children: [
+            { id: 'c1', name: 'C1', weight: 50, grade: 3.8 },
+            { id: 'c2', name: 'C2', weight: 50, grade: null },
+          ],
+        },
+        { id: 'lab', name: 'Laboratorio', weight: 30, children: [{ id: 'l1', name: 'L1', weight: 100, grade: 7.0 }] },
+      ],
+      conditions: [{ id: 'k', scopeId: 'cat', min: 4.0 }],
+    }
+    const cr = conditionResults(s)[0]
+    expect(cr.feasible).toBe(true)
+    expect(cr.met).toBe(false)
+    expect(cr.needed).toBeCloseTo(4.2) // (4 - 0.5*3.8)/0.5 = 4.2
+  })
+
+  it('sin condiciones, meetsAll depende solo del promedio final', () => {
+    expect(meetsAll(subject([note('N1', 100, 5.0)]), {})).toBe(true)
+    expect(meetsAll(subject([note('N1', 100, 3.0)]), {})).toBe(false)
   })
 
   it('funciona con una escala distinta (0–10, aprueba 5)', () => {

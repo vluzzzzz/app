@@ -50,11 +50,11 @@ export function ceilTo(value: number, step = 0.1): number {
  * normalizado por nivel → Σ de todas las hojas = 1). Robusto aunque los % no
  * sumen exactamente 100 dentro de un nivel.
  */
-function effectiveLeaves(subject: Subject): EffectiveLeaf[] {
+function flattenLeaves(nodes: GradeNode[]): EffectiveLeaf[] {
   const out: EffectiveLeaf[] = []
-  const walk = (nodes: GradeNode[], parentFrac: number, parentName: string | null) => {
-    const total = nodes.reduce((s, n) => s + (n.weight || 0), 0) || nodes.length || 1
-    for (const n of nodes) {
+  const walk = (ns: GradeNode[], parentFrac: number, parentName: string | null) => {
+    const total = ns.reduce((s, n) => s + (n.weight || 0), 0) || ns.length || 1
+    for (const n of ns) {
       const frac = parentFrac * ((n.weight || 0) / total)
       if (n.children === undefined) {
         // Hoja: una nota real.
@@ -67,8 +67,24 @@ function effectiveLeaves(subject: Subject): EffectiveLeaf[] {
       }
     }
   }
-  walk(subject.nodes, 1, null)
+  walk(nodes, 1, null)
   return out
+}
+
+function effectiveLeaves(subject: Subject): EffectiveLeaf[] {
+  return flattenLeaves(subject.nodes)
+}
+
+/** Busca un nodo por id en todo el árbol. */
+function findNode(nodes: GradeNode[], id: string): GradeNode | null {
+  for (const n of nodes) {
+    if (n.id === id) return n
+    if (n.children) {
+      const f = findNode(n.children, id)
+      if (f) return f
+    }
+  }
+  return null
 }
 
 /** Recorre todas las hojas (notas reales) del árbol. */
@@ -241,14 +257,18 @@ export function analyzeSituation(subject: Subject): Situation {
   const { scale } = subject
   if (realEvaluationCount(subject) === 0) return 'sin_datos'
   const res = minGradeToPass(subject)
+  const condsFeasible = conditionsAllFeasible(subject)
+  const condsMet = conditionsAllMet(subject)
   if (pendingWeight(subject) <= EPS) {
-    return (res.final ?? 0) + EPS >= scale.pass ? 'cerrado_aprobado' : 'cerrado_reprobado'
+    return (res.final ?? 0) + EPS >= scale.pass && condsMet ? 'cerrado_aprobado' : 'cerrado_reprobado'
   }
-  if (res.status === 'ASEGURADO') return 'asegurado'
+  // Si alguna condición ya no se puede cumplir ni con la nota máxima → Remedial.
+  if (!condsFeasible) return 'imposible'
+  if (res.status === 'ASEGURADO') return condsMet ? 'asegurado' : 'medio'
   if (res.status === 'IMPOSIBLE') return 'imposible'
   const needed = res.needed ?? scale.pass
   const hardCut = scale.pass + 0.6 * (scale.max - scale.pass)
-  if (needed <= scale.pass + EPS) return 'facil'
+  if (needed <= scale.pass + EPS) return condsMet ? 'facil' : 'medio'
   if (needed >= hardCut) return 'dificil'
   return 'medio'
 }
@@ -305,6 +325,101 @@ export function impactTable(subject: Subject, evalId: string): { x: number; fina
     rows.push({ x: round1(x), final: round1(projectedFinal(subject, { ...base, [evalId]: x })) })
   }
   return rows
+}
+
+/* ---------- Condiciones de aprobación (secciones con nota mínima) ---------- */
+
+/** Secciones tope (carpetas) elegibles para una condición. */
+export function sectionOptions(subject: Subject): { id: string; name: string }[] {
+  return subject.nodes.filter((n) => n.children !== undefined).map((n) => ({ id: n.id, name: n.name }))
+}
+
+/** Promedio ACTUAL de una sección (solo lo ya rendido dentro de ella). */
+export function sectionGrade(subject: Subject, nodeId: string): number | null {
+  const node = findNode(subject.nodes, nodeId)
+  if (!node || node.children === undefined) return null
+  const graded = flattenLeaves(node.children).filter((l) => l.grade != null)
+  const w = graded.reduce((s, l) => s + l.weight, 0)
+  if (w <= EPS) return null
+  return graded.reduce((s, l) => s + l.weight * (l.grade as number), 0) / w
+}
+
+/** Promedio de una sección asignando notas a pendientes (resto = `fallback`). */
+export function sectionProjected(
+  subject: Subject,
+  nodeId: string,
+  assignment: Record<string, number>,
+  fallback: number,
+): number {
+  const node = findNode(subject.nodes, nodeId)
+  if (!node || node.children === undefined) return 0
+  return flattenLeaves(node.children).reduce((s, l) => {
+    const g =
+      l.grade != null ? l.grade : l.id != null && assignment[l.id] != null ? assignment[l.id] : fallback
+    return s + l.weight * g
+  }, 0)
+}
+
+/** Nota uniforme necesaria en lo pendiente de una sección para llegar a `min` (null si imposible/sin pendientes). */
+export function sectionNeeded(subject: Subject, nodeId: string, min: number): number | null {
+  const node = findNode(subject.nodes, nodeId)
+  if (!node || node.children === undefined) return null
+  const leaves = flattenLeaves(node.children)
+  const K = leaves.filter((l) => l.grade != null).reduce((s, l) => s + l.weight * (l.grade as number), 0)
+  const P = leaves.filter((l) => l.grade == null).reduce((s, l) => s + l.weight, 0)
+  if (P <= EPS) return null
+  const raw = (min - K) / P
+  if (raw > subject.scale.max + EPS) return null // no alcanza ni con el máximo
+  return ceilTo(Math.max(raw, subject.scale.min), 0.1)
+}
+
+export type ConditionResult = {
+  id: string
+  scopeId: string
+  name: string
+  min: number
+  current: number | null
+  met: boolean
+  feasible: boolean
+  hasPending: boolean
+  needed: number | null
+}
+
+export function conditionResults(subject: Subject): ConditionResult[] {
+  const scaleMax = subject.scale.max
+  return (subject.conditions ?? []).map((c) => {
+    const node = findNode(subject.nodes, c.scopeId)
+    const current = sectionGrade(subject, c.scopeId)
+    const max = sectionProjected(subject, c.scopeId, {}, scaleMax)
+    const leaves = node?.children ? flattenLeaves(node.children) : []
+    const hasPending = leaves.some((l) => l.grade == null)
+    return {
+      id: c.id,
+      scopeId: c.scopeId,
+      name: node?.name ?? 'Sección',
+      min: c.min,
+      current,
+      met: current != null && current + EPS >= c.min,
+      feasible: max + EPS >= c.min,
+      hasPending,
+      needed: sectionNeeded(subject, c.scopeId, c.min),
+    }
+  })
+}
+
+export function conditionsAllFeasible(subject: Subject): boolean {
+  return conditionResults(subject).every((c) => c.feasible)
+}
+export function conditionsAllMet(subject: Subject): boolean {
+  return conditionResults(subject).every((c) => c.met)
+}
+
+/** ¿Una asignación de notas a pendientes aprueba (promedio final + TODAS las condiciones)? */
+export function meetsAll(subject: Subject, assignment: Record<string, number>): boolean {
+  if (projectedFinal(subject, assignment) + EPS < subject.scale.pass) return false
+  return (subject.conditions ?? []).every(
+    (c) => sectionProjected(subject, c.scopeId, assignment, subject.scale.min) + EPS >= c.min,
+  )
 }
 
 /**

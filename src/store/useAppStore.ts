@@ -132,6 +132,10 @@ type Actions = {
   setChildCount: (subjectId: string, parentId: string | null, count: number) => void
   /** Reparte 100% parejo entre los hijos de `parentId` (null = tope). */
   distributeEven: (subjectId: string, parentId: string | null) => void
+
+  /** --- Condiciones de aprobación (opcionales) --- */
+  addCondition: (subjectId: string, input: { scopeId: string; min: number }) => void
+  removeCondition: (subjectId: string, condId: string) => void
 }
 
 /** Aplica una transformación a una asignatura concreta de forma inmutable. */
@@ -248,6 +252,7 @@ export const useAppStore = create<State & Actions>()(
           color: color ?? 'gray',
           scale: get().defaultScale,
           nodes: nodes ?? [],
+          conditions: [],
         }
         set((st) => ({ subjects: [...st.subjects, subject] }))
         return newId
@@ -306,6 +311,22 @@ export const useAppStore = create<State & Actions>()(
               children: distributeChildren(n.children ?? []),
             }))
           }),
+        })),
+
+      addCondition: (subjectId, { scopeId, min }) =>
+        set((st) => ({
+          subjects: mapSubject(st.subjects, subjectId, (s) => ({
+            ...s,
+            conditions: [...(s.conditions ?? []), { id: makeId(), scopeId, min }],
+          })),
+        })),
+
+      removeCondition: (subjectId, condId) =>
+        set((st) => ({
+          subjects: mapSubject(st.subjects, subjectId, (s) => ({
+            ...s,
+            conditions: (s.conditions ?? []).filter((c) => c.id !== condId),
+          })),
         })),
     }),
     {

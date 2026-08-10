@@ -34,6 +34,20 @@ export type Subject = {
   scale: GradeScale
   /** Secciones tope del ramo (sus pesos suman 100). Árbol anidado de GradeNode. */
   nodes: GradeNode[]
+  /**
+   * Condiciones de aprobación OPCIONALES además del promedio final ≥ pass.
+   * Ej: "Cátedra ≥ 4,0". Vacío/undefined = ramo normal. Todas deben cumplirse (AND).
+   */
+  conditions?: ApprovalCondition[]
+}
+
+/** Regla extra de aprobación: el promedio de una sección debe ser ≥ min. */
+export type ApprovalCondition = {
+  id: string
+  /** Id del nodo (sección) del árbol al que aplica. */
+  scopeId: string
+  /** Nota mínima que debe alcanzar el promedio de esa sección. */
+  min: number
 }
 
 export type Theme = 'light' | 'dark'

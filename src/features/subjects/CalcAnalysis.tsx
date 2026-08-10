@@ -4,16 +4,20 @@ import type { Subject } from '../../lib/types'
 import {
   analyzeSituation,
   combinationsFor,
+  conditionResults,
+  conditionsAllFeasible,
   currentGrade,
   evaluationsBreakdown,
   impactTable,
   maxPossibleFinal,
+  meetsAll,
   minGradeToPass,
   minPossibleFinal,
   pendingEvaluations,
   pendingWeight,
   realEvaluationCount,
   scenariosFor,
+  type ConditionResult,
   type PendingEval,
   type Situation,
 } from '../../lib/grades'
@@ -106,7 +110,8 @@ export function CalcAnalysis({ subject }: { subject: Subject }) {
   const minFinal = minPossibleFinal(subject)
   const situation = analyzeSituation(subject)
   const breakdown = evaluationsBreakdown(subject)
-  const canPass = maxFinal + 1e-9 >= scale.pass
+  const conds = conditionResults(subject)
+  const canPass = maxFinal + 1e-9 >= scale.pass && conditionsAllFeasible(subject)
 
   // Posición en el medidor de escala (0..1).
   const span = scale.max - scale.min || 1
@@ -159,6 +164,9 @@ export function CalcAnalysis({ subject }: { subject: Subject }) {
           </div>
         </div>
       </Card>
+
+      {/* Condiciones de aprobación (si el ramo tiene) */}
+      {conds.length > 0 && <ConditionsCard conds={conds} pass={scale.pass} />}
 
       {/* Caso cerrado (sin pendientes): nota final */}
       {pend.length === 0 ? (
@@ -319,10 +327,26 @@ function Posibilidades({
 }) {
   const combos = combinationsFor(subject)
   if (!combos) return null
-  const feasible = combos.rows.filter((r) => r.b != null)
-  if (feasible.length === 0) return null
-  const shown = showAll ? feasible : pickEven(feasible, 6)
+  const hasConds = (subject.conditions ?? []).length > 0
+  const feasible = combos.rows.filter(
+    (r) =>
+      r.b != null &&
+      (!hasConds || meetsAll(subject, { [combos.first.id]: r.a, [combos.second.id]: r.b as number })),
+  )
   const { scale } = subject
+  if (feasible.length === 0) {
+    if (!hasConds) return null
+    return (
+      <Card>
+        <Title>Posibilidades para aprobar</Title>
+        <p className="text-sm text-ink/55">
+          Con estas dos notas no se cumplen las condiciones de aprobación. Revisa qué necesita
+          cada sección arriba.
+        </p>
+      </Card>
+    )
+  }
+  const shown = showAll ? feasible : pickEven(feasible, 6)
   return (
     <Card>
       <Title sub={`Algunas combinaciones para llegar a ${formatGrade(scale.pass)}`}>
@@ -485,6 +509,61 @@ function Impacto({
 }
 
 /* ---------- helpers ---------- */
+
+function ConditionsCard({ conds, pass }: { conds: ConditionResult[]; pass: number }) {
+  return (
+    <Card>
+      <Title sub="Reglas extra para aprobar este ramo">Condiciones de aprobación</Title>
+      <div className="space-y-1">
+        {/* Condición base siempre presente */}
+        <div className="flex items-center gap-2.5 py-1.5">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink/8 text-ink/60">
+            <CheckCircleIcon className="h-5 w-5" />
+          </span>
+          <p className="flex-1 text-[15px] font-semibold text-ink">
+            Promedio final ≥ {formatGrade(pass)}
+          </p>
+        </div>
+        {conds.map((c) => {
+          const tone: Tone = c.met ? 'green' : c.feasible ? 'amber' : 'red'
+          const icon = c.met ? (
+            <CheckCircleIcon className="h-5 w-5" />
+          ) : c.feasible ? (
+            <AlertIcon className="h-5 w-5" />
+          ) : (
+            <XCircleIcon className="h-5 w-5" />
+          )
+          const sub =
+            c.current == null
+              ? 'Aún sin nota en esta sección.'
+              : c.met
+                ? `Vas en ${formatGrade(c.current)}, cumple.`
+                : c.feasible
+                  ? c.needed != null
+                    ? `Vas en ${formatGrade(c.current)}; necesitas ${formatGrade(c.needed)} en lo que falta de ${c.name}.`
+                    : `Vas en ${formatGrade(c.current)}, aún por debajo.`
+                  : `Ya no alcanza: el máximo de ${c.name} no llega a ${formatGrade(c.min)}.`
+          return (
+            <div key={c.id} className="flex items-center gap-2.5 py-1.5">
+              <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${TONE[tone].bg} ${TONE[tone].fg}`}>
+                {icon}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[15px] font-semibold text-ink">
+                  {c.name} ≥ {formatGrade(c.min)}
+                </p>
+                <p className="text-[13px] leading-snug text-ink/45">{sub}</p>
+              </div>
+              <span className={`shrink-0 text-lg font-bold tabular-nums ${TONE[tone].fg}`}>
+                {c.current == null ? '—' : formatGrade(c.current)}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </Card>
+  )
+}
 
 /** Agrupa las pendientes por su sección (nombre del padre), para carpeta + círculos. */
 function groupBySection(

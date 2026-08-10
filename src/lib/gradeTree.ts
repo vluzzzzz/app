@@ -125,7 +125,8 @@ export function normalizeSubject(raw: unknown): Subject {
   const r = (raw ?? {}) as Record<string, any>
   const scale = r.scale ?? DEFAULT_SCALE
   const color = normalizeColor(r.color)
-  const base = { id: r.id ?? makeId(), name: r.name || 'Ramo', color, scale }
+  const conditions = Array.isArray(r.conditions) ? r.conditions : []
+  const base = { id: r.id ?? makeId(), name: r.name || 'Ramo', color, scale, conditions }
 
   // Ya es el modelo nuevo.
   if (Array.isArray(r.nodes)) return { ...base, nodes: r.nodes as GradeNode[] }
