@@ -39,6 +39,18 @@ export type Subject = {
    * Ej: "Cátedra ≥ 4,0". Vacío/undefined = ramo normal. Todas deben cumplirse (AND).
    */
   conditions?: ApprovalCondition[]
+  /** Prueba optativa OPCIONAL (modalidad especial de cálculo). undefined = no tiene. */
+  optativa?: Optativa
+}
+
+/**
+ * Prueba optativa: reemplaza parcialmente el promedio.
+ * final = promedioActual·(actualPct%) + nota·((100-actualPct)%).
+ */
+export type Optativa = {
+  /** Peso del promedio actual (0-100). La optativa pesa (100 - actualPct). Default 60. */
+  actualPct: number
+  grade: number | null
 }
 
 /** Regla extra de aprobación: el promedio de una sección debe ser ≥ min. */

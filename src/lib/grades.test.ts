@@ -11,6 +11,10 @@ import {
   meetsAll,
   minGradeToPass,
   minPossibleFinal,
+  optativaFinal,
+  optativaMax,
+  optativaNeeded,
+  optativaProjection,
   pendingEvaluations,
   projectedFinal,
   projectedGrade,
@@ -312,6 +316,23 @@ describe('análisis de Calcular', () => {
     expect(cr.feasible).toBe(true)
     expect(cr.met).toBe(false)
     expect(cr.needed).toBeCloseTo(4.2) // (4 - 0.5*3.8)/0.5 = 4.2
+  })
+
+  it('prueba optativa: necesaria, máximo y proyección (60/40)', () => {
+    const s = subject([note('N1', 100, 3.5)])
+    s.optativa = { actualPct: 60, grade: null }
+    expect(optativaNeeded(s)).toBe(4.8) // (4 - 3.5*0.6)/0.4 = 4.75 -> 4.8
+    expect(optativaMax(s)).toBeCloseTo(4.9) // 3.5*0.6 + 7*0.4
+    expect(optativaProjection(s, 5.0)).toBeCloseTo(4.1)
+    s.optativa = { actualPct: 60, grade: 5.0 }
+    expect(optativaFinal(s)).toBeCloseTo(4.1)
+  })
+
+  it('prueba optativa: imposible si ni con el máximo alcanza', () => {
+    const s = subject([note('N1', 100, 1.5)])
+    s.optativa = { actualPct: 60, grade: null }
+    expect(optativaMax(s)).toBeCloseTo(3.7) // 1.5*0.6 + 7*0.4
+    expect(optativaNeeded(s)).toBeNull()
   })
 
   it('sin condiciones, meetsAll depende solo del promedio final', () => {

@@ -423,6 +423,47 @@ export function meetsAll(subject: Subject, assignment: Record<string, number>): 
   )
 }
 
+/* ---------- Prueba optativa (modalidad especial: base·act% + nota·opt%) ---------- */
+
+/** Promedio "actual" base sobre el que actúa la optativa (promedio normal rendido). */
+export function optativaBase(subject: Subject): number | null {
+  return currentGrade(subject)
+}
+
+/** Proyección del promedio final si la optativa fuera `x` (null si no hay base). */
+export function optativaProjection(subject: Subject, x: number): number | null {
+  const o = subject.optativa
+  const base = currentGrade(subject)
+  if (!o || base == null) return null
+  const act = o.actualPct / 100
+  return base * act + x * (1 - act)
+}
+
+/** Promedio final con la optativa ya rendida (null si pendiente/sin base). */
+export function optativaFinal(subject: Subject): number | null {
+  const o = subject.optativa
+  if (!o || o.grade == null) return null
+  return optativaProjection(subject, o.grade)
+}
+
+/** Nota necesaria en la optativa para aprobar (null si imposible dentro de la escala). */
+export function optativaNeeded(subject: Subject): number | null {
+  const o = subject.optativa
+  const base = currentGrade(subject)
+  if (!o || base == null) return null
+  const act = o.actualPct / 100
+  const opt = 1 - act
+  if (opt <= EPS) return null
+  const raw = (subject.scale.pass - base * act) / opt
+  if (raw > subject.scale.max + EPS) return null
+  return ceilTo(Math.max(raw, subject.scale.min), 0.1)
+}
+
+/** Promedio final máximo posible con la optativa (nota máxima). */
+export function optativaMax(subject: Subject): number | null {
+  return optativaProjection(subject, subject.scale.max)
+}
+
 /**
  * ¿Los pesos de cada carpeta suman ~100? (para banners de aviso).
  * Revisa el nivel tope y, recursivamente, cada carpeta con hijos.

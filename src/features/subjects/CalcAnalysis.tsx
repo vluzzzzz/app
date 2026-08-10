@@ -8,10 +8,16 @@ import {
   conditionsAllFeasible,
   currentGrade,
   impactTable,
+  conditionsAllMet,
   maxPossibleFinal,
   meetsAll,
   minGradeToPass,
   minPossibleFinal,
+  optativaBase,
+  optativaFinal,
+  optativaMax,
+  optativaNeeded,
+  optativaProjection,
   pendingEvaluations,
   pendingWeight,
   realEvaluationCount,
@@ -165,6 +171,9 @@ export function CalcAnalysis({ subject }: { subject: Subject }) {
 
       {/* Condiciones de aprobación (si el ramo tiene) */}
       {conds.length > 0 && <ConditionsCard conds={conds} pass={scale.pass} />}
+
+      {/* Prueba optativa (si el ramo tiene) */}
+      {subject.optativa && <OptativaCard subject={subject} />}
 
       {/* Caso cerrado (sin pendientes): nota final */}
       {pend.length === 0 ? (
@@ -510,6 +519,102 @@ function ConditionsCard({ conds, pass }: { conds: ConditionResult[]; pass: numbe
           )
         })}
       </div>
+    </Card>
+  )
+}
+
+function OptativaCard({ subject }: { subject: Subject }) {
+  const o = subject.optativa!
+  const { scale } = subject
+  const base = optativaBase(subject)
+
+  if (base == null) {
+    return (
+      <Card>
+        <Title>Prueba optativa</Title>
+        <p className="text-sm text-ink/55">Ingresa tus notas normales para calcular la optativa.</p>
+      </Card>
+    )
+  }
+
+  // Ya rendida → resultado.
+  if (o.grade != null) {
+    const final = optativaFinal(subject) ?? 0
+    const ok = final + 1e-9 >= scale.pass && conditionsAllMet(subject)
+    return (
+      <Card>
+        <Title>Resultado con optativa</Title>
+        <div className="flex items-center justify-between py-1 text-[15px]">
+          <span className="text-ink/60">Promedio anterior</span>
+          <span className="font-semibold tabular-nums text-ink">{formatGrade(base)}</span>
+        </div>
+        <div className="flex items-center justify-between py-1 text-[15px]">
+          <span className="text-ink/60">Optativa ({100 - o.actualPct}%)</span>
+          <span className="font-semibold tabular-nums text-ink">{formatGrade(o.grade)}</span>
+        </div>
+        <div className="mt-2 flex items-center justify-between border-t border-ink/10 pt-3">
+          <span className="text-[15px] font-semibold text-ink">Promedio resultante</span>
+          <span className={`text-2xl font-black tabular-nums ${ok ? TONE.green.fg : TONE.red.fg}`}>
+            {formatGrade(final)}
+          </span>
+        </div>
+        <p className={`mt-1 text-right text-sm font-semibold ${ok ? TONE.green.fg : TONE.red.fg}`}>
+          {ok ? 'Aprobado' : 'No aprobado'}
+        </p>
+        {!conditionsAllMet(subject) && final + 1e-9 >= scale.pass && (
+          <p className="mt-1 text-[13px] text-ink/50">Aún debes cumplir las condiciones de aprobación de arriba.</p>
+        )}
+      </Card>
+    )
+  }
+
+  // Pendiente → cuánto necesita + tabla.
+  const needed = optativaNeeded(subject)
+  const max = optativaMax(subject) ?? 0
+  const step = scale.max - scale.min <= 10 ? 1 : 5
+  const rows: { x: number; final: number }[] = []
+  for (let x = scale.min; x <= scale.max + 1e-9; x += step) {
+    rows.push({ x: Math.round(x * 10) / 10, final: Math.round((optativaProjection(subject, x) ?? 0) * 10) / 10 })
+  }
+
+  return (
+    <Card>
+      <Title sub={`Tu promedio actual (${o.actualPct}%) + optativa (${100 - o.actualPct}%)`}>
+        Prueba optativa
+      </Title>
+      {needed == null ? (
+        <p className="text-sm font-semibold text-rose-600 dark:text-rose-300">
+          Ni con {formatGrade(scale.max)} en la optativa alcanzas: tu máximo sería {formatGrade(max)}.
+        </p>
+      ) : (
+        <>
+          <div className="mb-3 flex items-center gap-3 rounded-2xl bg-blue-500/10 px-3 py-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300">
+              <TargetIcon className="h-5 w-5" />
+            </span>
+            <p className="text-[15px] text-ink">
+              Necesitas <b>{formatGrade(needed)}</b> en la optativa para aprobar.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-x-2 border-b border-ink/10 pb-2 text-xs font-semibold uppercase tracking-wide text-ink/40">
+            <span>Si sacas</span>
+            <span className="text-right">Promedio final</span>
+          </div>
+          <div className="mt-1">
+            {rows.map((r, i) => {
+              const ok = r.final + 1e-9 >= scale.pass
+              return (
+                <div key={i} className="grid grid-cols-2 gap-x-2 py-1.5 text-[15px]">
+                  <span className="font-semibold tabular-nums text-ink">{formatGrade(r.x)}</span>
+                  <span className={`text-right font-semibold tabular-nums ${ok ? TONE.green.fg : 'text-ink/70'}`}>
+                    {formatGrade(r.final)}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
     </Card>
   )
 }

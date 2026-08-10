@@ -136,6 +136,12 @@ type Actions = {
   /** --- Condiciones de aprobación (opcionales) --- */
   addCondition: (subjectId: string, input: { scopeId: string; min: number }) => void
   removeCondition: (subjectId: string, condId: string) => void
+
+  /** --- Prueba optativa (opcional) --- */
+  addOptativa: (subjectId: string) => void
+  removeOptativa: (subjectId: string) => void
+  setOptativaGrade: (subjectId: string, grade: number | null) => void
+  setOptativaSplit: (subjectId: string, actualPct: number) => void
 }
 
 /** Aplica una transformación a una asignatura concreta de forma inmutable. */
@@ -327,6 +333,32 @@ export const useAppStore = create<State & Actions>()(
             ...s,
             conditions: (s.conditions ?? []).filter((c) => c.id !== condId),
           })),
+        })),
+
+      addOptativa: (subjectId) =>
+        set((st) => ({
+          subjects: mapSubject(st.subjects, subjectId, (s) => ({
+            ...s,
+            optativa: s.optativa ?? { actualPct: 60, grade: null },
+          })),
+        })),
+      removeOptativa: (subjectId) =>
+        set((st) => ({
+          subjects: mapSubject(st.subjects, subjectId, (s) => ({ ...s, optativa: undefined })),
+        })),
+      setOptativaGrade: (subjectId, grade) =>
+        set((st) => ({
+          subjects: mapSubject(st.subjects, subjectId, (s) =>
+            s.optativa ? { ...s, optativa: { ...s.optativa, grade } } : s,
+          ),
+        })),
+      setOptativaSplit: (subjectId, actualPct) =>
+        set((st) => ({
+          subjects: mapSubject(st.subjects, subjectId, (s) =>
+            s.optativa
+              ? { ...s, optativa: { ...s.optativa, actualPct: Math.min(100, Math.max(0, actualPct)) } }
+              : s,
+          ),
         })),
     }),
     {

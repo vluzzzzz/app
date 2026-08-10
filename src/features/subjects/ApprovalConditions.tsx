@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useAppStore } from '../../store/useAppStore'
 import { sectionOptions } from '../../lib/grades'
 import { formatGrade } from '../../lib/format'
+import { GradeInput } from '../../components/ui/GradeInput'
 import { CheckIcon, ChevronRight, PlusIcon, TrashIcon } from '../../components/ui/Icons'
 
 /** "Más opciones → Condiciones de aprobación" (opcional, cerrado por defecto). */
@@ -10,6 +11,9 @@ export function ApprovalConditions({ subjectId }: { subjectId: string }) {
   const subject = useAppStore((s) => s.subjects.find((x) => x.id === subjectId))
   const addCondition = useAppStore((s) => s.addCondition)
   const removeCondition = useAppStore((s) => s.removeCondition)
+  const addOptativa = useAppStore((s) => s.addOptativa)
+  const removeOptativa = useAppStore((s) => s.removeOptativa)
+  const setOptativaGrade = useAppStore((s) => s.setOptativaGrade)
   const [open, setOpen] = useState(false)
   const [adding, setAdding] = useState(false)
   const [scopeId, setScopeId] = useState<string>('')
@@ -132,6 +136,46 @@ export function ApprovalConditions({ subjectId }: { subjectId: string }) {
                 <PlusIcon className="h-4 w-4" /> Agregar condición
               </button>
             )}
+
+            {/* Evaluaciones especiales: prueba optativa */}
+            <div className="mt-4 border-t border-ink/10 pt-3">
+              <p className="mb-1 text-sm font-semibold text-ink">Evaluaciones especiales</p>
+              {!subject.optativa ? (
+                <>
+                  <p className="mb-2 text-[13px] leading-snug text-ink/45">
+                    Prueba optativa: reemplaza parte de tu promedio (actual 60% · optativa 40%).
+                  </p>
+                  <button
+                    onClick={() => addOptativa(subjectId)}
+                    className="flex items-center gap-1 text-sm font-semibold text-ink/55 active:text-ink/70"
+                  >
+                    <PlusIcon className="h-4 w-4" /> Agregar prueba optativa
+                  </button>
+                </>
+              ) : (
+                <div className="rounded-2xl bg-ink/[0.04] p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[15px] font-semibold text-ink">Prueba optativa</p>
+                      <p className="text-[13px] text-ink/45">
+                        Actual {subject.optativa.actualPct}% · Optativa {100 - subject.optativa.actualPct}%
+                      </p>
+                    </div>
+                    <GradeInput
+                      value={subject.optativa.grade}
+                      scale={subject.scale}
+                      onChange={(g) => setOptativaGrade(subjectId, g)}
+                    />
+                  </div>
+                  <button
+                    onClick={() => removeOptativa(subjectId)}
+                    className="mt-2 flex items-center gap-1 text-[13px] font-semibold text-rose-500 active:text-rose-600"
+                  >
+                    <TrashIcon className="h-3.5 w-3.5" /> Quitar optativa
+                  </button>
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
