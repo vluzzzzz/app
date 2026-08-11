@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useAppStore } from '../store/useAppStore'
 import type { ClassBlock } from '../lib/types'
@@ -16,7 +16,26 @@ import { accentRgb } from '../lib/accents'
 import { ClassSheet } from '../features/schedule/ClassSheet'
 import { ClockIcon, PlusIcon } from '../components/ui/Icons'
 
-/** Tarjeta de una clase: línea lateral con el color del ramo. */
+const pad2 = (n: number) => String(n).padStart(2, '0')
+
+/** Capa interior (tono más claro) con la info de la clase: hora + sala + profe. */
+function ClassInfo({ block, compact = false }: { block: ClassBlock; compact?: boolean }) {
+  const extra = [block.room && `Sala ${block.room}`, block.professor].filter(Boolean).join(' · ')
+  return (
+    <div className={`rounded-2xl bg-ink/[0.04] ${compact ? 'px-2.5 py-1.5' : 'px-3 py-2'}`}>
+      <p className={`tabular-nums text-ink/65 ${compact ? 'text-[12px]' : 'text-[13px]'}`}>
+        {block.start} — {block.end}
+      </p>
+      {extra && (
+        <p className={`mt-0.5 break-words text-ink/45 ${compact ? 'text-[11px]' : 'text-[12px]'}`}>
+          {extra}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** Tarjeta de clase para la vista semanal (nombre afuera, info en capa interior). */
 function ClassCard({ block, onOpen }: { block: ClassBlock; onOpen: () => void }) {
   const subject = useAppStore((s) => s.subjects.find((x) => x.id === block.subjectId))
   const color = `rgb(${accentRgb(subject?.color ?? 'gray')})`
@@ -24,31 +43,61 @@ function ClassCard({ block, onOpen }: { block: ClassBlock; onOpen: () => void })
     <motion.button
       whileTap={{ scale: 0.985 }}
       onClick={onOpen}
-      className="glass relative w-full overflow-hidden rounded-[20px] p-4 pl-5 text-left"
+      className="glass w-full rounded-[20px] p-3.5 text-left"
     >
-      <span
-        className="absolute inset-y-2 left-0 w-1 rounded-r-full"
-        style={{ background: color }}
-      />
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="truncate text-[16px] font-bold text-ink">
-          {subject?.name ?? 'Ramo eliminado'}
-        </h3>
-        <span className="shrink-0 text-[13px] font-medium text-ink/45">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-start gap-2">
+          <span className="mt-[3px] h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color }} />
+          <h3 className="break-words text-[15px] font-bold leading-snug text-ink">
+            {subject?.name ?? 'Ramo eliminado'}
+          </h3>
+        </div>
+        <span className="shrink-0 text-[12px] font-medium text-ink/40">
           {CLASS_TYPE_LABEL[block.type]}
         </span>
       </div>
-      <p className="mt-0.5 text-sm tabular-nums text-ink/60">
-        {block.start} — {block.end}
-      </p>
-      {(block.room || block.professor) && (
-        <p className="mt-0.5 truncate text-[13px] text-ink/45">
-          {[block.room && `Sala ${block.room}`, block.professor].filter(Boolean).join(' · ')}
-        </p>
-      )}
+      <div className="mt-2">
+        <ClassInfo block={block} />
+      </div>
     </motion.button>
   )
 }
+
+// --- Agenda: layout por horas (columnas para clases que se solapan) ---
+type Positioned = { block: ClassBlock; s: number; e: number; col: number; cols: number }
+
+function packColumns(classes: ClassBlock[]): Positioned[] {
+  const items: Positioned[] = classes
+    .map((b) => ({ block: b, s: toMinutes(b.start), e: toMinutes(b.end), col: 0, cols: 1 }))
+    .sort((a, b) => a.s - b.s || a.e - b.e)
+  const colEnds: number[] = []
+  for (const it of items) {
+    let placed = false
+    for (let i = 0; i < colEnds.length; i++) {
+      if (colEnds[i] <= it.s) {
+        it.col = i
+        colEnds[i] = it.e
+        placed = true
+        break
+      }
+    }
+    if (!placed) {
+      it.col = colEnds.length
+      colEnds.push(it.e)
+    }
+  }
+  // Nº de columnas por cada clase = máximo de columnas entre las que se solapan con ella.
+  for (const a of items) {
+    let max = a.col + 1
+    for (const b of items) {
+      if (a !== b && b.s < a.e && a.s < b.e) max = Math.max(max, b.col + 1)
+    }
+    a.cols = max
+  }
+  return items
+}
+
+const HOUR_PX = 76 // alto de cada hora en la agenda (bastante aire)
 
 export function Horario() {
   const classes = useAppStore((s) => s.classes)
@@ -81,6 +130,26 @@ export function Horario() {
   const next = selectedDay === dow ? nextClassToday(classes, now) : null
   const nextSubject = next ? subjects.find((s) => s.id === next.block.subjectId) : null
   const selectedDate = week[selectedDay]
+
+  const subjectColor = (id: string) =>
+    `rgb(${accentRgb(subjects.find((s) => s.id === id)?.color ?? 'gray')})`
+  const subjectName = (id: string) => subjects.find((s) => s.id === id)?.name ?? 'Ramo eliminado'
+
+  // Rango de horas de la agenda: por defecto 8–20, se estira para incluir todo.
+  const { startHour, endHour, positioned } = useMemo(() => {
+    if (dayClasses.length === 0) return { startHour: 8, endHour: 20, positioned: [] as Positioned[] }
+    const pos = packColumns(dayClasses)
+    const minS = Math.min(...pos.map((p) => p.s))
+    const maxE = Math.max(...pos.map((p) => p.e))
+    return {
+      startHour: Math.min(8, Math.floor(minS / 60)),
+      endHour: Math.max(20, Math.ceil(maxE / 60)),
+      positioned: pos,
+    }
+  }, [dayClasses])
+
+  const hours = Array.from({ length: endHour - startHour + 1 }, (_, i) => startHour + i)
+  const gridHeight = (endHour - startHour) * HOUR_PX + 16
 
   const openNew = () => {
     setEditing(null)
@@ -188,7 +257,7 @@ export function Horario() {
               </span>
             )}
           </div>
-          <h3 className="mt-1.5 text-[19px] font-bold text-ink">{nextSubject.name}</h3>
+          <h3 className="mt-1.5 break-words text-[19px] font-bold text-ink">{nextSubject.name}</h3>
           <p className="mt-0.5 text-sm tabular-nums text-ink/55">
             {next.block.start} — {next.block.end}
             {next.block.room ? ` · Sala ${next.block.room}` : ''}
@@ -244,71 +313,70 @@ export function Horario() {
           <p className="mt-0.5 text-sm text-ink/45">Aprovecha para ponerte al día.</p>
         </div>
       ) : (
-        /* Timeline del día: horas a la izquierda + rail + tarjetas */
-        <div className="space-y-0">
-          {dayClasses.map((b, i) => {
-            const isFirst = i === 0
-            const isLast = i === dayClasses.length - 1
-            const nextBlock = dayClasses[i + 1]
-            const gap = nextBlock ? toMinutes(nextBlock.start) - toMinutes(b.end) : 0
-            const color = `rgb(${accentRgb(subjects.find((s) => s.id === b.subjectId)?.color ?? 'gray')})`
-            return (
-              <div key={b.id}>
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: Math.min(i, 6) * 0.04 }}
-                  className="grid grid-cols-[2.75rem_1.25rem_1fr] items-stretch"
-                >
-                  {/* Columna de horas */}
-                  <div className="flex flex-col items-end pt-3 pr-1">
-                    <span className="text-[13px] font-bold tabular-nums leading-none text-ink/70">
-                      {b.start}
-                    </span>
-                    <span className="mt-1 text-[11px] tabular-nums leading-none text-ink/30">
-                      {b.end}
-                    </span>
-                  </div>
-                  {/* Rail con nodo */}
-                  <div className="relative flex justify-center">
-                    {dayClasses.length > 1 && (
-                      <span
-                        className={`absolute left-1/2 w-px -translate-x-1/2 bg-ink/[0.08] ${
-                          isFirst ? 'top-[18px]' : 'top-0'
-                        } ${isLast ? 'h-[18px]' : 'bottom-0'}`}
-                      />
-                    )}
-                    <span
-                      className="relative z-10 mt-[13px] h-2.5 w-2.5 rounded-full ring-4 ring-surface"
-                      style={{ background: color }}
-                    />
-                  </div>
-                  {/* Tarjeta */}
-                  <div className="pb-2 pl-1">
-                    <ClassCard block={b} onOpen={() => openEdit(b)} />
-                  </div>
-                </motion.div>
+        /* Agenda por horas: escala a la izquierda + líneas sutiles + bloques por hora */
+        <div className="relative" style={{ height: gridHeight }}>
+          {/* Escala de horas + líneas guía muy sutiles */}
+          {hours.map((h) => (
+            <div
+              key={h}
+              className="absolute inset-x-0 flex items-center gap-3"
+              style={{ top: (h - startHour) * HOUR_PX }}
+            >
+              <span className="w-10 shrink-0 -translate-y-1/2 text-right text-[12px] font-semibold tabular-nums text-ink/30">
+                {pad2(h)}:00
+              </span>
+              <span className="h-px flex-1 bg-ink/[0.05]" />
+            </div>
+          ))}
 
-                {/* Hueco entre clases → agregar bloque (discreto) */}
-                {gap >= 20 && (
-                  <div className="grid grid-cols-[2.75rem_1.25rem_1fr] items-stretch">
-                    <span />
-                    <div className="relative flex justify-center">
-                      <span className="absolute left-1/2 inset-y-0 w-px -translate-x-1/2 bg-ink/[0.08]" />
-                    </div>
-                    <div className="pb-2 pl-1">
-                      <button
-                        onClick={openNew}
-                        className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-ink/12 py-2.5 text-[13px] font-medium text-ink/35 active:bg-ink/[0.03]"
-                      >
-                        <PlusIcon className="h-4 w-4" /> Agregar bloque
-                      </button>
-                    </div>
+          {/* Bloques de clase */}
+          <div className="absolute inset-y-0" style={{ left: 52, right: 0 }}>
+            {positioned.map((p, i) => {
+              const top = ((p.s - startHour * 60) / 60) * HOUR_PX
+              const height = Math.max(((p.e - p.s) / 60) * HOUR_PX, 56)
+              const widthPct = 100 / p.cols
+              const tall = height >= 78
+              return (
+                <motion.button
+                  key={p.block.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: Math.min(i, 6) * 0.03 }}
+                  whileTap={{ scale: 0.985 }}
+                  onClick={() => openEdit(p.block)}
+                  className="glass absolute overflow-hidden rounded-2xl p-2.5 text-left"
+                  style={{
+                    top,
+                    height: height - 6,
+                    left: `calc(${p.col * widthPct}% + ${p.col ? 4 : 0}px)`,
+                    width: `calc(${widthPct}% - ${p.cols > 1 ? 4 : 0}px)`,
+                  }}
+                >
+                  <div className="flex items-start gap-1.5">
+                    <span
+                      className="mt-[3px] h-2 w-2 shrink-0 rounded-full"
+                      style={{ background: subjectColor(p.block.subjectId) }}
+                    />
+                    <h3 className="min-w-0 flex-1 break-words text-[13.5px] font-bold leading-tight text-ink">
+                      {subjectName(p.block.subjectId)}
+                    </h3>
+                    <span className="shrink-0 text-[10.5px] font-medium text-ink/40">
+                      {CLASS_TYPE_LABEL[p.block.type]}
+                    </span>
                   </div>
-                )}
-              </div>
-            )
-          })}
+                  {tall ? (
+                    <div className="mt-1.5">
+                      <ClassInfo block={p.block} compact />
+                    </div>
+                  ) : (
+                    <p className="mt-1 pl-3.5 text-[11.5px] tabular-nums text-ink/50">
+                      {p.block.start} — {p.block.end}
+                    </p>
+                  )}
+                </motion.button>
+              )
+            })}
+          </div>
         </div>
       )}
 

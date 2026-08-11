@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { AnimatedMesh } from './components/background/AnimatedMesh'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { TabBar, type TabId } from './components/ui/TabBar'
 import { AppMenuSheet } from './components/ui/AppMenuSheet'
 import { Inicio } from './pages/Inicio'
@@ -29,13 +30,6 @@ export type Route =
   | { name: 'subject'; id: string }
 
 const TAB_ROUTES: TabId[] = ['inicio', 'calculadora', 'horario', 'calendario']
-
-// Transición liviana: solo opacidad + un pelín de desplazamiento (composita en GPU).
-const pageVariants = {
-  initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -4 },
-}
 
 export default function App() {
   const [route, setRoute] = useState<Route>({ name: 'inicio' })
@@ -85,15 +79,16 @@ export default function App() {
       ) : (
       <>
       <div className="mx-auto h-full w-full max-w-md overflow-hidden">
-        <AnimatePresence mode="wait">
+        {/* Entrada por `key` (sin `exit` bloqueante) → nunca se queda en blanco al
+            navegar rápido. Un ErrorBoundary por ruta captura un crash de página y se
+            reinicia solo al cambiar de pestaña. */}
+        <ErrorBoundary key={key}>
           <motion.div
             key={key}
             className="h-full"
             style={{ willChange: 'opacity, transform' }}
-            variants={pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22, ease: EASE.standard }}
           >
             {route.name === 'inicio' && <Inicio navigate={setRoute} />}
@@ -109,7 +104,7 @@ export default function App() {
               <SubjectDetail id={route.id} navigate={setRoute} />
             )}
           </motion.div>
-        </AnimatePresence>
+        </ErrorBoundary>
       </div>
 
       {/* Velo degradado: el contenido se desvanece detrás de la nav flotante. */}

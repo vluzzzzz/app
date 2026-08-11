@@ -27,6 +27,9 @@ const EVENT_TYPE_RGB: Record<EventType, string> = {
   recordatorio: '139 92 246', // violeta
 }
 
+/** Item compacto para la vista mensual ampliada. */
+type DayItem = { title: string; time?: string; rgb: string }
+
 export function Calendario() {
   const classes = useAppStore((s) => s.classes)
   const events = useAppStore((s) => s.events)
@@ -39,6 +42,7 @@ export function Calendario() {
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
   const [selectedKey, setSelectedKey] = useState(todayKey)
+  const [expanded, setExpanded] = useState(false)
 
   const [eventSheetOpen, setEventSheetOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
@@ -65,21 +69,20 @@ export function Calendario() {
     setSelectedKey(todayKey)
   }
 
-  // Elementos del día seleccionado.
+  // Elementos del día seleccionado (vista compacta).
   const dayClasses = classesForDay(classes, weekday(selected))
   const dayEvents = eventsOn(events, selectedKey)
   const dayTasks = tasks.filter((t) => t.date === selectedKey)
   const totalItems = dayClasses.length + dayEvents.length + dayTasks.length
 
-  /** Colores de los puntitos de un día (máx 3): eventos + tareas. */
-  const dotsFor = (d: Date): string[] => {
+  /** Eventos + tareas de un día (para puntos y para la vista ampliada). */
+  const itemsFor = (d: Date): DayItem[] => {
     const key = toDateKey(d)
-    const colors: string[] = []
-    for (const e of eventsOn(events, key)) colors.push(`rgb(${eventRgb(e)})`)
-    for (const t of tasks.filter((x) => x.date === key)) {
-      colors.push(t.color ? `rgb(${accentRgb(t.color)})` : 'rgb(var(--ink) / 0.7)')
-    }
-    return colors.slice(0, 3)
+    const evs = eventsOn(events, key).map((e) => ({ title: e.title, time: e.time, rgb: eventRgb(e) }))
+    const tks = tasks
+      .filter((t) => t.date === key)
+      .map((t) => ({ title: t.title, time: t.time, rgb: t.color ? accentRgb(t.color) : '148 163 184' }))
+    return [...evs, ...tks]
   }
 
   const openNew = () => {
@@ -87,7 +90,8 @@ export function Calendario() {
     setEventSheetOpen(true)
   }
 
-  const viewingOtherMonth = year !== today.getFullYear() || month !== today.getMonth()
+  // El botón "Hoy" (acción, NO etiqueta) solo aparece si te alejaste de hoy.
+  const showHoy = year !== today.getFullYear() || month !== today.getMonth() || selectedKey !== todayKey
 
   return (
     <div className="h-full overflow-y-auto px-5 pb-36 pt-6">
@@ -106,39 +110,60 @@ export function Calendario() {
         </motion.button>
       </header>
 
-      {/* Navegación de mes */}
+      {/* Navegación de mes (izq) + controles Hoy/expandir (der) */}
       <div className="mb-4 flex items-center justify-between px-1">
-        <button
-          onClick={() => changeMonth(-1)}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-ink/50 active:bg-ink/5"
-          aria-label="Mes anterior"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-        <div className="flex items-center gap-2">
-          <h2 className="text-[18px] font-bold text-ink">
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={() => changeMonth(-1)}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-ink/50 active:bg-ink/5"
+            aria-label="Mes anterior"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <h2 className="min-w-[132px] text-center text-[18px] font-bold text-ink">
             {MONTH_NAMES[month]} {year}
           </h2>
-          {(viewingOtherMonth || selectedKey !== todayKey) && (
+          <button
+            onClick={() => changeMonth(1)}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-ink/50 active:bg-ink/5"
+            aria-label="Mes siguiente"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {showHoy && (
             <button
               onClick={goToday}
-              className="rounded-full bg-ink/5 px-2.5 py-1 text-[12px] font-semibold text-ink/60 active:bg-ink/10"
+              className="rounded-full bg-ink/5 px-3 py-1.5 text-[12px] font-semibold text-ink/60 active:bg-ink/10"
             >
               Hoy
             </button>
           )}
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-ink/60 active:bg-ink/5"
+            aria-label={expanded ? 'Vista compacta' : 'Vista mensual'}
+          >
+            {expanded ? (
+              <svg viewBox="0 0 24 24" fill="currentColor" className="h-[18px] w-[18px]">
+                <rect x="3.5" y="5" width="17" height="4.2" rx="1.6" />
+                <rect x="3.5" y="14.8" width="17" height="4.2" rx="1.6" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="currentColor" className="h-[18px] w-[18px]">
+                <rect x="3.5" y="3.5" width="7.5" height="7.5" rx="2" />
+                <rect x="13" y="3.5" width="7.5" height="7.5" rx="2" />
+                <rect x="3.5" y="13" width="7.5" height="7.5" rx="2" />
+                <rect x="13" y="13" width="7.5" height="7.5" rx="2" />
+              </svg>
+            )}
+          </button>
         </div>
-        <button
-          onClick={() => changeMonth(1)}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-ink/50 active:bg-ink/5"
-          aria-label="Mes siguiente"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
       </div>
 
-      {/* Grilla mensual */}
-      <div className="glass rounded-[28px] p-4">
+      {/* Grilla mensual (compacta o ampliada) */}
+      <motion.div layout transition={{ type: 'spring', stiffness: 380, damping: 38 }} className="glass rounded-[28px] p-4">
         <div className="mb-2 grid grid-cols-7">
           {DAY_SHORT.map((d) => (
             <span key={d} className="text-center text-[11px] font-semibold uppercase text-ink/30">
@@ -146,190 +171,242 @@ export function Calendario() {
             </span>
           ))}
         </div>
-        {weeks.map((w, wi) => (
-          <div key={wi} className="grid grid-cols-7">
-            {w.map((d, di) => {
-              if (!d) return <span key={di} />
-              const key = toDateKey(d)
-              const isToday = key === todayKey
-              const isSelected = key === selectedKey
-              const dots = dotsFor(d)
-              return (
-                <button
-                  key={di}
-                  onClick={() => setSelectedKey(key)}
-                  className="flex flex-col items-center py-1.5"
-                >
-                  <span className="relative flex h-9 w-9 items-center justify-center">
-                    {isSelected && (
-                      <motion.span
-                        layoutId="cal-daysel"
-                        transition={{ type: 'spring', stiffness: 520, damping: 40 }}
-                        className="absolute inset-0 rounded-full bg-ink"
-                      />
-                    )}
-                    <span
-                      className={`relative z-10 text-[15px] tabular-nums ${
-                        isSelected
-                          ? 'font-bold text-surface'
-                          : isToday
-                            ? 'font-bold text-ink'
-                            : 'font-medium text-ink/70'
-                      }`}
+
+        {!expanded
+          ? /* --- COMPACTA --- */
+            weeks.map((w, wi) => (
+              <div key={wi} className="grid grid-cols-7">
+                {w.map((d, di) => {
+                  if (!d) return <span key={di} />
+                  const key = toDateKey(d)
+                  const isToday = key === todayKey
+                  const isSelected = key === selectedKey
+                  const dots = itemsFor(d).slice(0, 3)
+                  return (
+                    <button
+                      key={di}
+                      onClick={() => setSelectedKey(key)}
+                      className="flex flex-col items-center py-1.5"
                     >
-                      {d.getDate()}
-                    </span>
-                  </span>
-                  <span className="mt-1 flex h-1.5 items-center gap-0.5">
-                    {dots.map((c, i) => (
-                      <span
-                        key={i}
-                        className="h-1 w-1 rounded-full"
-                        style={{ background: isSelected ? 'rgb(var(--surface) / 0.7)' : c }}
-                      />
-                    ))}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        ))}
-      </div>
-
-      {/* Día seleccionado */}
-      <div className="mb-3 mt-6 flex items-baseline justify-between px-1">
-        <h2 className="text-[18px] font-bold text-ink">
-          {DAY_NAMES[weekday(selected)]} {selected.getDate()}
-          <span className="font-semibold text-ink/40"> de {MONTH_NAMES[selected.getMonth()]}</span>
-        </h2>
-        {totalItems > 0 && (
-          <span className="shrink-0 text-sm font-semibold text-ink/40">
-            {totalItems} {totalItems === 1 ? 'cosa' : 'cosas'}
-          </span>
-        )}
-      </div>
-
-      {totalItems === 0 ? (
-        <div className="glass rounded-3xl p-8 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-ink/5 text-ink/60">
-            <CalendarIcon className="h-6 w-6" />
-          </div>
-          <p className="text-[15px] font-semibold text-ink">No tienes nada para este día</p>
-          <p className="mt-0.5 text-sm text-ink/45">Disfruta el día.</p>
-        </div>
-      ) : (
-        <div className="space-y-2.5">
-          {/* Clases del horario (derivadas) */}
-          {dayClasses.map((c, i) => (
-            <motion.div
-              key={c.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: Math.min(i, 8) * 0.03 }}
-              className="glass relative overflow-hidden rounded-[20px] p-4 pl-5 opacity-95"
-            >
-              <span
-                className="absolute inset-y-2 left-0 w-1 rounded-r-full"
-                style={{ background: subjectColor(c.subjectId) }}
-              />
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="truncate text-[15px] font-bold text-ink">
-                  {subjectName(c.subjectId) ?? 'Clase'}
-                </h3>
-                <span className="shrink-0 text-[12px] font-medium text-ink/40">
-                  Clase · {CLASS_TYPE_LABEL[c.type]}
-                </span>
+                      <span className="relative flex h-9 w-9 items-center justify-center">
+                        {isSelected && (
+                          <motion.span
+                            layoutId="cal-daysel"
+                            transition={{ type: 'spring', stiffness: 520, damping: 40 }}
+                            className="absolute inset-0 rounded-full bg-ink"
+                          />
+                        )}
+                        <span
+                          className={`relative z-10 text-[15px] tabular-nums ${
+                            isSelected
+                              ? 'font-bold text-surface'
+                              : isToday
+                                ? 'font-bold text-ink'
+                                : 'font-medium text-ink/70'
+                          }`}
+                        >
+                          {d.getDate()}
+                        </span>
+                      </span>
+                      <span className="mt-1 flex h-1.5 items-center gap-0.5">
+                        {dots.map((it, i) => (
+                          <span
+                            key={i}
+                            className="h-1 w-1 rounded-full"
+                            style={{ background: isSelected ? 'rgb(var(--surface) / 0.7)' : `rgb(${it.rgb})` }}
+                          />
+                        ))}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
-              <p className="mt-0.5 text-sm tabular-nums text-ink/55">
-                {c.start} — {c.end}
-                {c.room ? ` · Sala ${c.room}` : ''}
-              </p>
-            </motion.div>
-          ))}
+            ))
+          : /* --- AMPLIADA: eventos dentro de cada día --- */
+            weeks.map((w, wi) => (
+              <div key={wi} className="grid grid-cols-7 gap-0.5">
+                {w.map((d, di) => {
+                  if (!d) return <span key={di} />
+                  const key = toDateKey(d)
+                  const isToday = key === todayKey
+                  const items = itemsFor(d)
+                  return (
+                    <button
+                      key={di}
+                      onClick={() => {
+                        setSelectedKey(key)
+                        setExpanded(false)
+                      }}
+                      className="flex min-h-[74px] flex-col items-stretch gap-[3px] rounded-xl p-1 text-left active:bg-ink/[0.03]"
+                    >
+                      <span
+                        className={`mx-auto flex h-6 w-6 items-center justify-center rounded-full text-[12px] tabular-nums ${
+                          isToday ? 'bg-ink font-bold text-surface' : 'font-semibold text-ink/60'
+                        }`}
+                      >
+                        {d.getDate()}
+                      </span>
+                      <div className="flex flex-col gap-[3px] overflow-hidden">
+                        {items.slice(0, 2).map((it, i) => (
+                          <span
+                            key={i}
+                            className="truncate rounded-[5px] px-1 py-[1px] text-[9px] font-semibold leading-tight text-ink/75"
+                            style={{ background: `rgb(${it.rgb} / 0.16)` }}
+                          >
+                            {it.title}
+                          </span>
+                        ))}
+                        {items.length > 2 && (
+                          <span className="pl-1 text-[9px] font-semibold text-ink/40">
+                            +{items.length - 2} más
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            ))}
+      </motion.div>
 
-          {/* Eventos */}
-          {dayEvents.map((e, i) => {
-            const past = selectedKey < todayKey
-            return (
-              <motion.button
-                key={e.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(dayClasses.length + i, 8) * 0.03 }}
-                whileTap={{ scale: 0.985 }}
-                onClick={() => {
-                  setEditingEvent(e)
-                  setEventSheetOpen(true)
-                }}
-                className={`glass relative w-full overflow-hidden rounded-[20px] p-4 pl-5 text-left ${past ? 'opacity-60' : ''}`}
-              >
-                <span
-                  className="absolute inset-y-2 left-0 w-1 rounded-r-full"
-                  style={{ background: `rgb(${eventRgb(e)})` }}
-                />
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="truncate text-[15px] font-bold text-ink">{e.title}</h3>
-                  <span className="shrink-0 text-[12px] font-medium text-ink/40">
-                    {EVENT_TYPE_LABEL[e.type]}
-                  </span>
-                </div>
-                <p className="mt-0.5 text-sm tabular-nums text-ink/55">
-                  {[subjectName(e.subjectId), e.time ?? 'Todo el día', e.location]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </p>
-              </motion.button>
-            )
-          })}
+      {/* Detalle del día seleccionado (solo en vista compacta) */}
+      {!expanded && (
+        <>
+          <div className="mb-3 mt-6 flex items-baseline justify-between px-1">
+            <h2 className="text-[18px] font-bold text-ink">
+              {DAY_NAMES[weekday(selected)]} {selected.getDate()}
+              <span className="font-semibold text-ink/40"> de {MONTH_NAMES[selected.getMonth()]}</span>
+            </h2>
+            {totalItems > 0 && (
+              <span className="shrink-0 text-sm font-semibold text-ink/40">
+                {totalItems} {totalItems === 1 ? 'cosa' : 'cosas'}
+              </span>
+            )}
+          </div>
 
-          {/* Tareas con fecha */}
-          {dayTasks.map((t, i) => {
-            const overdue = !t.done && t.date! < todayKey
-            return (
-              <motion.div
-                key={t.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(dayClasses.length + dayEvents.length + i, 8) * 0.03 }}
-                className={`glass relative overflow-hidden rounded-[20px] p-4 pl-5 ${t.done ? 'opacity-60' : ''}`}
-              >
-                <span
-                  className="absolute inset-y-2 left-0 w-1 rounded-r-full"
-                  style={{ background: t.color ? `rgb(${accentRgb(t.color)})` : 'rgb(var(--ink) / 0.8)' }}
-                />
-                <div className="flex items-center justify-between gap-2">
-                  <button
-                    onClick={() => {
-                      setEditingTask(t)
-                      setTaskSheetOpen(true)
-                    }}
-                    className="min-w-0 flex-1 text-left"
-                  >
-                    <h3 className={`truncate text-[15px] font-bold text-ink ${t.done ? 'line-through opacity-60' : ''}`}>
-                      {t.title}
+          {totalItems === 0 ? (
+            <div className="glass rounded-3xl p-8 text-center">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-ink/5 text-ink/60">
+                <CalendarIcon className="h-6 w-6" />
+              </div>
+              <p className="text-[15px] font-semibold text-ink">No tienes nada para este día</p>
+              <p className="mt-0.5 text-sm text-ink/45">Disfruta el día.</p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {/* Clases del horario (derivadas) */}
+              {dayClasses.map((c, i) => (
+                <motion.div
+                  key={c.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: Math.min(i, 8) * 0.03 }}
+                  className="glass relative overflow-hidden rounded-[20px] p-4 pl-5 opacity-95"
+                >
+                  <span
+                    className="absolute inset-y-2 left-0 w-1 rounded-r-full"
+                    style={{ background: subjectColor(c.subjectId) }}
+                  />
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="break-words text-[15px] font-bold text-ink">
+                      {subjectName(c.subjectId) ?? 'Clase'}
                     </h3>
-                    <p className="mt-0.5 text-sm text-ink/55">
-                      Tarea{t.time ? ` · ${t.time}` : ''}
-                      {overdue && <span className="font-semibold text-rose-500"> · Vencida</span>}
-                      {t.done && <span className="font-semibold text-emerald-600 dark:text-emerald-300"> · Completada</span>}
-                    </p>
-                  </button>
-                  <button
-                    onClick={() => toggleTask(t.id)}
-                    aria-label={t.done ? 'Marcar pendiente' : 'Completar'}
-                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${
-                      t.done
-                        ? 'border-emerald-500 bg-emerald-500 text-white'
-                        : 'border-ink/20 text-transparent'
-                    }`}
+                    <span className="shrink-0 text-[12px] font-medium text-ink/40">
+                      Clase · {CLASS_TYPE_LABEL[c.type]}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-sm tabular-nums text-ink/55">
+                    {c.start} — {c.end}
+                    {c.room ? ` · Sala ${c.room}` : ''}
+                  </p>
+                </motion.div>
+              ))}
+
+              {/* Eventos */}
+              {dayEvents.map((e, i) => {
+                const past = selectedKey < todayKey
+                return (
+                  <motion.button
+                    key={e.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: Math.min(dayClasses.length + i, 8) * 0.03 }}
+                    whileTap={{ scale: 0.985 }}
+                    onClick={() => {
+                      setEditingEvent(e)
+                      setEventSheetOpen(true)
+                    }}
+                    className={`glass relative w-full overflow-hidden rounded-[20px] p-4 pl-5 text-left ${past ? 'opacity-60' : ''}`}
                   >
-                    <CheckIcon className="h-4 w-4" />
-                  </button>
-                </div>
-              </motion.div>
-            )
-          })}
-        </div>
+                    <span
+                      className="absolute inset-y-2 left-0 w-1 rounded-r-full"
+                      style={{ background: `rgb(${eventRgb(e)})` }}
+                    />
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="break-words text-[15px] font-bold text-ink">{e.title}</h3>
+                      <span className="shrink-0 text-[12px] font-medium text-ink/40">
+                        {EVENT_TYPE_LABEL[e.type]}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-sm tabular-nums text-ink/55">
+                      {[subjectName(e.subjectId), e.time ?? 'Todo el día', e.location]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                  </motion.button>
+                )
+              })}
+
+              {/* Tareas con fecha */}
+              {dayTasks.map((t, i) => {
+                const overdue = !t.done && t.date! < todayKey
+                return (
+                  <motion.div
+                    key={t.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: Math.min(dayClasses.length + dayEvents.length + i, 8) * 0.03 }}
+                    className={`glass relative overflow-hidden rounded-[20px] p-4 pl-5 ${t.done ? 'opacity-60' : ''}`}
+                  >
+                    <span
+                      className="absolute inset-y-2 left-0 w-1 rounded-r-full"
+                      style={{ background: t.color ? `rgb(${accentRgb(t.color)})` : 'rgb(var(--ink) / 0.8)' }}
+                    />
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingTask(t)
+                          setTaskSheetOpen(true)
+                        }}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <h3 className={`break-words text-[15px] font-bold text-ink ${t.done ? 'line-through opacity-60' : ''}`}>
+                          {t.title}
+                        </h3>
+                        <p className="mt-0.5 text-sm text-ink/55">
+                          Tarea{t.time ? ` · ${t.time}` : ''}
+                          {overdue && <span className="font-semibold text-rose-500"> · Vencida</span>}
+                          {t.done && <span className="font-semibold text-emerald-600 dark:text-emerald-300"> · Completada</span>}
+                        </p>
+                      </button>
+                      <button
+                        onClick={() => toggleTask(t.id)}
+                        aria-label={t.done ? 'Marcar pendiente' : 'Completar'}
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${
+                          t.done
+                            ? 'border-emerald-500 bg-emerald-500 text-white'
+                            : 'border-ink/20 text-transparent'
+                        }`}
+                      >
+                        <CheckIcon className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </div>
+          )}
+        </>
       )}
 
       <EventSheet
