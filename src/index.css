@@ -19,13 +19,13 @@
 /* ===== Tema OSCURO ===== */
 .dark {
   color-scheme: dark;
-  --surface: 14 14 16;
+  --surface: 0 0 0; /* OLED negro puro */
   --ink: 255 255 255;
 
-  --card: 23 23 27; /* carbón */
+  --card: 20 20 22; /* carbón, apenas elevado sobre el negro */
   --card-brd: 255 255 255;
-  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3),
-    0 12px 30px -18px rgba(0, 0, 0, 0.55);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.4),
+    0 12px 30px -18px rgba(0, 0, 0, 0.6);
 }
 
 html,
@@ -65,6 +65,12 @@ body {
     background-color: rgb(var(--card));
     border: 1px solid rgb(var(--card-brd) / 0.06);
     box-shadow: var(--card-shadow);
+  }
+  /* En OLED negro las tarjetas necesitan un borde un pelín más marcado para separarse. */
+  .dark .glass,
+  .dark .glass-strong,
+  .dark .glass-highlight {
+    border-color: rgb(var(--card-brd) / 0.1);
   }
 
   /* Resplandor de color: se controla con la variable --glow. */
