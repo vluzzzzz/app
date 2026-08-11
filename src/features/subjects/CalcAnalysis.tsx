@@ -323,7 +323,7 @@ function PosibilidadesUna({
               >
                 <span className="font-semibold tabular-nums text-ink">{formatGrade(n)}</span>
                 <span className={`text-right font-semibold tabular-nums ${passes(n) ? 'text-emerald-600 dark:text-emerald-300' : 'text-ink/70'}`}>
-                  {formatGrade(finalOf(n))}
+                  {finalOf(n).toFixed(2).replace('.', ',')}
                 </span>
                 {expandable ? (
                   <ChevronRight className={`h-4 w-4 text-ink/30 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
@@ -340,8 +340,9 @@ function PosibilidadesUna({
                         <span className={`tabular-nums ${isThreshold ? 'font-bold text-ink' : 'text-ink/70'}`}>
                           {formatGrade(x)}
                         </span>
+                        {/* 2 decimales para ver la diferencia real (notas de poco peso) */}
                         <span className={`text-right font-semibold tabular-nums ${passes(x) ? 'text-emerald-600 dark:text-emerald-300' : 'text-ink/60'}`}>
-                          {formatGrade(finalOf(x))}
+                          {finalOf(x).toFixed(2).replace('.', ',')}
                         </span>
                       </div>
                     )
