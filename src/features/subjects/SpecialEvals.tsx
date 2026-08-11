@@ -65,7 +65,18 @@ export function SpecialEvals({ subjectId }: { subjectId: string }) {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[13px] text-ink/55">La optativa pesa</span>
-                    <span className="text-[15px] font-semibold text-ink">{100 - opt.actualPct}%</span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        inputMode="numeric"
+                        value={100 - opt.actualPct}
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/[^0-9]/g, '')
+                          if (v !== '') setOptativaSplit(subjectId, 100 - Math.min(100, Number(v)))
+                        }}
+                        className="w-12 rounded-xl border border-ink/15 bg-[rgb(var(--card))] py-1.5 text-center text-[15px] font-bold tabular-nums text-ink outline-none focus:border-ink/40"
+                      />
+                      <span className="text-sm text-ink/50">%</span>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between border-t border-ink/10 pt-2.5">
                     <span className="text-[13px] text-ink/55">Tu nota en la optativa</span>
