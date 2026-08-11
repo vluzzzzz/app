@@ -357,6 +357,9 @@ describe('análisis de Calcular', () => {
     }
     const pos = possibilitiesFor(s)!
     expect(pos).not.toBeNull()
+    // Primera fila = nota mínima EXACTA (4,2 = (2*4 - 3.8)), no redondeada a 0,5.
+    expect(pos.first.name).toBe('P2')
+    expect(pos.rows[0].a).toBeCloseTo(4.2)
     let checked = 0
     for (const r of pos.rows) {
       if (r.b == null) continue

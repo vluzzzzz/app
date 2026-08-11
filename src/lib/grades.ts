@@ -238,20 +238,36 @@ export function possibilitiesFor(
   const [first, second] = pend
   const { scale } = subject
   const stepA = scale.max - scale.min <= 10 ? 0.5 : 5
-  const bSteps = Math.round((scale.max - scale.min) / 0.1)
-  const rows: Combo[] = []
-  for (let a = scale.min; a <= scale.max + EPS; a += stepA) {
-    const ra = round1(a)
-    let b: number | null = null
-    for (let i = 0; i <= bSteps; i++) {
+  const steps01 = Math.round((scale.max - scale.min) / 0.1)
+
+  // Nota mínima EXACTA (0.1) de la SEGUNDA que cumple todo, para una `a` dada.
+  const minB = (a: number): number | null => {
+    for (let i = 0; i <= steps01; i++) {
       const cand = round1(scale.min + i * 0.1)
-      if (meetsAll(subject, { [first.id]: ra, [second.id]: cand })) {
-        b = cand
-        break
-      }
+      if (meetsAll(subject, { [first.id]: a, [second.id]: cand })) return cand
     }
-    rows.push({ a: ra, b })
+    return null
   }
+
+  // `a` mínima EXACTA que hace factible la fila (con la mejor segunda nota posible).
+  let aMin: number | null = null
+  for (let i = 0; i <= steps01; i++) {
+    const a = round1(scale.min + i * 0.1)
+    if (meetsAll(subject, { [first.id]: a, [second.id]: scale.max })) {
+      aMin = a
+      break
+    }
+  }
+  if (aMin == null) return { first, second, rows: [] }
+
+  // Valores de `a`: el mínimo exacto + luego la grilla de 0.5 por encima.
+  const aValues: number[] = [aMin]
+  for (let g = Math.ceil((aMin + 1e-9) / stepA) * stepA; g <= scale.max + EPS; g += stepA) {
+    const rg = round1(g)
+    if (rg > aMin + 1e-9) aValues.push(rg)
+  }
+
+  const rows: Combo[] = aValues.map((a) => ({ a, b: minB(a) }))
   return { first, second, rows }
 }
 

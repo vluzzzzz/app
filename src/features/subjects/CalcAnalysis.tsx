@@ -292,26 +292,24 @@ function PosibilidadesUna({
   return (
     <Card>
       <Title sub={`Nota que necesitas en ${item.name}`}>Posibilidades para aprobar</Title>
-      <div className="grid grid-cols-[18px_1fr_1fr] gap-x-2 border-b border-ink/10 pb-2 text-xs font-semibold uppercase tracking-wide text-ink/40">
-        <span />
+      <div className="grid grid-cols-2 gap-x-2 border-b border-ink/10 px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-ink/40">
         <span>Si sacas</span>
         <span className="text-right">Tu promedio</span>
       </div>
       <div className="mt-1">
-        {grades.map((x) => {
+        {grades.map((x, i) => {
           const final = projectedFinal(subject, { [item.id]: x }) ?? 0
           const pass = threshold != null && x + 1e-9 >= threshold
-          const isThreshold = threshold != null && Math.abs(x - threshold) < 1e-9
+          const inBand = !Number.isInteger(x)
+          const prevBand = i > 0 && !Number.isInteger(grades[i - 1])
+          const nextBand = i < grades.length - 1 && !Number.isInteger(grades[i + 1])
           return (
             <div
               key={x}
-              className={`grid grid-cols-[18px_1fr_1fr] items-center gap-x-2 rounded-lg py-1.5 text-[15px] ${
-                isThreshold ? 'bg-emerald-500/10' : ''
-              }`}
+              className={`grid grid-cols-2 gap-x-2 px-2 py-1.5 text-[15px] ${
+                inBand ? 'bg-ink/[0.05]' : ''
+              } ${inBand && !prevBand ? 'rounded-t-xl' : ''} ${inBand && !nextBand ? 'rounded-b-xl' : ''}`}
             >
-              <span
-                className={`h-2.5 w-2.5 rounded-full ${isThreshold ? 'bg-emerald-500' : 'bg-transparent'}`}
-              />
               <span className="font-semibold tabular-nums text-ink">{formatGrade(x)}</span>
               <span
                 className={`text-right font-semibold tabular-nums ${pass ? 'text-emerald-600 dark:text-emerald-300' : 'text-ink/70'}`}
