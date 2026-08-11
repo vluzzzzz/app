@@ -6,6 +6,8 @@ import { useAppStore } from '../store/useAppStore'
 import { avatarSrc } from '../lib/avatars'
 import { AiBar } from '../features/chat/AiBar'
 import { RamosCarousel } from '../features/subjects/RamosCarousel'
+import { nextClassToday } from '../lib/schedule'
+import { accentRgb } from '../lib/accents'
 import { TaskCard } from '../features/tasks/TaskCard'
 import { TaskEditor } from '../features/tasks/TaskEditor'
 import { DashedBox } from '../components/ui/DashedBox'
@@ -18,6 +20,7 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
   const avatar = useAppStore((s) => s.avatar)
   const subjects = useAppStore((s) => s.subjects)
   const tasks = useAppStore((s) => s.tasks)
+  const classes = useAppStore((s) => s.classes)
 
   // Editor de tareas (null = crear nueva).
   const [editorOpen, setEditorOpen] = useState(false)
@@ -43,6 +46,10 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
   })
 
   const goAddRamo = () => navigate({ name: 'calculadora', add: true })
+
+  // Próxima clase de hoy (si hay horario).
+  const next = nextClassToday(classes, now)
+  const nextSubject = next ? subjects.find((s) => s.id === next.block.subjectId) : null
 
   return (
     <div className="flex h-full flex-col gap-7 overflow-y-auto px-5 pb-36 pt-4">
@@ -107,6 +114,34 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
           )
         })}
       </div>
+
+      {/* Próxima clase de hoy (usa el Horario) */}
+      {next && nextSubject && (
+        <button
+          onClick={() => navigate({ name: 'horario' })}
+          className="glass relative -mt-2 overflow-hidden rounded-2xl p-4 pl-5 text-left"
+        >
+          <span
+            className="absolute inset-y-0 left-0 w-1.5"
+            style={{ background: `rgb(${accentRgb(nextSubject.color ?? 'gray')})` }}
+          />
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-ink/50">
+              {next.status === 'now' ? 'Ahora' : 'Próxima clase'}
+            </p>
+            {next.status === 'next' && (
+              <span className="text-sm font-semibold text-ink/60">
+                {next.minutesTo < 60 ? `En ${next.minutesTo} min` : `A las ${next.block.start}`}
+              </span>
+            )}
+          </div>
+          <p className="mt-0.5 text-[16px] font-bold text-ink">{nextSubject.name}</p>
+          <p className="text-sm tabular-nums text-ink/55">
+            {next.block.start} — {next.block.end}
+            {next.block.room ? ` · Sala ${next.block.room}` : ''}
+          </p>
+        </button>
+      )}
 
       {/* Ramos */}
       <section className="space-y-4">

@@ -34,6 +34,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
             if (result.ramos) st.setSubjects(result.ramos)
             if (result.prefs) st.hydratePrefs(result.prefs)
             if (result.chat) st.setChat(result.chat)
+            if (result.horario) st.setClasses(result.horario)
+            if (result.eventos) st.setEvents(result.eventos)
             if (result.tasks) st.setTasks(result.tasks)
             // Cuenta nueva (nube sin tareas): sembrar 2 tareas de arranque (guía inicial).
             else if (!st.tasks.length) {
@@ -53,6 +55,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
               }
             if (!result.chat && cur.chat.length) seed.chat = cur.chat
             if (!result.tasks && cur.tasks.length) seed.tasks = cur.tasks
+            if (!result.horario && cur.classes.length) seed.horario = cur.classes
+            if (!result.eventos && cur.events.length) seed.eventos = cur.events
             if (Object.keys(seed).length) pushSync(seed)
           }
         } finally {

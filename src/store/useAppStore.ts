@@ -3,6 +3,8 @@ import { persist } from 'zustand/middleware'
 import { makeId } from '../lib/format'
 import {
   DEFAULT_SCALE,
+  type CalendarEvent,
+  type ClassBlock,
   type GradeNode,
   type GradeScale,
   type Subject,
@@ -55,6 +57,10 @@ type State = {
   chat: ChatMessage[]
   /** Tareas del usuario (se sincronizan con la nube). */
   tasks: Task[]
+  /** Clases semanales del horario (se sincronizan con la nube). */
+  classes: ClassBlock[]
+  /** Eventos del calendario (se sincronizan con la nube). */
+  events: CalendarEvent[]
 }
 
 /** Campos del perfil que se hidratan desde Supabase / se editan en Perfil. */
@@ -101,7 +107,7 @@ type Actions = {
   /** Reemplaza todas las tareas (para hidratar desde la nube). */
   setTasks: (tasks: Task[]) => void
   /** Crea una tarea y devuelve su id. */
-  addTask: (input: { title: string; time?: string; color?: string }) => string
+  addTask: (input: { title: string; time?: string; date?: string; color?: string }) => string
   updateTask: (id: string, patch: Partial<Omit<Task, 'id'>>) => void
   removeTask: (id: string) => void
   /** Alterna pendiente/hecha. */
@@ -142,6 +148,18 @@ type Actions = {
   removeOptativa: (subjectId: string) => void
   setOptativaGrade: (subjectId: string, grade: number | null) => void
   setOptativaSplit: (subjectId: string, actualPct: number) => void
+
+  /** --- Horario (clases) --- */
+  setClasses: (classes: ClassBlock[]) => void
+  addClass: (input: Omit<ClassBlock, 'id'>) => string
+  updateClass: (id: string, patch: Partial<Omit<ClassBlock, 'id'>>) => void
+  removeClass: (id: string) => void
+
+  /** --- Calendario (eventos) --- */
+  setEvents: (events: CalendarEvent[]) => void
+  addEvent: (input: Omit<CalendarEvent, 'id'>) => string
+  updateEvent: (id: string, patch: Partial<Omit<CalendarEvent, 'id'>>) => void
+  removeEvent: (id: string) => void
 }
 
 /** Aplica una transformación a una asignatura concreta de forma inmutable. */
@@ -184,6 +202,8 @@ export const useAppStore = create<State & Actions>()(
       nameMonth: '',
       chat: [],
       tasks: [],
+      classes: [],
+      events: [],
 
       setDefaultScale: (scale) => set({ defaultScale: scale }),
       setTheme: (theme) => set({ theme }),
@@ -211,6 +231,8 @@ export const useAppStore = create<State & Actions>()(
           chat: [],
           // Re-sembrar las tareas de arranque (como en una cuenta nueva).
           tasks: STARTER_TASKS.map((title) => ({ id: makeId(), title, done: false })),
+          classes: [],
+          events: [],
           userName: '',
           referral: '',
           country: '',
@@ -230,9 +252,9 @@ export const useAppStore = create<State & Actions>()(
       clearChat: () => set({ chat: [] }),
 
       setTasks: (tasks) => set({ tasks }),
-      addTask: ({ title, time, color }) => {
+      addTask: ({ title, time, date, color }) => {
         const id = makeId()
-        const task: Task = { id, title: title.trim() || 'Tarea', done: false, time, color }
+        const task: Task = { id, title: title.trim() || 'Tarea', done: false, time, date, color }
         set((st) => ({ tasks: [...st.tasks, task] }))
         return id
       },
@@ -360,6 +382,32 @@ export const useAppStore = create<State & Actions>()(
               : s,
           ),
         })),
+
+      setClasses: (classes) => set({ classes }),
+      addClass: (input) => {
+        const id = makeId()
+        set((st) => ({ classes: [...st.classes, { ...input, id }] }))
+        return id
+      },
+      updateClass: (id, patch) =>
+        set((st) => ({
+          classes: st.classes.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+        })),
+      removeClass: (id) =>
+        set((st) => ({ classes: st.classes.filter((c) => c.id !== id) })),
+
+      setEvents: (events) => set({ events }),
+      addEvent: (input) => {
+        const id = makeId()
+        set((st) => ({ events: [...st.events, { ...input, id }] }))
+        return id
+      },
+      updateEvent: (id, patch) =>
+        set((st) => ({
+          events: st.events.map((e) => (e.id === id ? { ...e, ...patch } : e)),
+        })),
+      removeEvent: (id) =>
+        set((st) => ({ events: st.events.filter((e) => e.id !== id) })),
     }),
     {
       name: 'salva-semestres',

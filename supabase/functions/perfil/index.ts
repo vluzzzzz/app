@@ -152,6 +152,8 @@ Deno.serve(async (req: Request) => {
       prefs: body.prefs !== undefined ? body.prefs : existing?.prefs ?? null,
       chat: body.chat !== undefined ? body.chat : existing?.chat ?? null,
       tasks: body.tasks !== undefined ? body.tasks : existing?.tasks ?? null,
+      horario: body.horario !== undefined ? body.horario : existing?.horario ?? null,
+      eventos: body.eventos !== undefined ? body.eventos : existing?.eventos ?? null,
       name_changes: nameChanges,
       name_month: nameMonth,
       actualizado: new Date().toISOString(),

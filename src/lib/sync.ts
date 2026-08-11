@@ -23,12 +23,21 @@ export function startRamosSync() {
       state.defaultScale !== prev.defaultScale ||
       state.lite !== prev.lite ||
       state.chat !== prev.chat ||
-      state.tasks !== prev.tasks
+      state.tasks !== prev.tasks ||
+      state.classes !== prev.classes ||
+      state.events !== prev.events
     if (!changed) return
     clearTimeout(timer)
     timer = setTimeout(() => {
       const s = useAppStore.getState()
-      pushSync({ ramos: s.subjects, prefs: prefsOf(s), chat: s.chat, tasks: s.tasks })
+      pushSync({
+        ramos: s.subjects,
+        prefs: prefsOf(s),
+        chat: s.chat,
+        tasks: s.tasks,
+        horario: s.classes,
+        eventos: s.events,
+      })
     }, 1500)
   })
 }

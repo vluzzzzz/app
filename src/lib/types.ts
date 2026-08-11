@@ -68,8 +68,51 @@ export type Task = {
   id: string
   title: string
   done: boolean
-  /** Hora opcional "HH:mm"; se muestra como "Hoy: 11:00am". */
+  /** Hora opcional "HH:mm". */
   time?: string
+  /** Fecha opcional "YYYY-MM-DD"; si existe, la tarea aparece en el Calendario. */
+  date?: string
   /** Id de la paleta ACCENTS para la barra lateral (si no hay, va negra/ink). */
   color?: string
+}
+
+/** --- Horario (clases semanales recurrentes) --- */
+export type ClassType = 'catedra' | 'laboratorio' | 'ayudantia' | 'otro'
+
+export type ClassBlock = {
+  id: string
+  /** Id del ramo (Subject) al que pertenece. */
+  subjectId: string
+  /** Día de la semana: 0=Lunes … 6=Domingo. */
+  day: number
+  /** Hora de inicio "HH:mm" (24h). */
+  start: string
+  /** Hora de término "HH:mm" (24h). */
+  end: string
+  type: ClassType
+  room?: string
+  professor?: string
+  location?: string
+  notes?: string
+}
+
+/** --- Calendario (eventos por fecha) --- */
+export type EventType = 'evaluacion' | 'tarea' | 'evento' | 'recordatorio'
+
+export type CalendarEvent = {
+  id: string
+  title: string
+  /** Fecha "YYYY-MM-DD". */
+  date: string
+  /** Hora opcional "HH:mm" (24h). Sin hora = todo el día. */
+  time?: string
+  endTime?: string
+  type: EventType
+  /** Ramo asociado (opcional, para evaluaciones). */
+  subjectId?: string
+  description?: string
+  location?: string
+  /** Repetición (default: sin repetir). */
+  repeat?: 'none' | 'daily' | 'weekly' | 'monthly'
+  done?: boolean
 }

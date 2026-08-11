@@ -1,6 +1,6 @@
 import { auth } from './firebase'
 import type { ProfileFields } from '../store/useAppStore'
-import type { GradeScale, Subject, Task, Theme } from './types'
+import type { CalendarEvent, ClassBlock, GradeScale, Subject, Task, Theme } from './types'
 import type { ChatMessage } from '../ai/types'
 
 // El endpoint de perfil vive junto al de la IA (misma base de Edge Functions),
@@ -66,6 +66,8 @@ export async function fetchProfile(): Promise<{
   prefs: PrefsPayload | null
   chat: ChatMessage[] | null
   tasks: Task[] | null
+  horario: ClassBlock[] | null
+  eventos: CalendarEvent[] | null
 } | null> {
   if (!ENDPOINT || !auth?.currentUser) return null
   try {
@@ -80,6 +82,8 @@ export async function fetchProfile(): Promise<{
       prefs: row.prefs && typeof row.prefs === 'object' ? (row.prefs as PrefsPayload) : null,
       chat: Array.isArray(row.chat) ? (row.chat as ChatMessage[]) : null,
       tasks: Array.isArray(row.tasks) ? (row.tasks as Task[]) : null,
+      horario: Array.isArray(row.horario) ? (row.horario as ClassBlock[]) : null,
+      eventos: Array.isArray(row.eventos) ? (row.eventos as CalendarEvent[]) : null,
     }
   } catch {
     return null
@@ -96,6 +100,8 @@ export async function pushSync(payload: {
   prefs?: PrefsPayload
   chat?: ChatMessage[]
   tasks?: Task[]
+  horario?: ClassBlock[]
+  eventos?: CalendarEvent[]
 }): Promise<void> {
   if (!ENDPOINT || !auth?.currentUser) return
   try {

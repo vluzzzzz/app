@@ -14,8 +14,8 @@ export const EASE = {
   overshoot: [0.34, 1.45, 0.5, 1] as Bezier,
   /** Overshoot más marcado. */
   overshootBig: [0.37, 1.42, 0.37, 1] as Bezier,
-  /** ease-out fuerte (Emil Kowalski): arranca rápido, se siente responsivo. */
-  standard: [0.23, 1, 0.32, 1] as Bezier,
+  /** Estándar suave. */
+  standard: [0, 0, 0.5, 1] as Bezier,
 }
 
 /** Entrada premium "blur-in": aparece desenfocado y se aclara mientras crece. */

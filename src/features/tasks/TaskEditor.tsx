@@ -9,28 +9,33 @@ type Props = {
   onClose: () => void
   /** Tarea a editar, o null para crear una nueva. */
   task: Task | null
+  /** Fecha preseleccionada "YYYY-MM-DD" al crear (desde el Calendario). */
+  defaultDate?: string
 }
 
-/** Hoja para crear/editar una tarea: título, hora y color. */
-export function TaskEditor({ open, onClose, task }: Props) {
+/** Hoja para crear/editar una tarea: título, fecha, hora. */
+export function TaskEditor({ open, onClose, task, defaultDate }: Props) {
   const addTask = useAppStore((s) => s.addTask)
   const updateTask = useAppStore((s) => s.updateTask)
   const removeTask = useAppStore((s) => s.removeTask)
 
   const [title, setTitle] = useState('')
   const [time, setTime] = useState('')
+  const [date, setDate] = useState('')
 
   // Cargar los valores de la tarea (o limpiar) cada vez que se abre.
   useEffect(() => {
     if (!open) return
     setTitle(task?.title ?? '')
     setTime(task?.time ?? '')
+    setDate(task?.date ?? defaultDate ?? '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, task])
 
   const save = () => {
     const t = title.trim()
     if (!t) return
-    const patch = { title: t, time: time || undefined }
+    const patch = { title: t, time: time || undefined, date: date || undefined }
     if (task) updateTask(task.id, patch)
     else addTask(patch)
     onClose()
@@ -56,15 +61,30 @@ export function TaskEditor({ open, onClose, task }: Props) {
           />
         </div>
 
-        {/* Hora */}
-        <div>
-          <label className="mb-1.5 block px-1 text-sm font-medium text-ink/55">Hora (opcional)</label>
-          <input
-            type="time"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-            className="glass w-full rounded-2xl px-4 py-3.5 text-[15px] text-ink focus:outline-none"
-          />
+        {/* Fecha + Hora */}
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label className="mb-1.5 block px-1 text-sm font-medium text-ink/55">
+              Fecha (opcional)
+            </label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="glass w-full rounded-2xl px-4 py-3.5 text-[15px] text-ink focus:outline-none"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="mb-1.5 block px-1 text-sm font-medium text-ink/55">
+              Hora (opcional)
+            </label>
+            <input
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              className="glass w-full rounded-2xl px-4 py-3.5 text-[15px] text-ink focus:outline-none"
+            />
+          </div>
         </div>
 
         {/* Acciones */}
