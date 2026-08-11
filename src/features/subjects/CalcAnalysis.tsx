@@ -5,14 +5,12 @@ import {
   analyzeSituation,
   combinationsFor,
   conditionResults,
-  conditionsAllFeasible,
+  conditionsAllMet,
   currentGrade,
   impactTable,
-  conditionsAllMet,
   maxPossibleFinal,
   meetsAll,
   minGradeToPass,
-  minPossibleFinal,
   optativaBase,
   optativaFinal,
   optativaMax,
@@ -21,7 +19,6 @@ import {
   pendingEvaluations,
   pendingWeight,
   realEvaluationCount,
-  scenariosFor,
   type ConditionResult,
   type PendingEval,
   type Situation,
@@ -33,10 +30,7 @@ import {
   CheckCircleIcon,
   ChevronRight,
   FolderIcon,
-  PercentIcon,
-  ScaleIcon,
   TargetIcon,
-  TrendingUpIcon,
   XCircleIcon,
 } from '../../components/ui/Icons'
 
@@ -66,34 +60,6 @@ function Title({ children, sub }: { children: ReactNode; sub?: string }) {
   )
 }
 
-/** Fila con icono en círculo de color + título + subtítulo + valor. */
-function InsightRow({
-  icon,
-  tone,
-  title,
-  sub,
-  value,
-}: {
-  icon: ReactNode
-  tone: Tone
-  title: string
-  sub?: string
-  value?: string
-}) {
-  return (
-    <div className="flex items-center gap-3 py-2">
-      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${TONE[tone].bg} ${TONE[tone].fg}`}>
-        {icon}
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-[15px] font-semibold text-ink">{title}</p>
-        {sub && <p className="text-[13px] leading-snug text-ink/45">{sub}</p>}
-      </div>
-      {value && <span className={`shrink-0 text-lg font-bold tabular-nums ${TONE[tone].fg}`}>{value}</span>}
-    </div>
-  )
-}
-
 export function CalcAnalysis({ subject }: { subject: Subject }) {
   const { scale } = subject
   const [tab, setTab] = useState(0)
@@ -112,10 +78,8 @@ export function CalcAnalysis({ subject }: { subject: Subject }) {
   const pend = pendingEvaluations(subject)
   const pendPct = Math.round(pendingWeight(subject) * 100)
   const maxFinal = maxPossibleFinal(subject)
-  const minFinal = minPossibleFinal(subject)
   const situation = analyzeSituation(subject)
   const conds = conditionResults(subject)
-  const canPass = maxFinal + 1e-9 >= scale.pass && conditionsAllFeasible(subject)
 
   // Posición en el medidor de escala (0..1).
   const span = scale.max - scale.min || 1
@@ -169,128 +133,77 @@ export function CalcAnalysis({ subject }: { subject: Subject }) {
         </div>
       </Card>
 
-      {/* Condiciones de aprobación (si el ramo tiene) */}
-      {conds.length > 0 && <ConditionsCard conds={conds} pass={scale.pass} />}
+      {/* Tus evaluaciones actuales (árbol: secciones/subgrupos como carpetas) */}
+      <Card>
+        <Title>Tus evaluaciones actuales</Title>
+        <EvalTree nodes={subject.nodes} depth={0} />
+      </Card>
 
-      {/* Prueba optativa (si el ramo tiene) */}
-      {subject.optativa && <OptativaCard subject={subject} />}
-
-      {/* Caso cerrado (sin pendientes): nota final */}
-      {pend.length === 0 ? (
+      {/* Te quedan N evaluaciones (agrupadas por sección: carpeta + círculos) */}
+      {pend.length > 0 && (
         <Card>
-          <Title>Nota final</Title>
-          <span
-            className={`text-4xl font-black tabular-nums ${
-              (res.final ?? current ?? 0) >= scale.pass ? TONE.green.fg : TONE.red.fg
-            }`}
-          >
-            {formatGrade(res.final ?? current)}
-          </span>
-        </Card>
-      ) : (
-        <>
-          {/* Análisis general */}
-          <Card>
-            <Title>Análisis general</Title>
-            <InsightRow
-              icon={canPass ? <CheckCircleIcon className="h-5 w-5" /> : <AlertIcon className="h-5 w-5" />}
-              tone={canPass ? 'green' : 'amber'}
-              title={canPass ? 'Sí puedes aprobar' : 'Necesitas Remedial'}
-              sub={
-                canPass
-                  ? `Aún tienes forma de llegar a ${formatGrade(scale.pass)}.`
-                  : 'Con lo que queda no alcanzas: para aprobar te quedaría Remedial u Optativa.'
-              }
-            />
-            <InsightRow
-              icon={<TrendingUpIcon className="h-5 w-5" />}
-              tone="green"
-              title="Promedio máximo"
-              sub={`Si sacas ${formatGrade(scale.max)} en todo lo que queda.`}
-              value={formatGrade(maxFinal)}
-            />
-            <InsightRow
-              icon={<PercentIcon className="h-5 w-5" />}
-              tone="amber"
-              title="Peso restante"
-              sub="Del ramo aún por evaluar."
-              value={`${pendPct}%`}
-            />
-            <InsightRow
-              icon={<AlertIcon className="h-5 w-5" />}
-              tone="ink"
-              title="Si te va mal"
-              sub={`Sacando ${formatGrade(scale.min)} en lo que queda.`}
-              value={formatGrade(minFinal)}
-            />
-          </Card>
-
-          {/* Te quedan N evaluaciones (agrupadas por sección: carpeta + círculos) */}
-          <Card>
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-[17px] font-bold text-ink">
-                Te quedan {pend.length} {pend.length === 1 ? 'evaluación' : 'evaluaciones'}
-              </h3>
-              <span className="text-sm font-semibold text-ink/45">{pendPct}% del ramo</span>
-            </div>
-            <div className="space-y-2">
-              {groupBySection(pend).map((g, gi) => (
-                <div key={gi}>
-                  {g.section && (
-                    <div className="flex items-center gap-2 pb-0.5 pt-1">
-                      <FolderIcon className="h-4 w-4 shrink-0 text-ink" />
-                      <span className="text-sm font-semibold text-ink">{g.section}</span>
-                    </div>
-                  )}
-                  {g.items.map((p) => (
-                    <div key={p.id} className={`flex items-center gap-2.5 py-1 ${g.section ? 'pl-1.5' : ''}`}>
-                      <span className="h-2 w-2 shrink-0 rounded-full bg-ink/45" />
-                      <span className="min-w-0 flex-1 truncate text-[15px] text-ink/90">{p.name}</span>
-                      <span className="text-sm font-semibold tabular-nums text-ink/55">{pctOf(p)}%</span>
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Posibilidades para aprobar (2 pendientes) */}
-          {pend.length === 2 && <Posibilidades subject={subject} showAll={showAll} onToggle={() => setShowAll((v) => !v)} />}
-
-          {/* Escenarios destacados (2 pendientes) */}
-          {pend.length === 2 && <Escenarios subject={subject} />}
-
-          {/* Posibilidades cuando faltan 3 o más (combinación sugerida) */}
-          {pend.length >= 3 && res.status === 'ALCANZABLE' && res.needed != null && (
-            <Card>
-              <Title sub="Una combinación simple que te hace aprobar">Posibilidades para aprobar</Title>
-              <p className="mb-2 text-sm text-ink/60">
-                Si en cada evaluación que te queda sacas al menos{' '}
-                <b className="text-ink">{formatGrade(res.needed)}</b>, apruebas.
-              </p>
-              <div className="space-y-1">
-                {pend.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center justify-between rounded-xl bg-ink/[0.04] px-3 py-2 text-[15px]"
-                  >
-                    <span className="min-w-0 truncate text-ink/90">{nameOf(p)}</span>
-                    <span className="font-bold tabular-nums text-ink">{formatGrade(res.needed)}</span>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-[17px] font-bold text-ink">
+              Te quedan {pend.length} {pend.length === 1 ? 'evaluación' : 'evaluaciones'}
+            </h3>
+            <span className="text-sm font-semibold text-ink/45">{pendPct}% del ramo</span>
+          </div>
+          <div className="space-y-2">
+            {groupBySection(pend).map((g, gi) => (
+              <div key={gi}>
+                {g.section && (
+                  <div className="flex items-center gap-2 pb-0.5 pt-1">
+                    <FolderIcon className="h-4 w-4 shrink-0 text-ink" />
+                    <span className="text-sm font-semibold text-ink">{g.section}</span>
+                  </div>
+                )}
+                {g.items.map((p) => (
+                  <div key={p.id} className={`flex items-center gap-2.5 py-1 ${g.section ? 'pl-1.5' : ''}`}>
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-ink/45" />
+                    <span className="min-w-0 flex-1 truncate text-[15px] text-ink/90">{p.name}</span>
+                    <span className="text-sm font-semibold tabular-nums text-ink/55">{pctOf(p)}%</span>
                   </div>
                 ))}
               </div>
-            </Card>
-          )}
+            ))}
+          </div>
+        </Card>
+      )}
 
-          {/* Impacto: solo cuando queda UNA nota (para saber exactamente) */}
-          {pend.length === 1 && <Impacto subject={subject} pend={pend} tab={tab} setTab={setTab} />}
+      {/* Condiciones de aprobación (solo si el ramo tiene) */}
+      {conds.length > 0 && <ConditionsCard conds={conds} pass={scale.pass} />}
 
-          {/* Evaluaciones actuales (árbol: secciones/subgrupos como carpetas) */}
-          <Card>
-            <Title>Tus evaluaciones actuales</Title>
-            <EvalTree nodes={subject.nodes} depth={0} />
-          </Card>
-        </>
+      {/* Prueba optativa (solo si el ramo tiene) */}
+      {subject.optativa && <OptativaCard subject={subject} />}
+
+      {/* Posibilidades para aprobar (2 pendientes) */}
+      {pend.length === 2 && (
+        <Posibilidades subject={subject} showAll={showAll} onToggle={() => setShowAll((v) => !v)} />
+      )}
+
+      {/* Impacto: solo cuando queda UNA nota (equivale a las posibilidades) */}
+      {pend.length === 1 && <Impacto subject={subject} pend={pend} tab={tab} setTab={setTab} />}
+
+      {/* Posibilidades cuando faltan 3 o más (combinación sugerida) */}
+      {pend.length >= 3 && res.status === 'ALCANZABLE' && res.needed != null && (
+        <Card>
+          <Title sub="Una combinación simple que te hace aprobar">Posibilidades para aprobar</Title>
+          <p className="mb-2 text-sm text-ink/60">
+            Si en cada evaluación que te queda sacas al menos{' '}
+            <b className="text-ink">{formatGrade(res.needed)}</b>, apruebas.
+          </p>
+          <div className="space-y-1">
+            {pend.map((p) => (
+              <div
+                key={p.id}
+                className="flex items-center justify-between rounded-xl bg-ink/[0.04] px-3 py-2 text-[15px]"
+              >
+                <span className="min-w-0 truncate text-ink/90">{nameOf(p)}</span>
+                <span className="font-bold tabular-nums text-ink">{formatGrade(res.needed)}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
       )}
     </div>
   )
@@ -359,43 +272,6 @@ function Posibilidades({
           <ChevronRight className={`h-4 w-4 transition-transform ${showAll ? '-rotate-90' : 'rotate-90'}`} />
         </button>
       )}
-    </Card>
-  )
-}
-
-function Escenarios({ subject }: { subject: Subject }) {
-  const sc = scenariosFor(subject)
-  if (!sc) return null
-  const items = [
-    { key: 'balanced', icon: <ScaleIcon className="h-5 w-5" />, title: 'Ir parejo', s: sc.balanced },
-    { key: 'higherFirst', icon: <TrendingUpIcon className="h-5 w-5" />, title: `Mejor en ${sc.first.name}`, s: sc.higherFirst },
-    { key: 'higherSecond', icon: <TargetIcon className="h-5 w-5" />, title: `Mejor en ${sc.second.name}`, s: sc.higherSecond },
-  ].filter((x) => x.s)
-  if (items.length === 0) return null
-  return (
-    <Card>
-      <Title>Escenarios destacados</Title>
-      <div className="space-y-2">
-        {items.map((it) => (
-          <div key={it.key} className="flex items-center gap-3 rounded-2xl bg-ink/[0.04] p-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink/8 text-ink/70">
-              {it.icon}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[15px] font-semibold text-ink">{it.title}</p>
-              <p className="truncate text-[13px] text-ink/45">
-                {sc.first.name}: {formatGrade(it.s!.a)} · {sc.second.name}: {formatGrade(it.s!.b)}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-300">
-                {formatGrade(it.s!.final)}
-              </p>
-              <p className="text-[11px] text-ink/40">Final</p>
-            </div>
-          </div>
-        ))}
-      </div>
     </Card>
   )
 }
