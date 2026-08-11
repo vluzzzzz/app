@@ -188,6 +188,17 @@ export type Combo = {
   b: number | null
 }
 
+/** Nota mínima EXACTA (0.1) en una evaluación pendiente para aprobar (final + condiciones). */
+export function neededForEval(subject: Subject, evalId: string): number | null {
+  const { scale } = subject
+  const steps = Math.round((scale.max - scale.min) / 0.1)
+  for (let i = 0; i <= steps; i++) {
+    const x = round1(scale.min + i * 0.1)
+    if (meetsAll(subject, { [evalId]: x })) return x
+  }
+  return null
+}
+
 /** Tabla de combinaciones cuando faltan EXACTAMENTE 2 notas. */
 export function combinationsFor(
   subject: Subject,

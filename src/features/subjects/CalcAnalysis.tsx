@@ -1,14 +1,13 @@
 import { useState, type ReactNode } from 'react'
-import { motion } from 'framer-motion'
 import type { GradeNode, Subject } from '../../lib/types'
 import {
   analyzeSituation,
   conditionResults,
   conditionsAllMet,
   currentGrade,
-  impactTable,
   maxPossibleFinal,
   minGradeToPass,
+  neededForEval,
   possibilitiesFor,
   projectedFinal,
   optativaBase,
@@ -62,7 +61,6 @@ function Title({ children, sub }: { children: ReactNode; sub?: string }) {
 
 export function CalcAnalysis({ subject }: { subject: Subject }) {
   const { scale } = subject
-  const [tab, setTab] = useState(0)
   const [showAll, setShowAll] = useState(false)
 
   if (realEvaluationCount(subject) === 0) {
@@ -181,8 +179,8 @@ export function CalcAnalysis({ subject }: { subject: Subject }) {
         <Posibilidades subject={subject} showAll={showAll} onToggle={() => setShowAll((v) => !v)} />
       )}
 
-      {/* Impacto: solo cuando queda UNA nota (equivale a las posibilidades) */}
-      {pend.length === 1 && <Impacto subject={subject} pend={pend} tab={tab} setTab={setTab} />}
+      {/* Posibilidades cuando queda UNA nota (con banda decimal en el punto de aprobación) */}
+      {pend.length === 1 && <PosibilidadesUna subject={subject} item={pend[0]} />}
 
       {/* Posibilidades cuando faltan 3 o más (combinación sugerida) */}
       {pend.length >= 3 && res.status === 'ALCANZABLE' && res.needed != null && (
@@ -270,66 +268,69 @@ function Posibilidades({
   )
 }
 
-function Impacto({
+function PosibilidadesUna({
   subject,
-  pend,
-  tab,
-  setTab,
+  item,
 }: {
   subject: Subject
-  pend: PendingEval[]
-  tab: number
-  setTab: (n: number) => void
+  item: PendingEval
 }) {
-  const active = pend[Math.min(tab, pend.length - 1)]
-  if (!active) return null
-  const rows = impactTable(subject, active.id)
   const { scale } = subject
-  const firstPass = rows.find((r) => r.final + 1e-9 >= scale.pass)
+  const threshold = neededForEval(subject, item.id)
+
+  // Enteros + banda decimal desde el punto de aprobación hasta el siguiente entero.
+  const set = new Set<number>()
+  for (let g = scale.min; g <= scale.max + 1e-9; g += 1) set.add(Math.round(g * 10) / 10)
+  if (threshold != null && !Number.isInteger(threshold)) {
+    const next = Math.ceil(threshold)
+    for (let g = threshold; g <= next + 1e-9; g = Math.round((g + 0.1) * 10) / 10) {
+      set.add(Math.round(g * 10) / 10)
+    }
+  }
+  const grades = [...set].sort((a, b) => a - b)
 
   return (
     <Card>
-      <Title sub="Según la nota que saques en cada evaluación">Impacto en tu promedio</Title>
-      {pend.length > 1 && (
-        <div className="mb-3 flex gap-1 overflow-x-auto rounded-2xl bg-ink/5 p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {pend.map((p, i) => {
-            const on = i === Math.min(tab, pend.length - 1)
-            return (
-              <button
-                key={p.id}
-                onClick={() => setTab(i)}
-                className={`relative shrink-0 rounded-xl px-3 py-1.5 text-[13px] font-semibold transition-colors ${on ? 'text-surface' : 'text-ink/60'}`}
-              >
-                {on && (
-                  <motion.span layoutId="impacto-tab" className="absolute inset-0 -z-10 rounded-xl bg-ink" transition={{ type: 'spring', stiffness: 400, damping: 32 }} />
-                )}
-                {p.name}
-              </button>
-            )
-          })}
-        </div>
-      )}
-      <div className="grid grid-cols-2 gap-x-2 border-b border-ink/10 pb-2 text-xs font-semibold uppercase tracking-wide text-ink/40">
+      <Title sub={`Nota que necesitas en ${item.name}`}>Posibilidades para aprobar</Title>
+      <div className="grid grid-cols-[18px_1fr_1fr] gap-x-2 border-b border-ink/10 pb-2 text-xs font-semibold uppercase tracking-wide text-ink/40">
+        <span />
         <span>Si sacas</span>
-        <span className="text-right">Tu promedio sería</span>
+        <span className="text-right">Tu promedio</span>
       </div>
       <div className="mt-1">
-        {rows.map((r, i) => {
-          const ok = r.final + 1e-9 >= scale.pass
+        {grades.map((x) => {
+          const final = projectedFinal(subject, { [item.id]: x }) ?? 0
+          const pass = threshold != null && x + 1e-9 >= threshold
+          const isThreshold = threshold != null && Math.abs(x - threshold) < 1e-9
           return (
-            <div key={i} className="grid grid-cols-2 gap-x-2 py-1.5 text-[15px]">
-              <span className="font-semibold tabular-nums text-ink">{formatGrade(r.x)}</span>
-              <span className={`text-right font-semibold tabular-nums ${ok ? 'text-emerald-600 dark:text-emerald-300' : 'text-ink/70'}`}>
-                {formatGrade(r.final)}
+            <div
+              key={x}
+              className={`grid grid-cols-[18px_1fr_1fr] items-center gap-x-2 rounded-lg py-1.5 text-[15px] ${
+                isThreshold ? 'bg-emerald-500/10' : ''
+              }`}
+            >
+              <span
+                className={`h-2.5 w-2.5 rounded-full ${isThreshold ? 'bg-emerald-500' : 'bg-transparent'}`}
+              />
+              <span className="font-semibold tabular-nums text-ink">{formatGrade(x)}</span>
+              <span
+                className={`text-right font-semibold tabular-nums ${pass ? 'text-emerald-600 dark:text-emerald-300' : 'text-ink/70'}`}
+              >
+                {formatGrade(final)}
               </span>
             </div>
           )
         })}
       </div>
-      {firstPass && (
+      {threshold != null ? (
         <div className="mt-3 flex items-center gap-2 rounded-2xl bg-emerald-500/12 px-3 py-2.5 text-[13px] font-medium text-emerald-700 dark:text-emerald-200">
           <CheckCircleIcon className="h-4 w-4 shrink-0" />
-          Con un {formatGrade(firstPass.x)} en {active.name} ya quedas sobre {formatGrade(scale.pass)}.
+          Con un {formatGrade(threshold)} en {item.name} ya apruebas.
+        </div>
+      ) : (
+        <div className="mt-3 flex items-center gap-2 rounded-2xl bg-rose-500/12 px-3 py-2.5 text-[13px] font-medium text-rose-700 dark:text-rose-200">
+          <XCircleIcon className="h-4 w-4 shrink-0" />
+          Ni con {formatGrade(scale.max)} en {item.name} alcanzas: necesitas Remedial u Optativa.
         </div>
       )}
     </Card>
