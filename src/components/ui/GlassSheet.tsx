@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import type { ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { EASE } from '../../lib/motion'
 import { useKeyboardInset } from '../../lib/useKeyboardInset'
 
@@ -13,7 +14,10 @@ type Props = {
 /** Hoja modal estilo iOS que sube desde abajo, con backdrop y arrastre para cerrar. */
 export function GlassSheet({ open, onClose, title, children }: Props) {
   const kbInset = useKeyboardInset()
-  return (
+  // Portal al body: las páginas viven dentro de un motion.div con transform
+  // (transición de página), que crea un stacking context y dejaría esta hoja
+  // DEBAJO de la TabBar (z-40) pese a su z-50.
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -54,6 +58,7 @@ export function GlassSheet({ open, onClose, title, children }: Props) {
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   )
 }
