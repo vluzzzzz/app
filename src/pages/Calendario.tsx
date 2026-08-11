@@ -1,15 +1,15 @@
 import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useAppStore } from '../store/useAppStore'
-import type { CalendarEvent, Task } from '../lib/types'
+import type { CalendarEvent, EventType, Task } from '../lib/types'
 import {
   CLASS_TYPE_LABEL,
+  DAY_NAMES,
   DAY_SHORT,
+  MONTH_NAMES,
   classesForDay,
   eventsOn,
   fromDateKey,
-  humanDate,
-  MONTH_NAMES,
   monthGrid,
   toDateKey,
   weekday,
@@ -18,6 +18,14 @@ import { accentRgb } from '../lib/accents'
 import { EventSheet, EVENT_TYPE_LABEL } from '../features/schedule/EventSheet'
 import { TaskEditor } from '../features/tasks/TaskEditor'
 import { CalendarIcon, CheckIcon, ChevronLeft, ChevronRight, PlusIcon } from '../components/ui/Icons'
+
+/** Color de acento por tipo de evento (cuando no hay ramo asociado). */
+const EVENT_TYPE_RGB: Record<EventType, string> = {
+  evaluacion: '239 68 68', // rojo
+  tarea: '249 115 22', // naranjo
+  evento: '59 130 246', // azul
+  recordatorio: '139 92 246', // violeta
+}
 
 export function Calendario() {
   const classes = useAppStore((s) => s.classes)
@@ -41,8 +49,10 @@ export function Calendario() {
   const selected = fromDateKey(selectedKey)
 
   const subjectName = (id?: string) => subjects.find((s) => s.id === id)?.name
-  const subjectColor = (id?: string) =>
-    `rgb(${accentRgb(subjects.find((s) => s.id === id)?.color ?? 'gray')})`
+  const subjectRgb = (id?: string) => accentRgb(subjects.find((s) => s.id === id)?.color ?? 'gray')
+  const subjectColor = (id?: string) => `rgb(${subjectRgb(id)})`
+  /** Color de un evento: el del ramo si tiene, si no el de su tipo. */
+  const eventRgb = (e: CalendarEvent) => (e.subjectId ? subjectRgb(e.subjectId) : EVENT_TYPE_RGB[e.type])
 
   const changeMonth = (delta: number) => {
     const d = new Date(year, month + delta, 1)
@@ -61,11 +71,15 @@ export function Calendario() {
   const dayTasks = tasks.filter((t) => t.date === selectedKey)
   const totalItems = dayClasses.length + dayEvents.length + dayTasks.length
 
-  /** ¿Un día tiene algo? (para los puntitos; clases no cuentan, solo eventos/tareas). */
-  const dotsFor = (d: Date): number => {
+  /** Colores de los puntitos de un día (máx 3): eventos + tareas. */
+  const dotsFor = (d: Date): string[] => {
     const key = toDateKey(d)
-    const n = eventsOn(events, key).length + tasks.filter((t) => t.date === key).length
-    return Math.min(n, 3)
+    const colors: string[] = []
+    for (const e of eventsOn(events, key)) colors.push(`rgb(${eventRgb(e)})`)
+    for (const t of tasks.filter((x) => x.date === key)) {
+      colors.push(t.color ? `rgb(${accentRgb(t.color)})` : 'rgb(var(--ink) / 0.7)')
+    }
+    return colors.slice(0, 3)
   }
 
   const openNew = () => {
@@ -77,7 +91,7 @@ export function Calendario() {
 
   return (
     <div className="h-full overflow-y-auto px-5 pb-36 pt-6">
-      <header className="mb-5 flex items-end justify-between">
+      <header className="mb-6 flex items-end justify-between">
         <div>
           <p className="text-sm font-medium text-ink/50">Tus fechas</p>
           <h1 className="text-[34px] font-bold leading-tight text-ink">Calendario</h1>
@@ -85,7 +99,7 @@ export function Calendario() {
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={openNew}
-          className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink text-surface"
+          className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink text-surface shadow-[0_6px_16px_-6px_rgba(0,0,0,0.4)]"
           aria-label="Agregar"
         >
           <PlusIcon className="h-6 w-6" />
@@ -93,16 +107,16 @@ export function Calendario() {
       </header>
 
       {/* Navegación de mes */}
-      <div className="mb-3 flex items-center justify-between px-1">
+      <div className="mb-4 flex items-center justify-between px-1">
         <button
           onClick={() => changeMonth(-1)}
-          className="rounded-xl p-2 text-ink/50 active:bg-ink/5"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-ink/50 active:bg-ink/5"
           aria-label="Mes anterior"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
         <div className="flex items-center gap-2">
-          <h2 className="text-[17px] font-bold text-ink">
+          <h2 className="text-[18px] font-bold text-ink">
             {MONTH_NAMES[month]} {year}
           </h2>
           {(viewingOtherMonth || selectedKey !== todayKey) && (
@@ -116,7 +130,7 @@ export function Calendario() {
         </div>
         <button
           onClick={() => changeMonth(1)}
-          className="rounded-xl p-2 text-ink/50 active:bg-ink/5"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-ink/50 active:bg-ink/5"
           aria-label="Mes siguiente"
         >
           <ChevronRight className="h-5 w-5" />
@@ -124,10 +138,10 @@ export function Calendario() {
       </div>
 
       {/* Grilla mensual */}
-      <div className="glass rounded-3xl p-3">
-        <div className="mb-1 grid grid-cols-7">
+      <div className="glass rounded-[28px] p-4">
+        <div className="mb-2 grid grid-cols-7">
           {DAY_SHORT.map((d) => (
-            <span key={d} className="text-center text-[11px] font-semibold text-ink/35">
+            <span key={d} className="text-center text-[11px] font-semibold uppercase text-ink/30">
               {d[0]}
             </span>
           ))}
@@ -144,24 +158,34 @@ export function Calendario() {
                 <button
                   key={di}
                   onClick={() => setSelectedKey(key)}
-                  className="flex flex-col items-center py-1"
+                  className="flex flex-col items-center py-1.5"
                 >
-                  <span
-                    className={`flex h-9 w-9 items-center justify-center rounded-full text-[15px] tabular-nums ${
-                      isSelected
-                        ? 'bg-ink font-bold text-surface'
-                        : isToday
-                          ? 'bg-ink/[0.08] font-bold text-ink'
-                          : 'font-medium text-ink/70'
-                    }`}
-                  >
-                    {d.getDate()}
+                  <span className="relative flex h-9 w-9 items-center justify-center">
+                    {isSelected && (
+                      <motion.span
+                        layoutId="cal-daysel"
+                        transition={{ type: 'spring', stiffness: 520, damping: 40 }}
+                        className="absolute inset-0 rounded-full bg-ink"
+                      />
+                    )}
+                    <span
+                      className={`relative z-10 text-[15px] tabular-nums ${
+                        isSelected
+                          ? 'font-bold text-surface'
+                          : isToday
+                            ? 'font-bold text-ink'
+                            : 'font-medium text-ink/70'
+                      }`}
+                    >
+                      {d.getDate()}
+                    </span>
                   </span>
-                  <span className="mt-0.5 flex h-1.5 gap-0.5">
-                    {Array.from({ length: dots }).map((_, i) => (
+                  <span className="mt-1 flex h-1.5 items-center gap-0.5">
+                    {dots.map((c, i) => (
                       <span
                         key={i}
-                        className={`h-1 w-1 rounded-full ${isSelected ? 'bg-ink/60' : 'bg-ink/30'}`}
+                        className="h-1 w-1 rounded-full"
+                        style={{ background: isSelected ? 'rgb(var(--surface) / 0.7)' : c }}
                       />
                     ))}
                   </span>
@@ -173,17 +197,20 @@ export function Calendario() {
       </div>
 
       {/* Día seleccionado */}
-      <div className="mb-3 mt-5 flex items-center justify-between px-1">
-        <h2 className="text-[17px] font-bold text-ink/70">{humanDate(selected)}</h2>
+      <div className="mb-3 mt-6 flex items-baseline justify-between px-1">
+        <h2 className="text-[18px] font-bold text-ink">
+          {DAY_NAMES[weekday(selected)]} {selected.getDate()}
+          <span className="font-semibold text-ink/40"> de {MONTH_NAMES[selected.getMonth()]}</span>
+        </h2>
         {totalItems > 0 && (
-          <span className="text-sm font-semibold text-ink/45">
+          <span className="shrink-0 text-sm font-semibold text-ink/40">
             {totalItems} {totalItems === 1 ? 'cosa' : 'cosas'}
           </span>
         )}
       </div>
 
       {totalItems === 0 ? (
-        <div className="glass rounded-3xl p-6 text-center">
+        <div className="glass rounded-3xl p-8 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-ink/5 text-ink/60">
             <CalendarIcon className="h-6 w-6" />
           </div>
@@ -193,10 +220,16 @@ export function Calendario() {
       ) : (
         <div className="space-y-2.5">
           {/* Clases del horario (derivadas) */}
-          {dayClasses.map((c) => (
-            <div key={c.id} className="glass relative overflow-hidden rounded-2xl p-4 pl-5 opacity-90">
+          {dayClasses.map((c, i) => (
+            <motion.div
+              key={c.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: Math.min(i, 8) * 0.03 }}
+              className="glass relative overflow-hidden rounded-[20px] p-4 pl-5 opacity-95"
+            >
               <span
-                className="absolute inset-y-0 left-0 w-1.5"
+                className="absolute inset-y-2 left-0 w-1 rounded-r-full"
                 style={{ background: subjectColor(c.subjectId) }}
               />
               <div className="flex items-center justify-between gap-2">
@@ -211,25 +244,28 @@ export function Calendario() {
                 {c.start} — {c.end}
                 {c.room ? ` · Sala ${c.room}` : ''}
               </p>
-            </div>
+            </motion.div>
           ))}
 
           {/* Eventos */}
-          {dayEvents.map((e) => {
+          {dayEvents.map((e, i) => {
             const past = selectedKey < todayKey
             return (
               <motion.button
                 key={e.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: Math.min(dayClasses.length + i, 8) * 0.03 }}
                 whileTap={{ scale: 0.985 }}
                 onClick={() => {
                   setEditingEvent(e)
                   setEventSheetOpen(true)
                 }}
-                className={`glass relative w-full overflow-hidden rounded-2xl p-4 pl-5 text-left ${past ? 'opacity-60' : ''}`}
+                className={`glass relative w-full overflow-hidden rounded-[20px] p-4 pl-5 text-left ${past ? 'opacity-60' : ''}`}
               >
                 <span
-                  className="absolute inset-y-0 left-0 w-1.5"
-                  style={{ background: e.subjectId ? subjectColor(e.subjectId) : 'rgb(var(--ink) / 0.35)' }}
+                  className="absolute inset-y-2 left-0 w-1 rounded-r-full"
+                  style={{ background: `rgb(${eventRgb(e)})` }}
                 />
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="truncate text-[15px] font-bold text-ink">{e.title}</h3>
@@ -247,11 +283,20 @@ export function Calendario() {
           })}
 
           {/* Tareas con fecha */}
-          {dayTasks.map((t) => {
+          {dayTasks.map((t, i) => {
             const overdue = !t.done && t.date! < todayKey
             return (
-              <div key={t.id} className={`glass relative overflow-hidden rounded-2xl p-4 pl-5 ${t.done ? 'opacity-60' : ''}`}>
-                <span className="absolute inset-y-0 left-0 w-1.5 bg-ink/80" />
+              <motion.div
+                key={t.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: Math.min(dayClasses.length + dayEvents.length + i, 8) * 0.03 }}
+                className={`glass relative overflow-hidden rounded-[20px] p-4 pl-5 ${t.done ? 'opacity-60' : ''}`}
+              >
+                <span
+                  className="absolute inset-y-2 left-0 w-1 rounded-r-full"
+                  style={{ background: t.color ? `rgb(${accentRgb(t.color)})` : 'rgb(var(--ink) / 0.8)' }}
+                />
                 <div className="flex items-center justify-between gap-2">
                   <button
                     onClick={() => {
@@ -281,7 +326,7 @@ export function Calendario() {
                     <CheckIcon className="h-4 w-4" />
                   </button>
                 </div>
-              </div>
+              </motion.div>
             )
           })}
         </div>
