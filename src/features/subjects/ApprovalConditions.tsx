@@ -60,21 +60,22 @@ export function ApprovalConditions({ subjectId }: { subjectId: string }) {
                 </p>
 
                 {/* Condición fija */}
-                <div className="flex items-center gap-2 py-1.5 text-[15px] text-ink/70">
-                  <CheckIcon className="h-4 w-4 text-emerald-500" />
-                  Promedio final ≥ {formatGrade(subject.scale.pass)}
+                <div className="flex items-center gap-2 py-1.5 text-[15px]">
+                  <CheckIcon className="h-4 w-4 shrink-0 text-emerald-500" />
+                  <span className="flex-1 text-ink">Promedio final</span>
+                  <span className="shrink-0 tabular-nums text-ink/70">≥ {formatGrade(subject.scale.pass)}</span>
+                  <span className="w-7 shrink-0" />
                 </div>
 
                 {/* Condiciones del usuario */}
                 {conds.map((c) => (
                   <div key={c.id} className="flex items-center gap-2 py-1.5 text-[15px]">
-                    <CheckIcon className="h-4 w-4 text-emerald-500" />
-                    <span className="flex-1 text-ink">
-                      {nameOf(c.scopeId)} ≥ {formatGrade(c.min)}
-                    </span>
+                    <CheckIcon className="h-4 w-4 shrink-0 text-emerald-500" />
+                    <span className="min-w-0 flex-1 truncate text-ink">{nameOf(c.scopeId)}</span>
+                    <span className="shrink-0 tabular-nums text-ink/70">≥ {formatGrade(c.min)}</span>
                     <button
                       onClick={() => removeCondition(subjectId, c.id)}
-                      className="rounded-lg p-1.5 text-ink/30 active:bg-ink/5"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-ink/30 active:bg-ink/5"
                       aria-label="Quitar"
                     >
                       <TrashIcon className="h-4 w-4" />
