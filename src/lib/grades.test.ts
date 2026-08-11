@@ -16,6 +16,7 @@ import {
   optativaNeeded,
   optativaProjection,
   pendingEvaluations,
+  possibilitiesFor,
   projectedFinal,
   projectedGrade,
   scenariosFor,
@@ -333,6 +334,41 @@ describe('análisis de Calcular', () => {
     s.optativa = { actualPct: 60, grade: null }
     expect(optativaMax(s)).toBeCloseTo(3.7) // 1.5*0.6 + 7*0.4
     expect(optativaNeeded(s)).toBeNull()
+  })
+
+  it('possibilitiesFor da la nota mínima EXACTA que cumple final + condiciones', () => {
+    const s: Subject = {
+      id: 's',
+      name: 'P',
+      scale: DEFAULT_SCALE,
+      nodes: [
+        {
+          id: 'cat',
+          name: 'Cátedra',
+          weight: 70,
+          children: [
+            { id: 'c1', name: 'C1', weight: 50, grade: 3.8 },
+            { id: 'p2', name: 'P2', weight: 50, grade: null },
+          ],
+        },
+        { id: 'lab', name: 'Laboratorio', weight: 30, children: [{ id: 'l1', name: 'L1', weight: 100, grade: null }] },
+      ],
+      conditions: [{ id: 'k', scopeId: 'cat', min: 4.0 }],
+    }
+    const pos = possibilitiesFor(s)!
+    expect(pos).not.toBeNull()
+    let checked = 0
+    for (const r of pos.rows) {
+      if (r.b == null) continue
+      checked++
+      const assign = { [pos.first.id]: r.a, [pos.second.id]: r.b }
+      expect(meetsAll(s, assign)).toBe(true)
+      // Es el MÍNIMO exacto: una décima menos ya no cumple.
+      if (r.b > DEFAULT_SCALE.min + 1e-9) {
+        expect(meetsAll(s, { [pos.first.id]: r.a, [pos.second.id]: Math.round((r.b - 0.1) * 10) / 10 })).toBe(false)
+      }
+    }
+    expect(checked).toBeGreaterThan(0)
   })
 
   it('sin condiciones, meetsAll depende solo del promedio final', () => {

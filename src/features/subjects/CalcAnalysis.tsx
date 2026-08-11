@@ -3,14 +3,14 @@ import { motion } from 'framer-motion'
 import type { GradeNode, Subject } from '../../lib/types'
 import {
   analyzeSituation,
-  combinationsFor,
   conditionResults,
   conditionsAllMet,
   currentGrade,
   impactTable,
   maxPossibleFinal,
-  meetsAll,
   minGradeToPass,
+  possibilitiesFor,
+  projectedFinal,
   optativaBase,
   optativaFinal,
   optativaMax,
@@ -220,23 +220,15 @@ function Posibilidades({
   showAll: boolean
   onToggle: () => void
 }) {
-  const combos = combinationsFor(subject)
-  if (!combos) return null
-  const hasConds = (subject.conditions ?? []).length > 0
-  const feasible = combos.rows.filter(
-    (r) =>
-      r.b != null &&
-      (!hasConds || meetsAll(subject, { [combos.first.id]: r.a, [combos.second.id]: r.b as number })),
-  )
-  const { scale } = subject
+  const pos = possibilitiesFor(subject)
+  if (!pos) return null
+  const feasible = pos.rows.filter((r) => r.b != null)
   if (feasible.length === 0) {
-    if (!hasConds) return null
     return (
       <Card>
         <Title>Posibilidades para aprobar</Title>
         <p className="text-sm text-ink/55">
-          Con estas dos notas no se cumplen las condiciones de aprobación. Revisa qué necesita
-          cada sección arriba.
+          Con estas dos notas no hay forma de cumplir todo. Revisa qué necesita cada sección arriba.
         </p>
       </Card>
     )
@@ -244,12 +236,12 @@ function Posibilidades({
   const shown = showAll ? feasible : pickEven(feasible, 6)
   return (
     <Card>
-      <Title sub={`Algunas combinaciones para llegar a ${formatGrade(scale.pass)}`}>
+      <Title sub="Nota mínima exacta que necesitas en cada combinación">
         Posibilidades para aprobar
       </Title>
       <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-x-2 border-b border-ink/10 pb-2 text-xs font-semibold uppercase tracking-wide text-ink/40">
-        <span className="truncate">{combos.first.name}</span>
-        <span className="truncate">{combos.second.name}</span>
+        <span className="truncate">{pos.first.name}</span>
+        <span className="truncate">{pos.second.name}</span>
         <span>Final</span>
         <span className="w-5" />
       </div>
@@ -258,7 +250,9 @@ function Posibilidades({
           <div key={i} className="grid grid-cols-[1fr_1fr_1fr_auto] items-center gap-x-2 py-1.5 text-[15px]">
             <span className="font-semibold tabular-nums text-ink">{formatGrade(r.a)}</span>
             <span className="font-semibold tabular-nums text-ink">{formatGrade(r.b)}</span>
-            <span className="tabular-nums text-ink/70">{formatGrade(scale.pass)}</span>
+            <span className="tabular-nums text-ink/70">
+              {formatGrade(projectedFinal(subject, { [pos.first.id]: r.a, [pos.second.id]: r.b as number }))}
+            </span>
             <CheckCircleIcon className="h-4 w-4 text-emerald-500" />
           </div>
         ))}

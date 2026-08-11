@@ -214,6 +214,36 @@ function round1(n: number) {
   return Math.round(n * 10) / 10
 }
 
+/**
+ * Posibilidades para 2 pendientes considerando el promedio final Y todas las
+ * condiciones: por cada nota `a` de la primera, calcula la nota MÍNIMA EXACTA
+ * (a 0.1) de la segunda que hace aprobar de verdad. `b = null` = no alcanza.
+ */
+export function possibilitiesFor(
+  subject: Subject,
+): { first: PendingEval; second: PendingEval; rows: Combo[] } | null {
+  const pend = pendingEvaluations(subject)
+  if (pend.length !== 2) return null
+  const [first, second] = pend
+  const { scale } = subject
+  const stepA = scale.max - scale.min <= 10 ? 0.5 : 5
+  const bSteps = Math.round((scale.max - scale.min) / 0.1)
+  const rows: Combo[] = []
+  for (let a = scale.min; a <= scale.max + EPS; a += stepA) {
+    const ra = round1(a)
+    let b: number | null = null
+    for (let i = 0; i <= bSteps; i++) {
+      const cand = round1(scale.min + i * 0.1)
+      if (meetsAll(subject, { [first.id]: ra, [second.id]: cand })) {
+        b = cand
+        break
+      }
+    }
+    rows.push({ a: ra, b })
+  }
+  return { first, second, rows }
+}
+
 /** Promedio final MÁXIMO posible (nota máxima en todo lo pendiente). */
 export function maxPossibleFinal(subject: Subject): number {
   return projectedGrade(subject, subject.scale.max)
