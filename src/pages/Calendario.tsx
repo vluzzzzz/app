@@ -162,112 +162,128 @@ export function Calendario() {
         </div>
       </div>
 
-      {/* Grilla mensual (compacta o ampliada) */}
-      <motion.div layout transition={{ type: 'spring', stiffness: 380, damping: 38 }} className="glass rounded-[28px] p-4">
-        <div className="mb-2 grid grid-cols-7">
-          {DAY_SHORT.map((d) => (
-            <span key={d} className="text-center text-[11px] font-semibold uppercase text-ink/30">
-              {d[0]}
-            </span>
-          ))}
-        </div>
-
-        {!expanded
-          ? /* --- COMPACTA --- */
-            weeks.map((w, wi) => (
-              <div key={wi} className="grid grid-cols-7">
-                {w.map((d, di) => {
-                  if (!d) return <span key={di} />
-                  const key = toDateKey(d)
-                  const isToday = key === todayKey
-                  const isSelected = key === selectedKey
-                  const dots = itemsFor(d).slice(0, 3)
-                  return (
-                    <button
-                      key={di}
-                      onClick={() => setSelectedKey(key)}
-                      className="flex flex-col items-center py-1.5"
-                    >
-                      <span className="relative flex h-9 w-9 items-center justify-center">
-                        {isSelected && (
-                          <motion.span
-                            layoutId="cal-daysel"
-                            transition={{ type: 'spring', stiffness: 520, damping: 40 }}
-                            className="absolute inset-0 rounded-full bg-ink"
-                          />
-                        )}
-                        <span
-                          className={`relative z-10 text-[15px] tabular-nums ${
-                            isSelected
-                              ? 'font-bold text-surface'
-                              : isToday
-                                ? 'font-bold text-ink'
-                                : 'font-medium text-ink/70'
-                          }`}
-                        >
-                          {d.getDate()}
-                        </span>
-                      </span>
-                      <span className="mt-1 flex h-1.5 items-center gap-0.5">
-                        {dots.map((it, i) => (
-                          <span
-                            key={i}
-                            className="h-1 w-1 rounded-full"
-                            style={{ background: isSelected ? 'rgb(var(--surface) / 0.7)' : `rgb(${it.rgb})` }}
-                          />
-                        ))}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            ))
-          : /* --- AMPLIADA: eventos dentro de cada día --- */
-            weeks.map((w, wi) => (
-              <div key={wi} className="grid grid-cols-7 gap-0.5">
-                {w.map((d, di) => {
-                  if (!d) return <span key={di} />
-                  const key = toDateKey(d)
-                  const isToday = key === todayKey
-                  const items = itemsFor(d)
-                  return (
-                    <button
-                      key={di}
-                      onClick={() => {
-                        setSelectedKey(key)
-                        setExpanded(false)
-                      }}
-                      className="flex min-h-[74px] flex-col items-stretch gap-[3px] rounded-xl p-1 text-left active:bg-ink/[0.03]"
-                    >
+      {/* --- COMPACTA: calendario dentro de una tarjeta --- */}
+      {!expanded && (
+        <div className="glass rounded-[28px] p-4">
+          <div className="mb-2 grid grid-cols-7">
+            {DAY_SHORT.map((d) => (
+              <span key={d} className="text-center text-[11px] font-semibold uppercase text-ink/30">
+                {d[0]}
+              </span>
+            ))}
+          </div>
+          {weeks.map((w, wi) => (
+            <div key={wi} className="grid grid-cols-7">
+              {w.map((d, di) => {
+                if (!d) return <span key={di} />
+                const key = toDateKey(d)
+                const isToday = key === todayKey
+                const isSelected = key === selectedKey
+                const dots = itemsFor(d).slice(0, 3)
+                return (
+                  <button
+                    key={di}
+                    onClick={() => setSelectedKey(key)}
+                    className="flex flex-col items-center py-1.5"
+                  >
+                    <span className="relative flex h-9 w-9 items-center justify-center">
+                      {isSelected && (
+                        <motion.span
+                          layoutId="cal-daysel"
+                          transition={{ type: 'spring', stiffness: 520, damping: 40 }}
+                          className="absolute inset-0 rounded-full bg-ink"
+                        />
+                      )}
                       <span
-                        className={`mx-auto flex h-6 w-6 items-center justify-center rounded-full text-[12px] tabular-nums ${
-                          isToday ? 'bg-ink font-bold text-surface' : 'font-semibold text-ink/60'
+                        className={`relative z-10 text-[15px] tabular-nums ${
+                          isSelected
+                            ? 'font-bold text-surface'
+                            : isToday
+                              ? 'font-bold text-ink'
+                              : 'font-medium text-ink/70'
                         }`}
                       >
                         {d.getDate()}
                       </span>
-                      <div className="flex flex-col gap-[3px] overflow-hidden">
-                        {items.slice(0, 2).map((it, i) => (
-                          <span
-                            key={i}
-                            className="truncate rounded-[5px] px-1 py-[1px] text-[9px] font-semibold leading-tight text-ink/75"
-                            style={{ background: `rgb(${it.rgb} / 0.16)` }}
-                          >
-                            {it.title}
-                          </span>
-                        ))}
-                        {items.length > 2 && (
-                          <span className="pl-1 text-[9px] font-semibold text-ink/40">
-                            +{items.length - 2} más
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
+                    </span>
+                    <span className="mt-1 flex h-1.5 items-center gap-0.5">
+                      {dots.map((it, i) => (
+                        <span
+                          key={i}
+                          className="h-1 w-1 rounded-full"
+                          style={{ background: isSelected ? 'rgb(var(--surface) / 0.7)' : `rgb(${it.rgb})` }}
+                        />
+                      ))}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* --- AMPLIADA: mes a pantalla completa con los eventos dentro de cada día --- */}
+      {expanded && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2 }}
+          className="-mx-4"
+        >
+          <div className="grid grid-cols-7 px-1 pb-1.5">
+            {DAY_SHORT.map((d) => (
+              <span key={d} className="text-center text-[11px] font-semibold uppercase text-ink/30">
+                {d[0]}
+              </span>
             ))}
-      </motion.div>
+          </div>
+          {weeks.map((w, wi) => (
+            <div key={wi} className="grid grid-cols-7 border-t border-ink/[0.06]">
+              {w.map((d, di) => {
+                if (!d) return <div key={di} className="min-h-[122px]" />
+                const key = toDateKey(d)
+                const isToday = key === todayKey
+                const items = itemsFor(d)
+                return (
+                  <button
+                    key={di}
+                    onClick={() => {
+                      setSelectedKey(key)
+                      setExpanded(false)
+                    }}
+                    className="flex min-h-[122px] flex-col gap-1 px-1 pt-1.5 text-left align-top active:bg-ink/[0.03]"
+                  >
+                    <span
+                      className={`mx-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[13px] tabular-nums ${
+                        isToday ? 'bg-ink font-bold text-surface' : 'font-semibold text-ink/70'
+                      }`}
+                    >
+                      {d.getDate()}
+                    </span>
+                    <div className="flex flex-col gap-1 overflow-hidden">
+                      {items.slice(0, 3).map((it, i) => (
+                        <span
+                          key={i}
+                          className="truncate rounded-md px-1 py-0.5 text-[10.5px] font-semibold leading-tight text-ink/80"
+                          style={{ background: `rgb(${it.rgb} / 0.16)` }}
+                        >
+                          {it.title}
+                        </span>
+                      ))}
+                      {items.length > 3 && (
+                        <span className="pl-1 text-[10px] font-semibold text-ink/40">
+                          +{items.length - 3} más
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          ))}
+        </motion.div>
+      )}
 
       {/* Detalle del día seleccionado (solo en vista compacta) */}
       {!expanded && (
