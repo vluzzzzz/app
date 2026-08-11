@@ -277,45 +277,77 @@ function PosibilidadesUna({
 }) {
   const { scale } = subject
   const threshold = neededForEval(subject, item.id)
+  const finalOf = (x: number) => projectedFinal(subject, { [item.id]: x }) ?? 0
+  const passes = (x: number) => threshold != null && x + 1e-9 >= threshold
 
-  // Enteros + banda decimal desde el punto de aprobación hasta el siguiente entero.
-  const set = new Set<number>()
-  for (let g = scale.min; g <= scale.max + 1e-9; g += 1) set.add(Math.round(g * 10) / 10)
-  if (threshold != null && !Number.isInteger(threshold)) {
-    const next = Math.ceil(threshold)
-    for (let g = threshold; g <= next + 1e-9; g = Math.round((g + 0.1) * 10) / 10) {
-      set.add(Math.round(g * 10) / 10)
-    }
-  }
-  const grades = [...set].sort((a, b) => a - b)
+  // Enteros dentro de la escala.
+  const integers: number[] = []
+  for (let n = Math.ceil(scale.min - 1e-9); n <= Math.floor(scale.max + 1e-9); n++) integers.push(n)
+
+  // Abrir por defecto el entero donde cae la nota exacta de aprobación.
+  const [open, setOpen] = useState<Set<number>>(() =>
+    threshold != null && !Number.isInteger(threshold) ? new Set([Math.floor(threshold)]) : new Set(),
+  )
+  const toggle = (n: number) =>
+    setOpen((prev) => {
+      const s = new Set(prev)
+      if (s.has(n)) s.delete(n)
+      else s.add(n)
+      return s
+    })
 
   return (
     <Card>
-      <Title sub={`Nota que necesitas en ${item.name}`}>Posibilidades para aprobar</Title>
-      <div className="grid grid-cols-2 gap-x-2 border-b border-ink/10 px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-ink/40">
+      <Title sub={`Toca un entero para ver sus decimales`}>Posibilidades para aprobar</Title>
+      <div className="grid grid-cols-[1fr_1fr_auto] gap-x-2 border-b border-ink/10 px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-ink/40">
         <span>Si sacas</span>
         <span className="text-right">Tu promedio</span>
+        <span className="w-4" />
       </div>
-      <div className="mt-1">
-        {grades.map((x, i) => {
-          const final = projectedFinal(subject, { [item.id]: x }) ?? 0
-          const pass = threshold != null && x + 1e-9 >= threshold
-          const inBand = !Number.isInteger(x)
-          const prevBand = i > 0 && !Number.isInteger(grades[i - 1])
-          const nextBand = i < grades.length - 1 && !Number.isInteger(grades[i + 1])
+      <div className="mt-1 space-y-0.5">
+        {integers.map((n) => {
+          const expandable = n < scale.max - 1e-9
+          const isOpen = open.has(n)
+          const decs: number[] = []
+          if (isOpen && expandable) {
+            for (let d = 1; d <= 9; d++) {
+              const x = Math.round((n + d / 10) * 10) / 10
+              if (x <= scale.max + 1e-9) decs.push(x)
+            }
+          }
           return (
-            <div
-              key={x}
-              className={`grid grid-cols-2 gap-x-2 px-2 py-1.5 text-[15px] ${
-                inBand ? 'bg-ink/[0.05]' : ''
-              } ${inBand && !prevBand ? 'rounded-t-xl' : ''} ${inBand && !nextBand ? 'rounded-b-xl' : ''}`}
-            >
-              <span className="font-semibold tabular-nums text-ink">{formatGrade(x)}</span>
-              <span
-                className={`text-right font-semibold tabular-nums ${pass ? 'text-emerald-600 dark:text-emerald-300' : 'text-ink/70'}`}
+            <div key={n}>
+              <button
+                onClick={() => expandable && toggle(n)}
+                className="grid w-full grid-cols-[1fr_1fr_auto] items-center gap-x-2 px-2 py-1.5 text-left text-[15px]"
               >
-                {formatGrade(final)}
-              </span>
+                <span className="font-semibold tabular-nums text-ink">{formatGrade(n)}</span>
+                <span className={`text-right font-semibold tabular-nums ${passes(n) ? 'text-emerald-600 dark:text-emerald-300' : 'text-ink/70'}`}>
+                  {formatGrade(finalOf(n))}
+                </span>
+                {expandable ? (
+                  <ChevronRight className={`h-4 w-4 text-ink/30 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+                ) : (
+                  <span className="w-4" />
+                )}
+              </button>
+              {isOpen && decs.length > 0 && (
+                <div className="mb-1 ml-2 space-y-0.5 rounded-xl bg-ink/[0.04] px-2 py-1">
+                  {decs.map((x) => {
+                    const isThreshold = threshold != null && Math.abs(x - threshold) < 1e-9
+                    return (
+                      <div key={x} className="grid grid-cols-2 gap-x-2 py-0.5 text-[14px]">
+                        <span className={`tabular-nums ${isThreshold ? 'font-bold text-ink' : 'text-ink/70'}`}>
+                          {formatGrade(x)}
+                        </span>
+                        <span className={`text-right font-semibold tabular-nums ${passes(x) ? 'text-emerald-600 dark:text-emerald-300' : 'text-ink/60'}`}>
+                          {formatGrade(finalOf(x))}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )
         })}
