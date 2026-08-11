@@ -13,6 +13,7 @@ import {
 } from '../../lib/grades'
 import { NodeEditor } from './NodeEditor'
 import { ApprovalConditions } from './ApprovalConditions'
+import { SpecialEvals } from './SpecialEvals'
 import { CalcAnalysis } from './CalcAnalysis'
 import { GlassButton } from '../../components/ui/GlassButton'
 import { ChevronLeft, TrashIcon } from '../../components/ui/Icons'
@@ -158,9 +159,10 @@ export function SubjectDetail({
       {/* Editor del árbol de evaluación */}
       <NodeEditor subjectId={id} />
 
-      {/* Más opciones → Condiciones de aprobación (opcional) */}
-      <div className="mt-3">
+      {/* Más opciones (condiciones) + Evaluaciones especiales (optativa) */}
+      <div className="mt-3 space-y-3">
         <ApprovalConditions subjectId={id} />
+        <SpecialEvals subjectId={id} />
       </div>
 
       {/* Botón Calcular (inline) */}

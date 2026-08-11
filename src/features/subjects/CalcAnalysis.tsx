@@ -437,53 +437,79 @@ function OptativaCard({ subject }: { subject: Subject }) {
     )
   }
 
-  // Pendiente → cuánto necesita + tabla.
-  const needed = optativaNeeded(subject)
-  const max = optativaMax(subject) ?? 0
-  const step = scale.max - scale.min <= 10 ? 1 : 5
-  const rows: { x: number; final: number }[] = []
-  for (let x = scale.min; x <= scale.max + 1e-9; x += step) {
-    rows.push({ x: Math.round(x * 10) / 10, final: Math.round((optativaProjection(subject, x) ?? 0) * 10) / 10 })
+  // Las posibilidades de la optativa solo tienen sentido con TODAS las notas puestas.
+  if (pendingEvaluations(subject).length > 0) {
+    return (
+      <Card>
+        <Title>Prueba optativa</Title>
+        <p className="text-sm text-ink/55">
+          Termina de poner todas tus notas para ver qué necesitas en la optativa.
+        </p>
+      </Card>
+    )
   }
+
+  const needed = conditionsAllMet(subject) ? optativaNeeded(subject) : null
+  const max = optativaMax(subject) ?? 0
+
+  if (needed == null) {
+    return (
+      <Card>
+        <Title sub={`Tu promedio actual (${o.actualPct}%) + optativa (${100 - o.actualPct}%)`}>
+          Prueba optativa
+        </Title>
+        <p className="text-sm text-ink/60">
+          {conditionsAllMet(subject)
+            ? `Ni con ${formatGrade(scale.max)} en la optativa alcanzas (tu máximo sería ${formatGrade(max)}).`
+            : 'No cumples una condición de aprobación, así que la optativa no basta para aprobar.'}
+        </p>
+      </Card>
+    )
+  }
+
+  // Enteros + banda decimal desde la nota exacta de aprobación hasta el siguiente entero.
+  const set = new Set<number>()
+  for (let g = scale.min; g <= scale.max + 1e-9; g += 1) set.add(Math.round(g * 10) / 10)
+  if (!Number.isInteger(needed)) {
+    const next = Math.ceil(needed)
+    for (let g = needed; g < next - 1e-9; g = Math.round((g + 0.1) * 10) / 10) set.add(Math.round(g * 10) / 10)
+  }
+  const grades = [...set].sort((a, b) => a - b)
 
   return (
     <Card>
       <Title sub={`Tu promedio actual (${o.actualPct}%) + optativa (${100 - o.actualPct}%)`}>
         Prueba optativa
       </Title>
-      {needed == null ? (
-        <p className="text-sm font-semibold text-rose-600 dark:text-rose-300">
-          Ni con {formatGrade(scale.max)} en la optativa alcanzas: tu máximo sería {formatGrade(max)}.
-        </p>
-      ) : (
-        <>
-          <div className="mb-3 flex items-center gap-3 rounded-2xl bg-blue-500/10 px-3 py-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300">
-              <TargetIcon className="h-5 w-5" />
-            </span>
-            <p className="text-[15px] text-ink">
-              Necesitas <b>{formatGrade(needed)}</b> en la optativa para aprobar.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-x-2 border-b border-ink/10 pb-2 text-xs font-semibold uppercase tracking-wide text-ink/40">
-            <span>Si sacas</span>
-            <span className="text-right">Promedio final</span>
-          </div>
-          <div className="mt-1">
-            {rows.map((r, i) => {
-              const ok = r.final + 1e-9 >= scale.pass
-              return (
-                <div key={i} className="grid grid-cols-2 gap-x-2 py-1.5 text-[15px]">
-                  <span className="font-semibold tabular-nums text-ink">{formatGrade(r.x)}</span>
-                  <span className={`text-right font-semibold tabular-nums ${ok ? TONE.green.fg : 'text-ink/70'}`}>
-                    {formatGrade(r.final)}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        </>
-      )}
+      <p className="mb-3 text-[15px] text-ink">
+        Necesitas <b>{formatGrade(needed)}</b> en la optativa para aprobar.
+      </p>
+      <div className="grid grid-cols-2 gap-x-2 border-b border-ink/10 px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-ink/40">
+        <span>Si sacas</span>
+        <span className="text-right">Promedio final</span>
+      </div>
+      <div className="mt-1">
+        {grades.map((x, i) => {
+          const final = optativaProjection(subject, x) ?? 0
+          const pass = x + 1e-9 >= needed
+          const inBand = !Number.isInteger(x)
+          const prevBand = i > 0 && !Number.isInteger(grades[i - 1])
+          const nextBand = i < grades.length - 1 && !Number.isInteger(grades[i + 1])
+          return (
+            <div
+              key={x}
+              className={`grid grid-cols-2 gap-x-2 px-2 py-1.5 text-[15px] ${
+                inBand ? 'bg-ink/[0.05]' : ''
+              } ${inBand && !prevBand ? 'rounded-t-xl' : ''} ${inBand && !nextBand ? 'rounded-b-xl' : ''}`}
+            >
+              <span className="font-semibold tabular-nums text-ink">{formatGrade(x)}</span>
+              <span className={`text-right font-semibold tabular-nums ${pass ? TONE.green.fg : 'text-ink/70'}`}>
+                {formatGrade(final)}
+              </span>
+            </div>
+          )
+        })}
+      </div>
     </Card>
   )
 }
