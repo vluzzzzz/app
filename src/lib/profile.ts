@@ -28,7 +28,7 @@ export type PrefsPayload = {
   lite?: boolean
 }
 
-async function authHeaders(): Promise<Record<string, string>> {
+export async function authHeaders(): Promise<Record<string, string>> {
   const idToken = auth?.currentUser ? await auth.currentUser.getIdToken() : ''
   return {
     'Content-Type': 'application/json',

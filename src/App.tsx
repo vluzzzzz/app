@@ -13,6 +13,7 @@ import { SubjectDetail } from './features/subjects/SubjectDetail'
 import { ChatPage } from './features/chat/ChatPage'
 import { ProfilePage } from './features/profile/ProfilePage'
 import { AuthGate } from './features/auth/AuthGate'
+import { SharedHorarioView } from './features/schedule/SharedHorarioView'
 import { Onboarding } from './features/onboarding/Onboarding'
 import { FpsMeter } from './components/dev/FpsMeter'
 import { EASE } from './lib/motion'
@@ -68,6 +69,20 @@ export default function App() {
   const showFps =
     typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).has('fps')
+
+  // Link público de horario (?h=token): vista de solo lectura, SIN login.
+  const sharedToken =
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('h')
+      : null
+  if (sharedToken) {
+    return (
+      <>
+        <AnimatedMesh />
+        <SharedHorarioView token={sharedToken} />
+      </>
+    )
+  }
 
   return (
     <>

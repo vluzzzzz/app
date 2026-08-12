@@ -12,3 +12,6 @@ dev-dist
 *.tsbuildinfo
 .vite
 login-shot.png
+.agents/
+.claude/
+skills-lock.json

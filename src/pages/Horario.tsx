@@ -14,7 +14,8 @@ import {
 } from '../lib/schedule'
 import { accentRgb } from '../lib/accents'
 import { ClassSheet } from '../features/schedule/ClassSheet'
-import { ClockIcon, PlusIcon } from '../components/ui/Icons'
+import { ShareHorarioSheet } from '../features/schedule/ShareHorarioSheet'
+import { ClockIcon, PlusIcon, ShareIcon } from '../components/ui/Icons'
 
 /** "13:05" → "1:05 PM" (hora normal, no militar). */
 function to12h(hhmm: string): string {
@@ -118,6 +119,7 @@ export function Horario() {
   const [selectedDay, setSelectedDay] = useState(weekday(now))
   const [weekView, setWeekView] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
   const [editing, setEditing] = useState<ClassBlock | null>(null)
 
   // Refresca "próxima clase" cada 30s.
@@ -178,14 +180,24 @@ export function Horario() {
           <p className="text-sm font-medium text-ink/50">Tus clases</p>
           <h1 className="text-[34px] font-bold leading-tight text-ink">Horario</h1>
         </div>
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={openNew}
-          className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink text-surface shadow-[0_6px_16px_-6px_rgba(0,0,0,0.4)]"
-          aria-label="Agregar clase"
-        >
-          <PlusIcon className="h-6 w-6" />
-        </motion.button>
+        <div className="flex items-center gap-2">
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setShareOpen(true)}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink/5 text-ink"
+            aria-label="Compartir horario"
+          >
+            <ShareIcon className="h-5 w-5" />
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={openNew}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink text-surface shadow-[0_6px_16px_-6px_rgba(0,0,0,0.4)]"
+            aria-label="Agregar clase"
+          >
+            <PlusIcon className="h-6 w-6" />
+          </motion.button>
+        </div>
       </header>
 
       {/* Tira de días — selector premium con cápsula oscura deslizante */}
@@ -412,6 +424,7 @@ export function Horario() {
         block={editing}
         defaultDay={selectedDay}
       />
+      <ShareHorarioSheet open={shareOpen} onClose={() => setShareOpen(false)} />
     </div>
   )
 }
