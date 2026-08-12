@@ -9,10 +9,13 @@ const PAD = (ITEM * (VISIBLE - 1)) / 2 // relleno para poder centrar extremos
 
 const pad2 = (n: number) => String(n).padStart(2, '0')
 
-// --- Tick satisfactorio (como el picker de iOS) ---
-// Se sintetiza con Web Audio (sin archivos): un clic muy corto y suave,
-// más una vibración mínima en celulares que la soporten.
+// --- Tick satisfactorio (como el picker real de iOS) ---
+// No es un "beep": es un "tock" mecánico sintetizado con dos capas:
+//   1) cuerpo: un seno corto cuyo tono CAE (520→170 Hz) → golpecito con peso
+//   2) chispa: ruido filtrado (bandpass) de 12ms → el "clic" de engranaje
+// Más una vibración mínima en celulares que la soporten. Sin archivos.
 let audioCtx: AudioContext | null = null
+let noiseBuf: AudioBuffer | null = null
 let lastTick = 0
 function tick() {
   const now = performance.now()
@@ -20,18 +23,43 @@ function tick() {
   lastTick = now
   try {
     audioCtx ??= new AudioContext()
-    if (audioCtx.state === 'suspended') void audioCtx.resume()
-    const t = audioCtx.currentTime
-    const osc = audioCtx.createOscillator()
-    const gain = audioCtx.createGain()
-    osc.type = 'square'
-    osc.frequency.value = 2600
-    gain.gain.setValueAtTime(0.05, t)
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03)
-    osc.connect(gain)
-    gain.connect(audioCtx.destination)
+    const ctx = audioCtx
+    if (ctx.state === 'suspended') void ctx.resume()
+    const t = ctx.currentTime
+
+    // 1) Cuerpo: "tock" con caída de tono.
+    const osc = ctx.createOscillator()
+    const og = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(520, t)
+    osc.frequency.exponentialRampToValueAtTime(170, t + 0.03)
+    og.gain.setValueAtTime(0.14, t)
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.05)
+    osc.connect(og)
+    og.connect(ctx.destination)
     osc.start(t)
-    osc.stop(t + 0.035)
+    osc.stop(t + 0.055)
+
+    // 2) Chispa: ruido corto filtrado (se genera una sola vez y se reusa).
+    if (!noiseBuf) {
+      const len = Math.floor(ctx.sampleRate * 0.012)
+      noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate)
+      const data = noiseBuf.getChannelData(0)
+      for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len)
+    }
+    const noise = ctx.createBufferSource()
+    noise.buffer = noiseBuf
+    const bp = ctx.createBiquadFilter()
+    bp.type = 'bandpass'
+    bp.frequency.value = 2100
+    bp.Q.value = 1.2
+    const ng = ctx.createGain()
+    ng.gain.setValueAtTime(0.2, t)
+    ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.02)
+    noise.connect(bp)
+    bp.connect(ng)
+    ng.connect(ctx.destination)
+    noise.start(t)
   } catch {
     /* sin audio no pasa nada */
   }
