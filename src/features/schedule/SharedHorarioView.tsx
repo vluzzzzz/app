@@ -5,6 +5,7 @@ import { DAY_NAMES, DAY_SHORT, MONTH_NAMES, classesForDay, weekday } from '../..
 import { accentRgb } from '../../lib/accents'
 import { fetchSharedHorario, type SharedHorario } from '../../lib/share'
 import { AgendaTimeline } from './AgendaTimeline'
+import { MoonIcon, SunIcon } from '../../components/ui/Icons'
 
 /**
  * Vista PÚBLICA del horario compartido (/horario/token o ?h=token):
@@ -17,6 +18,25 @@ export function SharedHorarioView({ token }: { token: string }) {
 
   const now = new Date()
   const [selectedDay, setSelectedDay] = useState(weekday(now))
+
+  // Tema propio del visitante: parte según su sistema y se recuerda en el equipo.
+  const [dark, setDark] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('brody-shared-theme')
+      if (saved) return saved === 'dark'
+      return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false
+    } catch {
+      return false
+    }
+  })
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark)
+    try {
+      localStorage.setItem('brody-shared-theme', dark ? 'dark' : 'light')
+    } catch {
+      /* sin storage */
+    }
+  }, [dark])
 
   useEffect(() => {
     fetchSharedHorario(token).then((d) => {
@@ -68,11 +88,21 @@ export function SharedHorarioView({ token }: { token: string }) {
 
   return (
     <div className="mx-auto h-full w-full max-w-md overflow-y-auto px-5 pb-16 pt-6">
-      <header className="mb-6">
-        <p className="text-sm font-medium text-ink/50">Horario de</p>
-        <h1 className="text-[34px] font-bold leading-tight text-ink">
-          {data.nombre || 'Estudiante'}
-        </h1>
+      <header className="mb-6 flex items-end justify-between">
+        <div>
+          <p className="text-sm font-medium text-ink/50">Horario de</p>
+          <h1 className="text-[34px] font-bold leading-tight text-ink">
+            {data.nombre || 'Estudiante'}
+          </h1>
+        </div>
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setDark((v) => !v)}
+          className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink/5 text-ink"
+          aria-label={dark ? 'Tema claro' : 'Tema oscuro'}
+        >
+          {dark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
+        </motion.button>
       </header>
 
       {/* Tira de días — igual que el Horario */}

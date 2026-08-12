@@ -40,9 +40,17 @@ export default function App() {
   const lite = useAppStore((s) => s.lite)
   const onboarded = useAppStore((s) => s.onboarded)
 
+  // En el link público (/horario/...) el tema lo maneja el propio visitante
+  // (interruptor en SharedHorarioView), no el tema guardado de la app.
+  const isSharedRoute =
+    typeof window !== 'undefined' &&
+    (/^\/horario\//.test(window.location.pathname) ||
+      new URLSearchParams(window.location.search).has('h'))
+
   useEffect(() => {
+    if (isSharedRoute) return
     document.documentElement.classList.toggle('dark', theme === 'dark')
-  }, [theme])
+  }, [theme, isSharedRoute])
 
   useEffect(() => {
     document.documentElement.classList.toggle('lite', lite)
