@@ -33,8 +33,8 @@ export function SubjectHomeCard({
       className="flex h-[120px] w-full items-center justify-between gap-3 rounded-3xl px-6 text-left"
       style={{ background: bg }}
     >
-      <span className="min-w-0 flex-1">
-        <span className="line-clamp-2 break-words text-xl font-bold leading-tight text-white">
+      <span className="min-w-0 flex-1 pr-4">
+        <span className="line-clamp-2 break-words text-[19px] font-bold leading-tight text-white">
           {subject.name}
         </span>
         {label && (
