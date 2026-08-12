@@ -1,7 +1,27 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '../../store/useAppStore'
 import type { ClassBlock, ClassType } from '../../lib/types'
 import { CLASS_TYPE_LABEL, DAY_SHORT, overlaps, toMinutes } from '../../lib/schedule'
+
+/** minutos → "HH:mm" (tope 23:59). */
+function toHHMM(mins: number): string {
+  const m = Math.min(mins, 23 * 60 + 59)
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+}
+/** "13:05" → "1:05" (para mostrar chips, sin AM/PM). */
+function fmt12(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number)
+  const h12 = h % 12 === 0 ? 12 : h % 12
+  return `${h12}:${String(m).padStart(2, '0')}`
+}
+
+/** Duraciones rápidas (minutos). */
+const DURATIONS = [
+  { mins: 45, label: '45 min' },
+  { mins: 60, label: '1 h' },
+  { mins: 90, label: '1 h 30' },
+  { mins: 120, label: '2 h' },
+]
 import { accentRgb } from '../../lib/accents'
 import { GlassSheet } from '../../components/ui/GlassSheet'
 import { AlertIcon, TrashIcon } from '../../components/ui/Icons'
@@ -56,6 +76,35 @@ export function ClassSheet({ open, onClose, block, defaultDay }: Props) {
     if (!block && initialSid) prefillFrom(initialSid)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, block])
+
+  /** Bloques de hora que el usuario ya usa, ordenados por frecuencia (máx 4). */
+  const slotSuggestions = useMemo(() => {
+    const count = new Map<string, number>()
+    for (const c of classes) {
+      const k = `${c.start}|${c.end}`
+      count.set(k, (count.get(k) ?? 0) + 1)
+    }
+    return [...count.entries()]
+      .sort(
+        (a, b) =>
+          b[1] - a[1] || toMinutes(a[0].split('|')[0]) - toMinutes(b[0].split('|')[0]),
+      )
+      .slice(0, 4)
+      .map(([k]) => {
+        const [s, e] = k.split('|')
+        return { s, e }
+      })
+  }, [classes])
+
+  /** Cambiar el inicio mantiene la duración (el fin se corre solo). */
+  const onStartChange = (v: string) => {
+    if (!v) return
+    const dur = toMinutes(end) - toMinutes(start)
+    setStart(v)
+    if (dur > 0) setEnd(toHHMM(toMinutes(v) + dur))
+  }
+
+  const duration = toMinutes(end) - toMinutes(start)
 
   const toggleDay = (i: number) => {
     if (block) {
@@ -160,24 +209,72 @@ export function ClassSheet({ open, onClose, block, defaultDay }: Props) {
         </div>
 
         {/* Horas */}
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="mb-1.5 block px-1 text-sm font-medium text-ink/55">Inicio</label>
-            <input
-              type="time"
-              value={start}
-              onChange={(e) => setStart(e.target.value)}
-              className="w-full rounded-2xl border border-ink/15 bg-[rgb(var(--card))] px-3 py-2.5 text-[15px] font-semibold tabular-nums text-ink outline-none focus:border-ink/40"
-            />
+        <div>
+          {/* Tus horarios de siempre: un toque y quedan inicio + fin */}
+          {slotSuggestions.length > 0 && (
+            <div className="mb-2.5">
+              <label className="mb-1.5 block px-1 text-sm font-medium text-ink/55">
+                Tus horarios
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {slotSuggestions.map(({ s, e }) => {
+                  const on = start === s && end === e
+                  return (
+                    <button
+                      key={`${s}${e}`}
+                      onClick={() => {
+                        setStart(s)
+                        setEnd(e)
+                      }}
+                      className={`rounded-xl px-3 py-1.5 text-[13px] font-semibold tabular-nums ${
+                        on ? 'bg-ink text-surface' : 'bg-ink/5 text-ink/60'
+                      }`}
+                    >
+                      {fmt12(s)} — {fmt12(e)}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="mb-1.5 block px-1 text-sm font-medium text-ink/55">Inicio</label>
+              <input
+                type="time"
+                value={start}
+                onChange={(e) => onStartChange(e.target.value)}
+                className="w-full rounded-2xl border border-ink/15 bg-[rgb(var(--card))] px-3 py-2.5 text-[15px] font-semibold tabular-nums text-ink outline-none focus:border-ink/40"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="mb-1.5 block px-1 text-sm font-medium text-ink/55">Fin</label>
+              <input
+                type="time"
+                value={end}
+                onChange={(e) => setEnd(e.target.value)}
+                className="w-full rounded-2xl border border-ink/15 bg-[rgb(var(--card))] px-3 py-2.5 text-[15px] font-semibold tabular-nums text-ink outline-none focus:border-ink/40"
+              />
+            </div>
           </div>
-          <div className="flex-1">
-            <label className="mb-1.5 block px-1 text-sm font-medium text-ink/55">Fin</label>
-            <input
-              type="time"
-              value={end}
-              onChange={(e) => setEnd(e.target.value)}
-              className="w-full rounded-2xl border border-ink/15 bg-[rgb(var(--card))] px-3 py-2.5 text-[15px] font-semibold tabular-nums text-ink outline-none focus:border-ink/40"
-            />
+
+          {/* Duración rápida: el fin se calcula solo */}
+          <div className="mt-2 flex flex-wrap gap-2">
+            {DURATIONS.map((d) => {
+              const on = duration === d.mins
+              return (
+                <button
+                  key={d.mins}
+                  onClick={() => setEnd(toHHMM(toMinutes(start) + d.mins))}
+                  className={`rounded-xl px-3 py-1.5 text-[13px] font-semibold ${
+                    on ? 'bg-ink text-surface' : 'bg-ink/5 text-ink/60'
+                  }`}
+                >
+                  {d.label}
+                </button>
+              )
+            })}
           </div>
         </div>
         {!validTimes && (
