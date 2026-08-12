@@ -158,6 +158,26 @@ export function applyActions(actions: AiAction[]): string[] {
         applied.push(`Borré el evento ${a.title}`)
         break
       }
+      case 'clear_date': {
+        if (!a.date) break
+        const scope = a.scope ?? 'all'
+        const st = useAppStore.getState()
+        let count = 0
+        if (scope !== 'tasks') {
+          for (const e of st.events.filter((e) => e.date === a.date)) {
+            store.removeEvent(e.id)
+            count++
+          }
+        }
+        if (scope !== 'events') {
+          for (const t of st.tasks.filter((t) => t.date === a.date)) {
+            store.removeTask(t.id)
+            count++
+          }
+        }
+        if (count) applied.push(`Borré ${count} cosa${count === 1 ? '' : 's'} del ${a.date}`)
+        break
+      }
     }
   }
   return applied

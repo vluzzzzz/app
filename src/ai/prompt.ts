@@ -1,4 +1,4 @@
-import type { CalendarEvent, GradeNode, Subject, Task } from '../lib/types'
+import type { CalendarEvent, ClassBlock, GradeNode, Subject, Task } from '../lib/types'
 import { currentGrade, minGradeToPass } from '../lib/grades'
 import { formatGrade } from '../lib/format'
 import { DAY_NAMES, MONTH_NAMES, toDateKey, weekday } from '../lib/schedule'
@@ -31,17 +31,34 @@ function stateSnapshot(subjects: Subject[]): string {
     .join('\n')
 }
 
-/** Lista compacta de tareas pendientes y próximos eventos (contexto para la IA). */
-function agendaSnapshot(tasks: Task[], events: CalendarEvent[]): string {
+/** Contexto de la agenda: horario semanal, tareas pendientes y próximos eventos. */
+function agendaSnapshot(
+  tasks: Task[],
+  events: CalendarEvent[],
+  classes: ClassBlock[],
+  subjects: Subject[],
+): string {
+  const nameOf = (id: string) => subjects.find((s) => s.id === id)?.name ?? 'Ramo'
+  const horario = classes.length
+    ? DAY_NAMES.map((dn, i) => {
+        const list = classes.filter((c) => c.day === i).sort((a, b) => a.start.localeCompare(b.start))
+        return list.length
+          ? `${dn}: ${list.map((c) => `${nameOf(c.subjectId)} ${c.start}-${c.end}`).join(', ')}`
+          : null
+      })
+        .filter(Boolean)
+        .join('\n')
+    : 'Sin clases en el horario.'
+
   const pend = tasks.filter((t) => !t.done)
   const taskLines = pend.length
     ? pend.map((t) => `- ${t.title}${t.date ? ` (${t.date}${t.time ? ` ${t.time}` : ''})` : ''}`).join('\n')
     : 'Sin tareas pendientes.'
-  const evs = [...events].sort((a, b) => a.date.localeCompare(b.date)).slice(0, 12)
+  const evs = [...events].sort((a, b) => a.date.localeCompare(b.date)).slice(0, 20)
   const evLines = evs.length
     ? evs.map((e) => `- ${e.title} — ${e.date}${e.time ? ` ${e.time}` : ''} (${e.type})`).join('\n')
     : 'Sin eventos agendados.'
-  return `TAREAS PENDIENTES:\n${taskLines}\n\nEVENTOS DEL CALENDARIO:\n${evLines}`
+  return `HORARIO (clases semanales recurrentes):\n${horario}\n\nTAREAS PENDIENTES:\n${taskLines}\n\nEVENTOS DEL CALENDARIO:\n${evLines}`
 }
 
 export function buildSystemPrompt(
@@ -54,6 +71,7 @@ export function buildSystemPrompt(
   userName?: string,
   tasks: Task[] = [],
   events: CalendarEvent[] = [],
+  classes: ClassBlock[] = [],
 ): string {
   const name = (userName ?? '').trim()
   // Fecha de hoy, para resolver "el martes 14", "mañana", "el 23 de octubre", etc.
@@ -133,6 +151,12 @@ REGLAS IMPORTANTES:
 - DISTINGUE tarea vs evento: algo con FECHA concreta (prueba, examen, cumpleaños, entrega,
   reunión) → add_event. Un pendiente sin fecha clara ("recordar comprar", "estudiar") →
   add_task (con date/time solo si lo dan). Pruebas/exámenes/certámenes → eventType "evaluacion".
+- REVISAR / LISTAR ("¿qué tengo este martes?", "qué me queda esta semana", "qué hay el 23"):
+  NO uses actions. Responde en "reply" con una lista clara y ordenada por hora, juntando lo
+  de ese día: CLASES del horario (según el día de la semana), EVENTOS/evaluaciones del
+  calendario y TAREAS con esa fecha. Si no hay nada, dilo simpático. Sé breve pero completo.
+- BORRAR EN BLOQUE ("borra todo lo del 23 de octubre", "elimina lo de este martes"): usa
+  clear_date con la fecha resuelta. Si piden solo eventos o solo tareas, usa "scope".
 
 MODELO DE UN RAMO (árbol anidado): un ramo tiene "nodos". Un nodo con "children" es una
 CARPETA (sección o subgrupo, ej. Cátedra, Controles); un nodo SIN children es una NOTA (con
@@ -155,6 +179,7 @@ ACCIONES disponibles (cada una es un objeto con "type"):
 - add_event: { type, title, date, time?, endTime?, eventType?, subject?, repeat?, location?, description? }
     eventType = "evaluacion" | "tarea" | "evento" | "recordatorio" (default "evento").
 - remove_event: { type, title }
+- clear_date: { type, date, scope? }  (borra TODO lo de esa fecha; scope "all"|"events"|"tasks")
 
 EJEMPLO 1 (crear estructurado + nota):
 Usuario: "crea Cálculo: cátedra 60 (controles 40, pruebas 60) y laboratorio 40; saqué 5,5 en control 1"
@@ -199,8 +224,18 @@ Respuesta: {"reply":"¡Listo! Te lo puse en tus tareas ✅","actions":[
  {"type":"add_task","title":"Comprar la calculadora"}
 ]}
 
+EJEMPLO 7 (revisar un día → SOLO listar, sin actions):
+Usuario: "¿qué tengo este martes?"
+Respuesta: {"reply":"Para el martes tienes 📅:\n• Cálculo (clase) 08:30–10:00\n• Prueba de Álgebra 17:00\n• Tarea: entregar informe\n¡Ánimo con la prueba! 💪","actions":[]}
+
+EJEMPLO 8 (borrar en bloque una fecha):
+Usuario: "borra todo lo que tengo el 23 de octubre"
+Respuesta: {"reply":"Listo, borré todo lo del 23 de octubre 🧹","actions":[
+ {"type":"clear_date","date":"2026-10-23"}
+]}
+
 ESTADO ACTUAL DEL USUARIO:
 ${stateSnapshot(subjects)}
 
-${agendaSnapshot(tasks, events)}`
+${agendaSnapshot(tasks, events, classes, subjects)}`
 }

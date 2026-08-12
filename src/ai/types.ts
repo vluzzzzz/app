@@ -43,6 +43,8 @@ export type AiAction =
       description?: string
     }
   | { type: 'remove_event'; title: string }
+  /** Borra en bloque lo agendado en una fecha ("borra todo lo del 23 de octubre"). */
+  | { type: 'clear_date'; date: string; scope?: 'all' | 'events' | 'tasks' }
 
 /** Respuesta esperada de la IA (JSON). */
 export type AiResponse = {

@@ -40,7 +40,8 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
     pushChat({ id: makeId(), role: 'user', text })
     setLoading(true)
     try {
-      const { subjects, defaultScale, userName, tasks, events } = useAppStore.getState()
+      const { subjects, defaultScale, userName, tasks, events, classes } =
+        useAppStore.getState()
       const history = useAppStore
         .getState()
         .chat.filter((m) => !m.error)
@@ -48,7 +49,7 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
       const messages = [
         {
           role: 'system' as const,
-          content: buildSystemPrompt(subjects, defaultScale, userName, tasks, events),
+          content: buildSystemPrompt(subjects, defaultScale, userName, tasks, events, classes),
         },
         ...history,
       ]
