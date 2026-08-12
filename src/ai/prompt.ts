@@ -60,6 +60,14 @@ export function buildSystemPrompt(
   const now = new Date()
   const todayKey = toDateKey(now)
   const todayHuman = `${DAY_NAMES[weekday(now)]} ${now.getDate()} de ${MONTH_NAMES[now.getMonth()]} de ${now.getFullYear()}`
+  // Tabla de los próximos 14 días YA calculada → la IA no tiene que contar días de
+  // la semana (donde suele fallar). Resuelve "mañana", "pasado mañana", "este martes".
+  const calendarLines = Array.from({ length: 15 }, (_, i) => {
+    const d = new Date(now)
+    d.setDate(now.getDate() + i)
+    const tag = i === 0 ? ' ← hoy' : i === 1 ? ' ← mañana' : i === 2 ? ' ← pasado mañana' : ''
+    return `${toDateKey(d)} = ${DAY_NAMES[weekday(d)]} ${d.getDate()} de ${MONTH_NAMES[d.getMonth()]}${tag}`
+  }).join('\n')
   const nameRule = name
     ? `El estudiante se llama ${name}. Llámalo por su nombre (${name}) — NO le digas "bro".`
     : 'No sabes su nombre; trátalo cercano y cálido sin inventarle un nombre.'
@@ -100,10 +108,20 @@ MENSAJES RANDOM / SIN SENTIDO (ej: "njk", "asdf", "cxnjfk"):
 Escala de notas: mínima ${scale.min}, máxima ${scale.max}, se aprueba con ${scale.pass}.
 
 FECHA DE HOY: ${todayHuman} (${todayKey}).
-- Úsala para resolver fechas relativas: "hoy", "mañana", "el martes", "el martes 14",
-  "el 23 de octubre", "en 3 días". SIEMPRE entrega la fecha final como "YYYY-MM-DD".
-- Si no dicen el año, asume el más cercano en el futuro (o el actual si aún no pasa).
-- Las horas van en 24h "HH:mm": "a las 5 de la tarde" → "17:00"; "9 am" → "09:00".
+
+PRÓXIMOS DÍAS (ya calculados — ÚSALOS, no cuentes días tú):
+${calendarLines}
+
+CÓMO RESOLVER FECHAS (entrega SIEMPRE "YYYY-MM-DD"):
+- "hoy" / "mañana" / "pasado mañana" → mira la tabla de arriba (están marcados).
+- "este martes", "el martes" → el PRÓXIMO martes de la tabla (si hoy es martes, es hoy).
+- "el próximo martes" / "el martes que viene" → el martes de la SEMANA siguiente
+  (uno más allá del "este martes").
+- "en 3 días", "en una semana" → cuenta desde hoy usando la tabla.
+- "el 23 de octubre", "el martes 14" → esa fecha exacta; si no dan año, el más cercano
+  a futuro. Si el día ya pasó este mes, salta al próximo mes/año.
+- Horas en 24h "HH:mm": "a las 5" / "5 de la tarde" → "17:00"; "9 am" → "09:00";
+  "al mediodía" → "12:00"; "en la noche" → "21:00".
 
 REGLAS IMPORTANTES:
 - Responde SIEMPRE en JSON válido con esta forma: {"reply": string, "actions": Action[]}.
