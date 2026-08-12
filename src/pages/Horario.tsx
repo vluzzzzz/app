@@ -350,13 +350,17 @@ export function Horario() {
               const top = ((c.s - startHour * 60) / 60) * HOUR_PX
               const minH = Math.max(((c.e - c.s) / 60) * HOUR_PX, 56) - 6
               const tall = minH >= 72
+              // Con 3+ choques: carrusel horizontal (máx ~2 visibles, el resto se desliza).
+              const carousel = c.items.length > 2
               return (
                 <motion.div
                   key={c.items[0].id}
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: Math.min(ci, 6) * 0.03 }}
-                  className="absolute inset-x-0 flex items-stretch gap-1.5"
+                  className={`absolute inset-x-0 flex items-stretch gap-1.5 ${
+                    carousel ? 'snap-x snap-mandatory overflow-x-auto' : ''
+                  }`}
                   style={{ top, minHeight: minH }}
                 >
                   {c.items.map((b) => (
@@ -364,7 +368,9 @@ export function Horario() {
                       key={b.id}
                       whileTap={{ scale: 0.985 }}
                       onClick={() => openEdit(b)}
-                      className="glass min-w-0 flex-1 basis-0 rounded-2xl p-2.5 text-left"
+                      className={`glass rounded-2xl p-2.5 text-left ${
+                        carousel ? 'w-[46%] flex-none snap-start' : 'min-w-0 flex-1 basis-0'
+                      }`}
                     >
                       <div className="flex h-full gap-2">
                         <span
