@@ -30,15 +30,17 @@ export function SubjectHomeCard({
     <motion.button
       whileTap={{ scale: 0.98 }}
       onClick={onOpen}
-      className="flex w-full items-center justify-between gap-3 rounded-3xl px-6 py-8 text-left"
+      className="flex h-[120px] w-full items-center justify-between gap-3 rounded-3xl px-6 text-left"
       style={{ background: bg }}
     >
-      <span className="min-w-0">
-        <span className="block truncate text-xl font-bold text-white">{subject.name}</span>
+      <span className="min-w-0 flex-1">
+        <span className="line-clamp-2 break-words text-xl font-bold leading-tight text-white">
+          {subject.name}
+        </span>
         {label && (
           <span className="mt-1.5 flex items-center gap-1.5 text-[13px] font-semibold text-white/60">
-            <ClockIcon className="h-3.5 w-3.5" />
-            {label}
+            <ClockIcon className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{label}</span>
           </span>
         )}
       </span>
