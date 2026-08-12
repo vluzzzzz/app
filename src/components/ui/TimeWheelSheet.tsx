@@ -67,8 +67,8 @@ function tick() {
       const src = ctx.createBufferSource()
       src.buffer = tickBuf
       const gain = ctx.createGain()
-      gain.gain.setValueAtTime(0.7, t)
-      gain.gain.setValueAtTime(0.7, t + TICK_DUR - 0.03)
+      gain.gain.setValueAtTime(0.32, t)
+      gain.gain.setValueAtTime(0.32, t + TICK_DUR - 0.03)
       gain.gain.exponentialRampToValueAtTime(0.001, t + TICK_DUR)
       src.connect(gain)
       gain.connect(ctx.destination)
