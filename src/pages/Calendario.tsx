@@ -333,7 +333,7 @@ export function Calendario() {
                   </div>
                   <p className="mt-0.5 text-sm tabular-nums text-ink/55">
                     {c.start} — {c.end}
-                    {c.room ? ` · Sala ${c.room}` : ''}
+                    {c.room ? ` · ${c.room}` : ''}
                   </p>
                 </motion.div>
               ))}

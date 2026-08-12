@@ -16,18 +16,31 @@ import { accentRgb } from '../lib/accents'
 import { ClassSheet } from '../features/schedule/ClassSheet'
 import { ClockIcon, PlusIcon } from '../components/ui/Icons'
 
-const pad2 = (n: number) => String(n).padStart(2, '0')
+/** "13:05" → "1:05 PM" (hora normal, no militar). */
+function to12h(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number)
+  const ampm = h < 12 ? 'AM' : 'PM'
+  const h12 = h % 12 === 0 ? 12 : h % 12
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`
+}
+/** 8 → "8 AM", 13 → "1 PM" (etiqueta de la escala de horas). */
+function hourLabel(h: number): string {
+  const ampm = h < 12 ? 'AM' : 'PM'
+  const h12 = h % 12 === 0 ? 12 : h % 12
+  return `${h12} ${ampm}`
+}
 
-/** Capa interior (tono más claro) con la info de la clase: hora + sala + profe. */
+/** Capa interior (tono más claro) con la info de la clase: hora + sala + profe.
+ *  Ojo: "Sala" NO se muestra al ver (solo al editar) — aquí va el valor tal cual. */
 function ClassInfo({ block, compact = false }: { block: ClassBlock; compact?: boolean }) {
-  const extra = [block.room && `Sala ${block.room}`, block.professor].filter(Boolean).join(' · ')
+  const extra = [block.room, block.professor].filter(Boolean).join(' · ')
   return (
-    <div className={`rounded-2xl bg-ink/[0.04] ${compact ? 'px-2.5 py-1.5' : 'px-3 py-2'}`}>
-      <p className={`tabular-nums text-ink/65 ${compact ? 'text-[12px]' : 'text-[13px]'}`}>
-        {block.start} — {block.end}
+    <div className={`rounded-xl bg-ink/[0.05] ${compact ? 'px-3 py-2' : 'px-3.5 py-3'}`}>
+      <p className={`font-semibold tabular-nums text-ink/70 ${compact ? 'text-[12.5px]' : 'text-[14px]'}`}>
+        {to12h(block.start)} — {to12h(block.end)}
       </p>
       {extra && (
-        <p className={`mt-0.5 break-words text-ink/45 ${compact ? 'text-[11px]' : 'text-[12px]'}`}>
+        <p className={`mt-1 break-words text-ink/45 ${compact ? 'text-[11.5px]' : 'text-[13px]'}`}>
           {extra}
         </p>
       )}
@@ -43,15 +56,13 @@ function ClassCard({ block, onOpen }: { block: ClassBlock; onOpen: () => void })
     <motion.button
       whileTap={{ scale: 0.985 }}
       onClick={onOpen}
-      className="glass w-full rounded-[20px] p-3.5 text-left"
+      className="glass relative w-full overflow-hidden rounded-[20px] p-3.5 pl-4 text-left"
     >
+      <span className="absolute inset-y-3 left-0 w-[3px] rounded-r-full" style={{ background: color }} />
       <div className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 items-start gap-2">
-          <span className="mt-[3px] h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color }} />
-          <h3 className="break-words text-[15px] font-bold leading-snug text-ink">
-            {subject?.name ?? 'Ramo eliminado'}
-          </h3>
-        </div>
+        <h3 className="break-words text-[15px] font-bold leading-snug text-ink">
+          {subject?.name ?? 'Ramo eliminado'}
+        </h3>
         <span className="shrink-0 text-[12px] font-medium text-ink/40">
           {CLASS_TYPE_LABEL[block.type]}
         </span>
@@ -253,14 +264,14 @@ export function Horario() {
             </p>
             {next.status === 'next' && (
               <span className="rounded-full bg-ink/[0.06] px-2.5 py-1 text-[12px] font-bold text-ink/60">
-                {next.minutesTo < 60 ? `En ${next.minutesTo} min` : `A las ${next.block.start}`}
+                {next.minutesTo < 60 ? `En ${next.minutesTo} min` : `A las ${to12h(next.block.start)}`}
               </span>
             )}
           </div>
           <h3 className="mt-1.5 break-words text-[19px] font-bold text-ink">{nextSubject.name}</h3>
           <p className="mt-0.5 text-sm tabular-nums text-ink/55">
-            {next.block.start} — {next.block.end}
-            {next.block.room ? ` · Sala ${next.block.room}` : ''}
+            {to12h(next.block.start)} — {to12h(next.block.end)}
+            {next.block.room ? ` · ${next.block.room}` : ''}
           </p>
         </motion.div>
       )}
@@ -315,15 +326,15 @@ export function Horario() {
       ) : (
         /* Agenda por horas: escala a la izquierda + líneas sutiles + bloques por hora */
         <div className="relative" style={{ height: gridHeight }}>
-          {/* Escala de horas + líneas guía muy sutiles */}
+          {/* Escala de horas (hora normal AM/PM) + líneas guía muy sutiles */}
           {hours.map((h) => (
             <div
               key={h}
-              className="absolute inset-x-0 flex items-center gap-3"
+              className="absolute inset-x-0 flex items-center gap-2"
               style={{ top: (h - startHour) * HOUR_PX }}
             >
-              <span className="w-10 shrink-0 -translate-y-1/2 text-right text-[12px] font-semibold tabular-nums text-ink/30">
-                {pad2(h)}:00
+              <span className="w-11 shrink-0 -translate-y-1/2 text-right text-[11.5px] font-semibold text-ink/30">
+                {hourLabel(h)}
               </span>
               <span className="h-px flex-1 bg-ink/[0.05]" />
             </div>
@@ -344,7 +355,7 @@ export function Horario() {
                   transition={{ delay: Math.min(i, 6) * 0.03 }}
                   whileTap={{ scale: 0.985 }}
                   onClick={() => openEdit(p.block)}
-                  className="glass absolute overflow-hidden rounded-2xl p-2.5 text-left"
+                  className="glass absolute overflow-hidden rounded-2xl p-2.5 pl-3 text-left"
                   style={{
                     top,
                     height: height - 6,
@@ -352,25 +363,25 @@ export function Horario() {
                     width: `calc(${widthPct}% - ${p.cols > 1 ? 4 : 0}px)`,
                   }}
                 >
-                  <div className="flex items-start gap-1.5">
-                    <span
-                      className="mt-[3px] h-2 w-2 shrink-0 rounded-full"
-                      style={{ background: subjectColor(p.block.subjectId) }}
-                    />
-                    <h3 className="min-w-0 flex-1 break-words text-[13.5px] font-bold leading-tight text-ink">
-                      {subjectName(p.block.subjectId)}
-                    </h3>
-                    <span className="shrink-0 text-[10.5px] font-medium text-ink/40">
-                      {CLASS_TYPE_LABEL[p.block.type]}
-                    </span>
-                  </div>
+                  <span
+                    className="absolute inset-y-2 left-0 w-[3px] rounded-r-full"
+                    style={{ background: subjectColor(p.block.subjectId) }}
+                  />
+                  <h3 className="break-words text-[13.5px] font-bold leading-tight text-ink">
+                    {subjectName(p.block.subjectId)}
+                  </h3>
                   {tall ? (
-                    <div className="mt-1.5">
-                      <ClassInfo block={p.block} compact />
-                    </div>
+                    <>
+                      <p className="mt-0.5 text-[11px] font-medium text-ink/40">
+                        {CLASS_TYPE_LABEL[p.block.type]}
+                      </p>
+                      <div className="mt-1.5">
+                        <ClassInfo block={p.block} compact />
+                      </div>
+                    </>
                   ) : (
-                    <p className="mt-1 pl-3.5 text-[11.5px] tabular-nums text-ink/50">
-                      {p.block.start} — {p.block.end}
+                    <p className="mt-1 text-[11.5px] font-medium tabular-nums text-ink/50">
+                      {to12h(p.block.start)} — {to12h(p.block.end)}
                     </p>
                   )}
                 </motion.button>
