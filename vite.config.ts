@@ -9,9 +9,16 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      // Registramos el SW manualmente en main.tsx (con .catch) para que un fallo
-      // de registro —común en navegadores in-app / iOS— no dispare el overlay.
+      // Registramos el SW desde main.tsx con el módulo virtual (recarga sola al
+      // haber versión nueva) y silenciamos errores de registro (in-app / iOS).
       injectRegister: false,
+      // El SW nuevo toma control de inmediato y limpia cachés viejos → evita que
+      // una PWA instalada quede pegada en una versión antigua (pantalla en blanco).
+      workbox: {
+        clientsClaim: true,
+        skipWaiting: true,
+        cleanupOutdatedCaches: true,
+      },
       includeAssets: ['logoapp.png'],
       manifest: {
         name: 'Brody',
