@@ -23,6 +23,12 @@ function to12h(hhmm: string): string {
   const h12 = h % 12 === 0 ? 12 : h % 12
   return `${h12}:${String(m).padStart(2, '0')} ${ampm}`
 }
+/** "13:05" → "1:05" (sin AM/PM: dentro de la agenda la escala ya lo indica). */
+function to12hShort(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number)
+  const h12 = h % 12 === 0 ? 12 : h % 12
+  return `${h12}:${String(m).padStart(2, '0')}`
+}
 /** 8 → "8 AM", 13 → "1 PM" (etiqueta de la escala de horas). */
 function hourLabel(h: number): string {
   const ampm = h < 12 ? 'AM' : 'PM'
@@ -37,7 +43,7 @@ function ClassInfo({ block, compact = false }: { block: ClassBlock; compact?: bo
   return (
     <div className={`rounded-xl bg-ink/[0.05] ${compact ? 'px-3 py-2' : 'px-3.5 py-3'}`}>
       <p className={`font-semibold tabular-nums text-ink/70 ${compact ? 'text-[12.5px]' : 'text-[14px]'}`}>
-        {to12h(block.start)} — {to12h(block.end)}
+        {to12hShort(block.start)} — {to12hShort(block.end)}
       </p>
       {extra && (
         <p className={`mt-1 break-words text-ink/45 ${compact ? 'text-[11.5px]' : 'text-[13px]'}`}>
@@ -56,19 +62,23 @@ function ClassCard({ block, onOpen }: { block: ClassBlock; onOpen: () => void })
     <motion.button
       whileTap={{ scale: 0.985 }}
       onClick={onOpen}
-      className="glass relative w-full overflow-hidden rounded-[20px] p-3.5 pl-4 text-left"
+      className="glass w-full rounded-[20px] p-3.5 text-left"
     >
-      <span className="absolute inset-y-3 left-0 w-[3px] rounded-r-full" style={{ background: color }} />
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="break-words text-[15px] font-bold leading-snug text-ink">
-          {subject?.name ?? 'Ramo eliminado'}
-        </h3>
-        <span className="shrink-0 text-[12px] font-medium text-ink/40">
-          {CLASS_TYPE_LABEL[block.type]}
-        </span>
-      </div>
-      <div className="mt-2">
-        <ClassInfo block={block} />
+      <div className="flex gap-2.5">
+        <span className="w-[3px] shrink-0 self-stretch rounded-full" style={{ background: color }} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="break-words text-[15px] font-bold leading-snug text-ink">
+              {subject?.name ?? 'Ramo eliminado'}
+            </h3>
+            <span className="shrink-0 text-[12px] font-medium text-ink/40">
+              {CLASS_TYPE_LABEL[block.type]}
+            </span>
+          </div>
+          <div className="mt-2">
+            <ClassInfo block={block} />
+          </div>
+        </div>
       </div>
     </motion.button>
   )
@@ -250,29 +260,33 @@ export function Horario() {
         <motion.div
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass glow relative mb-5 overflow-hidden rounded-[22px] p-4 pl-5"
+          className="glass glow mb-5 rounded-[22px] p-4"
           style={{ ['--glow' as string]: `rgb(${accentRgb(nextSubject.color ?? 'gray')} / 0.28)` }}
         >
-          <span
-            className="absolute inset-y-2 left-0 w-1 rounded-r-full"
-            style={{ background: `rgb(${accentRgb(nextSubject.color ?? 'gray')})` }}
-          />
-          <div className="flex items-center justify-between">
-            <p className="flex items-center gap-1.5 text-[13px] font-semibold text-ink/50">
-              <ClockIcon className="h-4 w-4" />
-              {next.status === 'now' ? 'Ahora en clase' : 'Próxima clase'}
-            </p>
-            {next.status === 'next' && (
-              <span className="rounded-full bg-ink/[0.06] px-2.5 py-1 text-[12px] font-bold text-ink/60">
-                {next.minutesTo < 60 ? `En ${next.minutesTo} min` : `A las ${to12h(next.block.start)}`}
-              </span>
-            )}
+          <div className="flex gap-2.5">
+            <span
+              className="w-[3px] shrink-0 self-stretch rounded-full"
+              style={{ background: `rgb(${accentRgb(nextSubject.color ?? 'gray')})` }}
+            />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between">
+                <p className="flex items-center gap-1.5 text-[13px] font-semibold text-ink/50">
+                  <ClockIcon className="h-4 w-4" />
+                  {next.status === 'now' ? 'Ahora en clase' : 'Próxima clase'}
+                </p>
+                {next.status === 'next' && (
+                  <span className="rounded-full bg-ink/[0.06] px-2.5 py-1 text-[12px] font-bold text-ink/60">
+                    {next.minutesTo < 60 ? `En ${next.minutesTo} min` : `A las ${to12h(next.block.start)}`}
+                  </span>
+                )}
+              </div>
+              <h3 className="mt-1.5 break-words text-[19px] font-bold text-ink">{nextSubject.name}</h3>
+              <p className="mt-0.5 text-sm tabular-nums text-ink/55">
+                {to12h(next.block.start)} — {to12h(next.block.end)}
+                {next.block.room ? ` · ${next.block.room}` : ''}
+              </p>
+            </div>
           </div>
-          <h3 className="mt-1.5 break-words text-[19px] font-bold text-ink">{nextSubject.name}</h3>
-          <p className="mt-0.5 text-sm tabular-nums text-ink/55">
-            {to12h(next.block.start)} — {to12h(next.block.end)}
-            {next.block.room ? ` · ${next.block.room}` : ''}
-          </p>
         </motion.div>
       )}
 
@@ -355,35 +369,41 @@ export function Horario() {
                   transition={{ delay: Math.min(i, 6) * 0.03 }}
                   whileTap={{ scale: 0.985 }}
                   onClick={() => openEdit(p.block)}
-                  className="glass absolute overflow-hidden rounded-2xl p-2.5 pl-3 text-left"
+                  className="glass absolute rounded-2xl p-2.5 text-left"
                   style={{
                     top,
-                    height: height - 6,
+                    // minHeight (no height fija): si la info no cabe en el alto de la
+                    // duración, la tarjeta crece → nunca se corta el contenido.
+                    minHeight: height - 6,
                     left: `calc(${p.col * widthPct}% + ${p.col ? 4 : 0}px)`,
                     width: `calc(${widthPct}% - ${p.cols > 1 ? 4 : 0}px)`,
                   }}
                 >
-                  <span
-                    className="absolute inset-y-2 left-0 w-[3px] rounded-r-full"
-                    style={{ background: subjectColor(p.block.subjectId) }}
-                  />
-                  <h3 className="break-words text-[13.5px] font-bold leading-tight text-ink">
-                    {subjectName(p.block.subjectId)}
-                  </h3>
-                  {tall ? (
-                    <>
-                      <p className="mt-0.5 text-[11px] font-medium text-ink/40">
-                        {CLASS_TYPE_LABEL[p.block.type]}
-                      </p>
-                      <div className="mt-1.5">
-                        <ClassInfo block={p.block} compact />
-                      </div>
-                    </>
-                  ) : (
-                    <p className="mt-1 text-[11.5px] font-medium tabular-nums text-ink/50">
-                      {to12h(p.block.start)} — {to12h(p.block.end)}
-                    </p>
-                  )}
+                  <div className="flex h-full gap-2">
+                    <span
+                      className="w-[3px] shrink-0 self-stretch rounded-full"
+                      style={{ background: subjectColor(p.block.subjectId) }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <h3 className="break-words text-[13.5px] font-bold leading-tight text-ink">
+                        {subjectName(p.block.subjectId)}
+                      </h3>
+                      {tall ? (
+                        <>
+                          <p className="mt-0.5 text-[11px] font-medium text-ink/40">
+                            {CLASS_TYPE_LABEL[p.block.type]}
+                          </p>
+                          <div className="mt-1.5">
+                            <ClassInfo block={p.block} compact />
+                          </div>
+                        </>
+                      ) : (
+                        <p className="mt-1 text-[11.5px] font-medium tabular-nums text-ink/50">
+                          {to12hShort(p.block.start)} — {to12hShort(p.block.end)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </motion.button>
               )
             })}
