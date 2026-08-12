@@ -9,6 +9,39 @@ const PAD = (ITEM * (VISIBLE - 1)) / 2 // relleno para poder centrar extremos
 
 const pad2 = (n: number) => String(n).padStart(2, '0')
 
+// --- Tick satisfactorio (como el picker de iOS) ---
+// Se sintetiza con Web Audio (sin archivos): un clic muy corto y suave,
+// más una vibración mínima en celulares que la soporten.
+let audioCtx: AudioContext | null = null
+let lastTick = 0
+function tick() {
+  const now = performance.now()
+  if (now - lastTick < 30) return // no ametrallar si giras rápido
+  lastTick = now
+  try {
+    audioCtx ??= new AudioContext()
+    if (audioCtx.state === 'suspended') void audioCtx.resume()
+    const t = audioCtx.currentTime
+    const osc = audioCtx.createOscillator()
+    const gain = audioCtx.createGain()
+    osc.type = 'square'
+    osc.frequency.value = 2600
+    gain.gain.setValueAtTime(0.05, t)
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03)
+    osc.connect(gain)
+    gain.connect(audioCtx.destination)
+    osc.start(t)
+    osc.stop(t + 0.035)
+  } catch {
+    /* sin audio no pasa nada */
+  }
+  try {
+    navigator.vibrate?.(3)
+  } catch {
+    /* idem */
+  }
+}
+
 /** Columna de rueda con scroll-snap (se detiene fila por fila). */
 function WheelColumn({
   values,
@@ -33,7 +66,10 @@ function WheelColumn({
     if (!el) return
     const idx = Math.round(el.scrollTop / ITEM)
     const v = values[Math.max(0, Math.min(values.length - 1, idx))]
-    if (v !== value) onChange(v)
+    if (v !== value) {
+      tick() // clic + vibración al pasar cada fila
+      onChange(v)
+    }
   }
 
   return (
