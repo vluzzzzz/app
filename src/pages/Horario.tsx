@@ -84,38 +84,28 @@ function ClassCard({ block, onOpen }: { block: ClassBlock; onOpen: () => void })
   )
 }
 
-// --- Agenda: layout por horas (columnas para clases que se solapan) ---
-type Positioned = { block: ClassBlock; s: number; e: number; col: number; cols: number }
+// --- Agenda: clases agrupadas en "clusters" de solape. Las que chocan se
+// renderizan lado a lado en una fila flex → SIEMPRE quedan del mismo alto
+// (la más alta manda), sin importar cuánto texto tenga cada una. ---
+type Cluster = { s: number; e: number; items: ClassBlock[] }
 
-function packColumns(classes: ClassBlock[]): Positioned[] {
-  const items: Positioned[] = classes
-    .map((b) => ({ block: b, s: toMinutes(b.start), e: toMinutes(b.end), col: 0, cols: 1 }))
-    .sort((a, b) => a.s - b.s || a.e - b.e)
-  const colEnds: number[] = []
-  for (const it of items) {
-    let placed = false
-    for (let i = 0; i < colEnds.length; i++) {
-      if (colEnds[i] <= it.s) {
-        it.col = i
-        colEnds[i] = it.e
-        placed = true
-        break
-      }
-    }
-    if (!placed) {
-      it.col = colEnds.length
-      colEnds.push(it.e)
+function buildClusters(classes: ClassBlock[]): Cluster[] {
+  const sorted = [...classes].sort(
+    (a, b) => toMinutes(a.start) - toMinutes(b.start) || toMinutes(a.end) - toMinutes(b.end),
+  )
+  const clusters: Cluster[] = []
+  for (const b of sorted) {
+    const s = toMinutes(b.start)
+    const e = toMinutes(b.end)
+    const last = clusters[clusters.length - 1]
+    if (last && s < last.e) {
+      last.items.push(b)
+      last.e = Math.max(last.e, e)
+    } else {
+      clusters.push({ s, e, items: [b] })
     }
   }
-  // Nº de columnas por cada clase = máximo de columnas entre las que se solapan con ella.
-  for (const a of items) {
-    let max = a.col + 1
-    for (const b of items) {
-      if (a !== b && b.s < a.e && a.s < b.e) max = Math.max(max, b.col + 1)
-    }
-    a.cols = max
-  }
-  return items
+  return clusters
 }
 
 const HOUR_PX = 76 // alto de cada hora en la agenda (bastante aire)
@@ -157,15 +147,15 @@ export function Horario() {
   const subjectName = (id: string) => subjects.find((s) => s.id === id)?.name ?? 'Ramo eliminado'
 
   // Rango de horas de la agenda: por defecto 8–20, se estira para incluir todo.
-  const { startHour, endHour, positioned } = useMemo(() => {
-    if (dayClasses.length === 0) return { startHour: 8, endHour: 20, positioned: [] as Positioned[] }
-    const pos = packColumns(dayClasses)
-    const minS = Math.min(...pos.map((p) => p.s))
-    const maxE = Math.max(...pos.map((p) => p.e))
+  const { startHour, endHour, clusters } = useMemo(() => {
+    if (dayClasses.length === 0) return { startHour: 8, endHour: 20, clusters: [] as Cluster[] }
+    const cl = buildClusters(dayClasses)
+    const minS = cl[0].s
+    const maxE = Math.max(...cl.map((c) => c.e))
     return {
       startHour: Math.min(8, Math.floor(minS / 60)),
       endHour: Math.max(20, Math.ceil(maxE / 60)),
-      positioned: pos,
+      clusters: cl,
     }
   }, [dayClasses])
 
@@ -354,57 +344,56 @@ export function Horario() {
             </div>
           ))}
 
-          {/* Bloques de clase */}
+          {/* Bloques de clase (los que chocan van en una fila flex → mismo alto) */}
           <div className="absolute inset-y-0" style={{ left: 52, right: 0 }}>
-            {positioned.map((p, i) => {
-              const top = ((p.s - startHour * 60) / 60) * HOUR_PX
-              const height = Math.max(((p.e - p.s) / 60) * HOUR_PX, 56)
-              const widthPct = 100 / p.cols
-              const tall = height >= 78
+            {clusters.map((c, ci) => {
+              const top = ((c.s - startHour * 60) / 60) * HOUR_PX
+              const minH = Math.max(((c.e - c.s) / 60) * HOUR_PX, 56) - 6
+              const tall = minH >= 72
               return (
-                <motion.button
-                  key={p.block.id}
+                <motion.div
+                  key={c.items[0].id}
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: Math.min(i, 6) * 0.03 }}
-                  whileTap={{ scale: 0.985 }}
-                  onClick={() => openEdit(p.block)}
-                  className="glass absolute rounded-2xl p-2.5 text-left"
-                  style={{
-                    top,
-                    // minHeight (no height fija): si la info no cabe en el alto de la
-                    // duración, la tarjeta crece → nunca se corta el contenido.
-                    minHeight: height - 6,
-                    left: `calc(${p.col * widthPct}% + ${p.col ? 4 : 0}px)`,
-                    width: `calc(${widthPct}% - ${p.cols > 1 ? 4 : 0}px)`,
-                  }}
+                  transition={{ delay: Math.min(ci, 6) * 0.03 }}
+                  className="absolute inset-x-0 flex items-stretch gap-1.5"
+                  style={{ top, minHeight: minH }}
                 >
-                  <div className="flex h-full gap-2">
-                    <span
-                      className="w-[3px] shrink-0 self-stretch rounded-full"
-                      style={{ background: subjectColor(p.block.subjectId) }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <h3 className="break-words text-[13.5px] font-bold leading-tight text-ink">
-                        {subjectName(p.block.subjectId)}
-                      </h3>
-                      {tall ? (
-                        <>
-                          <p className="mt-0.5 text-[11px] font-medium text-ink/40">
-                            {CLASS_TYPE_LABEL[p.block.type]}
-                          </p>
-                          <div className="mt-1.5">
-                            <ClassInfo block={p.block} compact />
-                          </div>
-                        </>
-                      ) : (
-                        <p className="mt-1 text-[11.5px] font-medium tabular-nums text-ink/50">
-                          {to12hShort(p.block.start)} — {to12hShort(p.block.end)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </motion.button>
+                  {c.items.map((b) => (
+                    <motion.button
+                      key={b.id}
+                      whileTap={{ scale: 0.985 }}
+                      onClick={() => openEdit(b)}
+                      className="glass min-w-0 flex-1 basis-0 rounded-2xl p-2.5 text-left"
+                    >
+                      <div className="flex h-full gap-2">
+                        <span
+                          className="w-[3px] shrink-0 self-stretch rounded-full"
+                          style={{ background: subjectColor(b.subjectId) }}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <h3 className="break-words text-[13.5px] font-bold leading-tight text-ink">
+                            {subjectName(b.subjectId)}
+                          </h3>
+                          {tall ? (
+                            <>
+                              <p className="mt-0.5 text-[11px] font-medium text-ink/40">
+                                {CLASS_TYPE_LABEL[b.type]}
+                              </p>
+                              <div className="mt-1.5">
+                                <ClassInfo block={b} compact />
+                              </div>
+                            </>
+                          ) : (
+                            <p className="mt-1 text-[11.5px] font-medium tabular-nums text-ink/50">
+                              {to12hShort(b.start)} — {to12hShort(b.end)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </motion.button>
+                  ))}
+                </motion.div>
               )
             })}
           </div>
