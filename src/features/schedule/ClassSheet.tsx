@@ -26,31 +26,53 @@ export function ClassSheet({ open, onClose, block, defaultDay }: Props) {
   const removeClass = useAppStore((s) => s.removeClass)
 
   const [subjectId, setSubjectId] = useState('')
-  const [day, setDay] = useState(defaultDay)
+  // Al crear se pueden elegir VARIOS días (misma clase repetida); al editar, uno.
+  const [days, setDays] = useState<number[]>([defaultDay])
   const [start, setStart] = useState('08:15')
   const [end, setEnd] = useState('09:45')
   const [type, setType] = useState<ClassType>('catedra')
   const [room, setRoom] = useState('')
   const [professor, setProfessor] = useState('')
 
+  /** Config recordada del curso: si ya tiene clases, hereda tipo/sala/profe. */
+  const prefillFrom = (sid: string) => {
+    const prev = [...classes].reverse().find((c) => c.subjectId === sid)
+    if (!prev) return
+    setType(prev.type)
+    setRoom(prev.room ?? '')
+    setProfessor(prev.professor ?? '')
+  }
+
   useEffect(() => {
     if (!open) return
-    setSubjectId(block?.subjectId ?? subjects[0]?.id ?? '')
-    setDay(block?.day ?? defaultDay)
+    const initialSid = block?.subjectId ?? subjects[0]?.id ?? ''
+    setSubjectId(initialSid)
+    setDays(block ? [block.day] : [defaultDay])
     setStart(block?.start ?? '08:15')
     setEnd(block?.end ?? '09:45')
     setType(block?.type ?? 'catedra')
     setRoom(block?.room ?? '')
     setProfessor(block?.professor ?? '')
+    if (!block && initialSid) prefillFrom(initialSid)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, block])
 
-  const validTimes = toMinutes(end) > toMinutes(start)
-  const canSave = subjectId !== '' && validTimes
+  const toggleDay = (i: number) => {
+    if (block) {
+      setDays([i]) // editando: un solo día
+      return
+    }
+    setDays((prev) =>
+      prev.includes(i) ? (prev.length > 1 ? prev.filter((d) => d !== i) : prev) : [...prev, i].sort(),
+    )
+  }
 
-  // Conflicto: otra clase del mismo día que se superpone (advertir, no impedir).
+  const validTimes = toMinutes(end) > toMinutes(start)
+  const canSave = subjectId !== '' && validTimes && days.length > 0
+
+  // Conflicto: otra clase en alguno de los días elegidos que se superpone (advertir, no impedir).
   const conflict = classes.find(
-    (c) => c.id !== block?.id && c.day === day && overlaps(start, end, c.start, c.end),
+    (c) => c.id !== block?.id && days.includes(c.day) && overlaps(start, end, c.start, c.end),
   )
   const conflictName = conflict
     ? subjects.find((s) => s.id === conflict.subjectId)?.name ?? 'otra clase'
@@ -60,15 +82,14 @@ export function ClassSheet({ open, onClose, block, defaultDay }: Props) {
     if (!canSave) return
     const data = {
       subjectId,
-      day,
       start,
       end,
       type,
       room: room.trim() || undefined,
       professor: professor.trim() || undefined,
     }
-    if (block) updateClass(block.id, data)
-    else addClass(data)
+    if (block) updateClass(block.id, { ...data, day: days[0] })
+    else days.forEach((d) => addClass({ ...data, day: d }))
     onClose()
   }
 
@@ -96,7 +117,11 @@ export function ClassSheet({ open, onClose, block, defaultDay }: Props) {
                 return (
                   <button
                     key={s.id}
-                    onClick={() => setSubjectId(s.id)}
+                    onClick={() => {
+                      setSubjectId(s.id)
+                      // Al crear, hereda la config ya usada para este curso.
+                      if (!block) prefillFrom(s.id)
+                    }}
                     className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold ${
                       on ? 'bg-ink text-surface' : 'bg-ink/5 text-ink/60'
                     }`}
@@ -113,16 +138,19 @@ export function ClassSheet({ open, onClose, block, defaultDay }: Props) {
           )}
         </div>
 
-        {/* Día */}
+        {/* Días (al crear se pueden elegir varios → se repite la clase) */}
         <div>
-          <label className="mb-1.5 block px-1 text-sm font-medium text-ink/55">Día</label>
+          <label className="mb-1.5 block px-1 text-sm font-medium text-ink/55">
+            {block ? 'Día' : 'Días'}
+            {!block && <span className="text-ink/35"> (toca varios si se repite)</span>}
+          </label>
           <div className="flex gap-1.5">
             {DAY_SHORT.map((d, i) => (
               <button
                 key={d}
-                onClick={() => setDay(i)}
+                onClick={() => toggleDay(i)}
                 className={`flex-1 rounded-xl py-2 text-[13px] font-semibold ${
-                  day === i ? 'bg-ink text-surface' : 'bg-ink/5 text-ink/60'
+                  days.includes(i) ? 'bg-ink text-surface' : 'bg-ink/5 text-ink/60'
                 }`}
               >
                 {d[0]}
@@ -198,10 +226,10 @@ export function ClassSheet({ open, onClose, block, defaultDay }: Props) {
         </div>
 
         {/* Advertencia de conflicto (no impide guardar) */}
-        {conflictName && validTimes && (
+        {conflict && conflictName && validTimes && (
           <div className="flex items-center gap-2 rounded-2xl bg-amber-400/15 px-3 py-2.5 text-[13px] font-medium text-amber-700 dark:text-amber-200">
             <AlertIcon className="h-4 w-4 shrink-0" />
-            Tienes {conflictName} en este horario.
+            Tienes {conflictName} el {DAY_SHORT[conflict.day]} en este horario.
           </div>
         )}
 
@@ -221,7 +249,7 @@ export function ClassSheet({ open, onClose, block, defaultDay }: Props) {
             disabled={!canSave}
             className="h-12 flex-1 rounded-2xl bg-ink text-[15px] font-semibold text-surface transition active:opacity-90 disabled:opacity-30"
           >
-            {block ? 'Guardar' : 'Agregar clase'}
+            {block ? 'Guardar' : days.length > 1 ? `Agregar ${days.length} clases` : 'Agregar clase'}
           </button>
         </div>
       </div>
