@@ -2,9 +2,15 @@
  * Capturador global de errores (incluye errores asíncronos / de animación que el
  * ErrorBoundary de React NO atrapa). Muestra un banner rojo abajo con el detalle,
  * para poder diagnosticar crashes. No bloquea la app; se cierra al tocarlo.
+ *
+ * SOLO en desarrollo: en producción muchos rechazos son ruido no fatal de
+ * librerías de terceros (Firebase/IndexedDB, service worker) en navegadores
+ * in-app o iOS, y no deben asustar al usuario. Los crashes reales de render los
+ * cubre el ErrorBoundary de React.
  */
 export function installErrorOverlay() {
   if (typeof window === 'undefined') return
+  if (!import.meta.env.DEV) return
 
   const show = (title: string, detail: string) => {
     let el = document.getElementById('brody-err')
