@@ -70,7 +70,11 @@ export function RamosCarousel({
           }}
         >
           {subjects.map((s, i) => (
-            <div key={s.id} style={{ minWidth: width || '100%' }} className="shrink-0">
+            <div
+              key={s.id}
+              style={{ width: width || '100%' }}
+              className="shrink-0"
+            >
               <SubjectHomeCard
                 subject={s}
                 bg={GRAYS[i % GRAYS.length]}
