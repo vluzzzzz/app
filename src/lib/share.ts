@@ -13,9 +13,9 @@ export type SharedHorario = {
   ramos: { id: string; nombre: string; color: string }[]
 }
 
-/** URL pública que se comparte. */
+/** URL pública que se comparte (bonita: /horario/<token>). */
 export function shareUrl(token: string): string {
-  return `${window.location.origin}/?h=${token}`
+  return `${window.location.origin}/horario/${token}`
 }
 
 async function manage(action: 'get' | 'enable' | 'disable'): Promise<string | null> {

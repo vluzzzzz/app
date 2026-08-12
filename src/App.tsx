@@ -70,11 +70,14 @@ export default function App() {
     typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).has('fps')
 
-  // Link público de horario (?h=token): vista de solo lectura, SIN login.
-  const sharedToken =
-    typeof window !== 'undefined'
-      ? new URLSearchParams(window.location.search).get('h')
-      : null
+  // Link público de horario (/horario/token, o ?h=token para links viejos):
+  // vista de solo lectura, SIN login.
+  const sharedToken = (() => {
+    if (typeof window === 'undefined') return null
+    const m = window.location.pathname.match(/^\/horario\/([A-Za-z0-9]{16,})/)
+    if (m) return m[1]
+    return new URLSearchParams(window.location.search).get('h')
+  })()
   if (sharedToken) {
     return (
       <>

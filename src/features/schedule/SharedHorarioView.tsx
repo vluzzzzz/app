@@ -1,37 +1,29 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import type { ClassBlock } from '../../lib/types'
-import {
-  CLASS_TYPE_LABEL,
-  DAY_NAMES,
-  DAY_SHORT,
-  classesForDay,
-  weekday,
-} from '../../lib/schedule'
+import { DAY_NAMES, DAY_SHORT, MONTH_NAMES, classesForDay, weekday } from '../../lib/schedule'
 import { accentRgb } from '../../lib/accents'
 import { fetchSharedHorario, type SharedHorario } from '../../lib/share'
-
-/** "13:05" → "1:05 PM". */
-function to12h(hhmm: string): string {
-  const [h, m] = hhmm.split(':').map(Number)
-  const h12 = h % 12 === 0 ? 12 : h % 12
-  return `${h12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`
-}
+import { AgendaTimeline } from './AgendaTimeline'
 
 /**
- * Vista PÚBLICA del horario compartido (?h=token): solo lectura, sin login.
- * La abre la familia/amigos en cualquier navegador.
+ * Vista PÚBLICA del horario compartido (/horario/token o ?h=token):
+ * solo lectura, sin login, y con la MISMA agenda que el Horario real
+ * (tira de días con fechas + escala de horas a la izquierda).
  */
 export function SharedHorarioView({ token }: { token: string }) {
   const [state, setState] = useState<'loading' | 'error' | 'ok'>('loading')
   const [data, setData] = useState<SharedHorario | null>(null)
-  const [day, setDay] = useState(weekday(new Date()))
+
+  const now = new Date()
+  const [selectedDay, setSelectedDay] = useState(weekday(now))
 
   useEffect(() => {
     fetchSharedHorario(token).then((d) => {
       if (d) {
         setData(d)
         setState('ok')
+        document.title = `Horario de ${d.nombre || 'Brody'}`
       } else {
         setState('error')
       }
@@ -59,27 +51,39 @@ export function SharedHorarioView({ token }: { token: string }) {
   }
 
   const ramo = (id: string) => data.ramos.find((r) => r.id === id)
-  const color = (id: string) => `rgb(${accentRgb(ramo(id)?.color ?? 'gray')})`
-  const dayClasses = classesForDay(data.horario as ClassBlock[], day)
+  const subjectColor = (id: string) => `rgb(${accentRgb(ramo(id)?.color ?? 'gray')})`
+  const subjectName = (id: string) => ramo(id)?.nombre ?? 'Clase'
+  const dayClasses = classesForDay(data.horario as ClassBlock[], selectedDay)
+
+  // Semana actual (lunes → domingo) para la tira de días, igual que el Horario.
+  const dow = weekday(now)
+  const monday = new Date(now)
+  monday.setDate(now.getDate() - dow)
+  const week = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    return d
+  })
+  const selectedDate = week[selectedDay]
 
   return (
     <div className="mx-auto h-full w-full max-w-md overflow-y-auto px-5 pb-16 pt-6">
-      <header className="mb-5">
+      <header className="mb-6">
         <p className="text-sm font-medium text-ink/50">Horario de</p>
-        <h1 className="text-[30px] font-bold leading-tight text-ink">
+        <h1 className="text-[34px] font-bold leading-tight text-ink">
           {data.nombre || 'Estudiante'}
         </h1>
       </header>
 
-      {/* Tira de días */}
+      {/* Tira de días — igual que el Horario */}
       <div className="glass mb-5 flex items-stretch justify-between gap-1 rounded-[26px] p-2">
-        {DAY_SHORT.map((d, i) => {
-          const selected = i === day
+        {week.map((d, i) => {
+          const selected = i === selectedDay
           return (
             <button
-              key={d}
-              onClick={() => setDay(i)}
-              className="relative flex flex-1 flex-col items-center justify-center rounded-2xl py-2.5"
+              key={i}
+              onClick={() => setSelectedDay(i)}
+              className="relative flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2.5"
             >
               {selected && (
                 <motion.span
@@ -89,65 +93,47 @@ export function SharedHorarioView({ token }: { token: string }) {
                 />
               )}
               <span
-                className={`relative z-10 text-[13px] font-semibold ${
-                  selected ? 'text-surface' : 'text-ink/45'
+                className={`relative z-10 text-[12px] font-medium ${
+                  selected ? 'text-surface/60' : 'text-ink/35'
                 }`}
               >
-                {d}
+                {DAY_SHORT[i]}
+              </span>
+              <span
+                className={`relative z-10 tabular-nums ${
+                  selected
+                    ? 'text-[17px] font-bold text-surface'
+                    : 'text-[16px] font-semibold text-ink/45'
+                }`}
+              >
+                {d.getDate()}
               </span>
             </button>
           )
         })}
       </div>
 
-      <h2 className="mb-3 px-1 text-[17px] font-bold text-ink/70">{DAY_NAMES[day]}</h2>
+      {/* Encabezado del día seleccionado */}
+      <div className="mb-4 px-1">
+        <h2 className="text-[19px] font-bold text-ink">
+          {DAY_NAMES[selectedDay]} {selectedDate.getDate()}
+          <span className="font-semibold text-ink/40"> de {MONTH_NAMES[selectedDate.getMonth()]}</span>
+        </h2>
+      </div>
 
       {dayClasses.length === 0 ? (
         <div className="glass rounded-3xl p-8 text-center">
           <p className="text-[15px] font-semibold text-ink">Sin clases este día</p>
         </div>
       ) : (
-        <div className="space-y-2.5">
-          {dayClasses.map((b, i) => (
-            <motion.div
-              key={b.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: Math.min(i, 8) * 0.04 }}
-              className="glass rounded-[20px] p-3.5"
-            >
-              <div className="flex gap-2.5">
-                <span
-                  className="w-[3px] shrink-0 self-stretch rounded-full"
-                  style={{ background: color(b.subjectId) }}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="break-words text-[15px] font-bold leading-snug text-ink">
-                      {ramo(b.subjectId)?.nombre ?? 'Clase'}
-                    </h3>
-                    <span className="shrink-0 text-[12px] font-medium text-ink/40">
-                      {CLASS_TYPE_LABEL[b.type]}
-                    </span>
-                  </div>
-                  <div className="mt-2 rounded-xl bg-ink/[0.05] px-3.5 py-3">
-                    <p className="text-[14px] font-semibold tabular-nums text-ink/70">
-                      {to12h(b.start)} — {to12h(b.end)}
-                    </p>
-                    {(b.room || b.professor) && (
-                      <p className="mt-1 break-words text-[13px] text-ink/45">
-                        {[b.room, b.professor].filter(Boolean).join(' · ')}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+        <AgendaTimeline
+          classes={dayClasses}
+          subjectName={subjectName}
+          subjectColor={subjectColor}
+        />
       )}
 
-      <p className="mt-8 text-center text-[12px] text-ink/35">
+      <p className="mt-8 pb-4 text-center text-[12px] text-ink/35">
         Hecho con <span className="font-semibold text-ink/50">Brody</span> · brrody.app
       </p>
     </div>
