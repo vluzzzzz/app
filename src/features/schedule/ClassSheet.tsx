@@ -14,16 +14,14 @@ function fmt12(hhmm: string): string {
   const h12 = h % 12 === 0 ? 12 : h % 12
   return `${h12}:${String(m).padStart(2, '0')}`
 }
-
-/** Duraciones rápidas (minutos). */
-const DURATIONS = [
-  { mins: 45, label: '45 min' },
-  { mins: 60, label: '1 h' },
-  { mins: 90, label: '1 h 30' },
-  { mins: 120, label: '2 h' },
-]
+/** "13:05" → "1:05 PM" (para los campos de hora). */
+function fmt12Full(hhmm: string): string {
+  const [h] = hhmm.split(':').map(Number)
+  return `${fmt12(hhmm)} ${h < 12 ? 'AM' : 'PM'}`
+}
 import { accentRgb } from '../../lib/accents'
 import { GlassSheet } from '../../components/ui/GlassSheet'
+import { TimeWheelSheet } from '../../components/ui/TimeWheelSheet'
 import { AlertIcon, TrashIcon } from '../../components/ui/Icons'
 
 type Props = {
@@ -104,7 +102,8 @@ export function ClassSheet({ open, onClose, block, defaultDay }: Props) {
     if (dur > 0) setEnd(toHHMM(toMinutes(v) + dur))
   }
 
-  const duration = toMinutes(end) - toMinutes(start)
+  /** Rueda de hora abierta: para inicio, para fin, o cerrada. */
+  const [pickerFor, setPickerFor] = useState<'start' | 'end' | null>(null)
 
   const toggleDay = (i: number) => {
     if (block) {
@@ -241,40 +240,22 @@ export function ClassSheet({ open, onClose, block, defaultDay }: Props) {
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="mb-1.5 block px-1 text-sm font-medium text-ink/55">Inicio</label>
-              <input
-                type="time"
-                value={start}
-                onChange={(e) => onStartChange(e.target.value)}
-                className="w-full rounded-2xl border border-ink/15 bg-[rgb(var(--card))] px-3 py-2.5 text-[15px] font-semibold tabular-nums text-ink outline-none focus:border-ink/40"
-              />
+              <button
+                onClick={() => setPickerFor('start')}
+                className="w-full rounded-2xl border border-ink/15 bg-[rgb(var(--card))] px-3 py-2.5 text-left text-[15px] font-semibold tabular-nums text-ink active:border-ink/40"
+              >
+                {fmt12Full(start)}
+              </button>
             </div>
             <div className="flex-1">
               <label className="mb-1.5 block px-1 text-sm font-medium text-ink/55">Fin</label>
-              <input
-                type="time"
-                value={end}
-                onChange={(e) => setEnd(e.target.value)}
-                className="w-full rounded-2xl border border-ink/15 bg-[rgb(var(--card))] px-3 py-2.5 text-[15px] font-semibold tabular-nums text-ink outline-none focus:border-ink/40"
-              />
+              <button
+                onClick={() => setPickerFor('end')}
+                className="w-full rounded-2xl border border-ink/15 bg-[rgb(var(--card))] px-3 py-2.5 text-left text-[15px] font-semibold tabular-nums text-ink active:border-ink/40"
+              >
+                {fmt12Full(end)}
+              </button>
             </div>
-          </div>
-
-          {/* Duración rápida: el fin se calcula solo */}
-          <div className="mt-2 flex flex-wrap gap-2">
-            {DURATIONS.map((d) => {
-              const on = duration === d.mins
-              return (
-                <button
-                  key={d.mins}
-                  onClick={() => setEnd(toHHMM(toMinutes(start) + d.mins))}
-                  className={`rounded-xl px-3 py-1.5 text-[13px] font-semibold ${
-                    on ? 'bg-ink text-surface' : 'bg-ink/5 text-ink/60'
-                  }`}
-                >
-                  {d.label}
-                </button>
-              )
-            })}
           </div>
         </div>
         {!validTimes && (
@@ -350,6 +331,15 @@ export function ClassSheet({ open, onClose, block, defaultDay }: Props) {
           </button>
         </div>
       </div>
+
+      {/* Rueda de hora (inicio / fin) */}
+      <TimeWheelSheet
+        open={pickerFor !== null}
+        title={pickerFor === 'end' ? 'Hora de término' : 'Hora de inicio'}
+        value={pickerFor === 'end' ? end : start}
+        onClose={() => setPickerFor(null)}
+        onSave={(v) => (pickerFor === 'end' ? setEnd(v) : onStartChange(v))}
+      />
     </GlassSheet>
   )
 }
