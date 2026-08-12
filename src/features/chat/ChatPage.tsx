@@ -18,6 +18,24 @@ const SUGERENCIAS = [
   '¿Qué necesito para pasar Cálculo?',
 ]
 
+/**
+ * Parte el prompt del sistema en varios mensajes ≤ maxLen (el proxy limita el
+ * tamaño POR mensaje). Corta por líneas para no romper el contenido.
+ */
+function splitSystem(prompt: string, maxLen = 5000): string[] {
+  const chunks: string[] = []
+  let buf = ''
+  for (const line of prompt.split('\n')) {
+    if (buf.length + line.length + 1 > maxLen && buf) {
+      chunks.push(buf)
+      buf = ''
+    }
+    buf += (buf ? '\n' : '') + line
+  }
+  if (buf) chunks.push(buf)
+  return chunks
+}
+
 export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
   const chat = useAppStore((s) => s.chat)
   const pushChat = useAppStore((s) => s.pushChat)
@@ -45,12 +63,18 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
       const history = useAppStore
         .getState()
         .chat.filter((m) => !m.error)
+        .slice(-14) // últimos mensajes: mantiene contexto sin pasar el tope de tamaño
         .map((m) => ({ role: m.role, content: m.text }))
+      const systemPrompt = buildSystemPrompt(
+        subjects,
+        defaultScale,
+        userName,
+        tasks,
+        events,
+        classes,
+      )
       const messages = [
-        {
-          role: 'system' as const,
-          content: buildSystemPrompt(subjects, defaultScale, userName, tasks, events, classes),
-        },
+        ...splitSystem(systemPrompt).map((content) => ({ role: 'system' as const, content })),
         ...history,
       ]
       const res = await askAi(messages)
