@@ -9,6 +9,9 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Registramos el SW manualmente en main.tsx (con .catch) para que un fallo
+      // de registro —común en navegadores in-app / iOS— no dispare el overlay.
+      injectRegister: false,
       includeAssets: ['logoapp.png'],
       manifest: {
         name: 'Brody',
