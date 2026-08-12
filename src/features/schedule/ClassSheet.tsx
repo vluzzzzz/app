@@ -15,7 +15,7 @@ type Props = {
   defaultDay: number
 }
 
-const TYPES: ClassType[] = ['catedra', 'laboratorio', 'ayudantia', 'otro']
+const TYPES: ClassType[] = ['catedra', 'laboratorio', 'ayudantia', 'taller', 'otro']
 
 /** Hoja para crear/editar una clase del horario. */
 export function ClassSheet({ open, onClose, block, defaultDay }: Props) {

@@ -77,7 +77,7 @@ export type Task = {
 }
 
 /** --- Horario (clases semanales recurrentes) --- */
-export type ClassType = 'catedra' | 'laboratorio' | 'ayudantia' | 'otro'
+export type ClassType = 'catedra' | 'laboratorio' | 'ayudantia' | 'taller' | 'otro'
 
 export type ClassBlock = {
   id: string

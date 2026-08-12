@@ -12,6 +12,7 @@ export const CLASS_TYPE_LABEL: Record<ClassType, string> = {
   catedra: 'Cátedra',
   laboratorio: 'Laboratorio',
   ayudantia: 'Ayudantía',
+  taller: 'Taller',
   otro: 'Otro',
 }
 
