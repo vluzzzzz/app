@@ -22,7 +22,14 @@ function fmt12Full(hhmm: string): string {
 import { accentRgb } from '../../lib/accents'
 import { GlassSheet } from '../../components/ui/GlassSheet'
 import { TimeWheelSheet } from '../../components/ui/TimeWheelSheet'
-import { AlertIcon, TrashIcon } from '../../components/ui/Icons'
+import {
+  AlertIcon,
+  ChevronDown,
+  ClockIcon,
+  DoorIcon,
+  TrashIcon,
+  UserIcon,
+} from '../../components/ui/Icons'
 
 type Props = {
   open: boolean
@@ -150,167 +157,185 @@ export function ClassSheet({ open, onClose, block, defaultDay }: Props) {
 
   return (
     <GlassSheet open={open} onClose={onClose} title={block ? 'Editar clase' : 'Nueva clase'}>
-      <div className="space-y-3 pt-1">
-        {/* ═══ Sección 1: Clase (ramo + días) ═══ */}
-        <section className="rounded-3xl bg-ink/[0.04] p-3.5">
-          <label className="mb-2 block px-0.5 text-[13px] font-semibold text-ink/45">Ramo</label>
-          {subjects.length === 0 ? (
-            <p className="px-1 text-sm text-ink/50">
-              Primero crea un ramo en la Calculadora.
-            </p>
-          ) : (
+      <div className="pt-1">
+        {/* Ramo */}
+        <label className="mb-2 block px-0.5 text-[13px] font-semibold text-ink/50">Ramo</label>
+        {subjects.length === 0 ? (
+          <p className="px-1 text-sm text-ink/50">
+            Primero crea un ramo en la Calculadora.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {subjects.map((s) => {
+              const on = subjectId === s.id
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => {
+                    setSubjectId(s.id)
+                    // Al crear, hereda la config ya usada para este curso.
+                    if (!block) prefillFrom(s.id)
+                  }}
+                  className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[13px] font-semibold ${
+                    on ? 'bg-ink text-surface' : 'bg-ink/5 text-ink/60'
+                  }`}
+                >
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{ background: `rgb(${accentRgb(s.color ?? 'gray')})` }}
+                  />
+                  {s.name}
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        <div className="my-4 h-px bg-ink/[0.07]" />
+
+        {/* Día(s) */}
+        <label className="mb-2 block px-0.5 text-[13px] font-semibold text-ink/50">
+          {block ? 'Día' : 'Días'}
+          {!block && <span className="font-medium text-ink/30"> · toca varios si se repite</span>}
+        </label>
+        <div className="flex gap-1.5">
+          {DAY_SHORT.map((d, i) => (
+            <button
+              key={d}
+              onClick={() => toggleDay(i)}
+              className={`flex-1 rounded-xl py-2 text-[13px] font-semibold ${
+                days.includes(i) ? 'bg-ink text-surface' : 'bg-ink/5 text-ink/60'
+              }`}
+            >
+              {d[0]}
+            </button>
+          ))}
+        </div>
+
+        {/* Tus horarios de siempre: un toque y quedan inicio + fin */}
+        {slotSuggestions.length > 0 && (
+          <>
+            <div className="my-4 h-px bg-ink/[0.07]" />
+            <label className="mb-2 block px-0.5 text-[13px] font-semibold text-ink/50">
+              Tus horarios
+            </label>
             <div className="flex flex-wrap gap-1.5">
-              {subjects.map((s) => {
-                const on = subjectId === s.id
+              {slotSuggestions.map(({ s, e }) => {
+                const on = start === s && end === e
                 return (
                   <button
-                    key={s.id}
+                    key={`${s}${e}`}
                     onClick={() => {
-                      setSubjectId(s.id)
-                      // Al crear, hereda la config ya usada para este curso.
-                      if (!block) prefillFrom(s.id)
+                      setStart(s)
+                      setEnd(e)
                     }}
-                    className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[13px] font-semibold ${
-                      on ? 'bg-ink text-surface' : 'bg-[rgb(var(--card))] text-ink/60'
+                    className={`rounded-xl px-3 py-1.5 text-[13px] font-semibold tabular-nums ${
+                      on ? 'bg-ink text-surface' : 'bg-ink/5 text-ink/60'
                     }`}
                   >
-                    <span
-                      className="h-2 w-2 rounded-full"
-                      style={{ background: `rgb(${accentRgb(s.color ?? 'gray')})` }}
-                    />
-                    {s.name}
+                    {fmt12(s)} — {fmt12(e)}
                   </button>
                 )
               })}
             </div>
-          )}
+          </>
+        )}
 
-          <label className="mb-2 mt-3.5 block px-0.5 text-[13px] font-semibold text-ink/45">
-            {block ? 'Día' : 'Días'}
-            {!block && <span className="font-medium text-ink/30"> · toca varios si se repite</span>}
-          </label>
-          <div className="flex gap-1.5">
-            {DAY_SHORT.map((d, i) => (
-              <button
-                key={d}
-                onClick={() => toggleDay(i)}
-                className={`flex-1 rounded-xl py-2 text-[13px] font-semibold ${
-                  days.includes(i) ? 'bg-ink text-surface' : 'bg-[rgb(var(--card))] text-ink/60'
-                }`}
-              >
-                {d[0]}
-              </button>
-            ))}
-          </div>
-        </section>
+        <div className="my-4 h-px bg-ink/[0.07]" />
 
-        {/* ═══ Sección 2: Horario ═══ */}
-        <section className="rounded-3xl bg-ink/[0.04] p-3.5">
-          {/* Tus horarios de siempre: un toque y quedan inicio + fin */}
-          {slotSuggestions.length > 0 && (
-            <>
-              <label className="mb-2 block px-0.5 text-[13px] font-semibold text-ink/45">
-                Tus horarios
-              </label>
-              <div className="mb-3.5 flex flex-wrap gap-1.5">
-                {slotSuggestions.map(({ s, e }) => {
-                  const on = start === s && end === e
-                  return (
-                    <button
-                      key={`${s}${e}`}
-                      onClick={() => {
-                        setStart(s)
-                        setEnd(e)
-                      }}
-                      className={`rounded-xl px-3 py-1.5 text-[13px] font-semibold tabular-nums ${
-                        on ? 'bg-ink text-surface' : 'bg-[rgb(var(--card))] text-ink/60'
-                      }`}
-                    >
-                      {fmt12(s)} — {fmt12(e)}
-                    </button>
-                  )
-                })}
-              </div>
-            </>
-          )}
+        {/* Horario de la clase: [🕐 inicio ⌄] — [🕐 fin ⌄] */}
+        <label className="mb-2 block px-0.5 text-[13px] font-semibold text-ink/50">
+          Horario de la clase
+        </label>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setPickerFor('start')}
+            className="flex flex-1 items-center gap-2 rounded-2xl border border-ink/12 bg-[rgb(var(--card))] px-3 py-2.5 active:border-ink/30"
+          >
+            <ClockIcon className="h-4 w-4 shrink-0 text-ink/40" />
+            <span className="flex-1 text-left text-[15px] font-semibold tabular-nums text-ink">
+              {fmt12Full(start)}
+            </span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-ink/35" />
+          </button>
+          <span className="text-ink/30">—</span>
+          <button
+            onClick={() => setPickerFor('end')}
+            className="flex flex-1 items-center gap-2 rounded-2xl border border-ink/12 bg-[rgb(var(--card))] px-3 py-2.5 active:border-ink/30"
+          >
+            <ClockIcon className="h-4 w-4 shrink-0 text-ink/40" />
+            <span className="flex-1 text-left text-[15px] font-semibold tabular-nums text-ink">
+              {fmt12Full(end)}
+            </span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-ink/35" />
+          </button>
+        </div>
+        {!validTimes && (
+          <p className="mt-2 px-1 text-[13px] text-rose-500">
+            La hora de término debe ser después del inicio.
+          </p>
+        )}
 
-          <div className="flex gap-2.5">
-            <div className="flex-1">
-              <label className="mb-2 block px-0.5 text-[13px] font-semibold text-ink/45">Inicio</label>
-              <button
-                onClick={() => setPickerFor('start')}
-                className="w-full rounded-xl bg-[rgb(var(--card))] px-3 py-2.5 text-center text-[15px] font-semibold tabular-nums text-ink active:opacity-80"
-              >
-                {fmt12Full(start)}
-              </button>
-            </div>
-            <div className="flex-1">
-              <label className="mb-2 block px-0.5 text-[13px] font-semibold text-ink/45">Fin</label>
-              <button
-                onClick={() => setPickerFor('end')}
-                className="w-full rounded-xl bg-[rgb(var(--card))] px-3 py-2.5 text-center text-[15px] font-semibold tabular-nums text-ink active:opacity-80"
-              >
-                {fmt12Full(end)}
-              </button>
-            </div>
-          </div>
-          {!validTimes && (
-            <p className="mt-2 px-1 text-[13px] text-rose-500">
-              La hora de término debe ser después del inicio.
-            </p>
-          )}
-        </section>
+        <div className="my-4 h-px bg-ink/[0.07]" />
 
-        {/* ═══ Sección 3: Detalles (tipo + sala + profesor) ═══ */}
-        <section className="rounded-3xl bg-ink/[0.04] p-3.5">
-          <label className="mb-2 block px-0.5 text-[13px] font-semibold text-ink/45">Tipo de clase</label>
-          <div className="flex flex-wrap gap-1.5">
-            {TYPES.map((t) => (
-              <button
-                key={t}
-                onClick={() => setType(t)}
-                className={`rounded-xl px-3 py-1.5 text-[13px] font-semibold ${
-                  type === t ? 'bg-ink text-surface' : 'bg-[rgb(var(--card))] text-ink/60'
-                }`}
-              >
-                {CLASS_TYPE_LABEL[t]}
-              </button>
-            ))}
-          </div>
+        {/* Tipo de clase */}
+        <label className="mb-2 block px-0.5 text-[13px] font-semibold text-ink/50">Tipo de clase</label>
+        <div className="flex flex-wrap gap-1.5">
+          {TYPES.map((t) => (
+            <button
+              key={t}
+              onClick={() => setType(t)}
+              className={`rounded-xl px-3 py-1.5 text-[13px] font-semibold ${
+                type === t ? 'bg-ink text-surface' : 'bg-ink/5 text-ink/60'
+              }`}
+            >
+              {CLASS_TYPE_LABEL[t]}
+            </button>
+          ))}
+        </div>
 
-          <div className="mt-3.5 flex gap-2.5">
-            <div className="flex-1">
-              <label className="mb-2 block px-0.5 text-[13px] font-semibold text-ink/45">Sala</label>
+        <div className="my-4 h-px bg-ink/[0.07]" />
+
+        {/* Sala + Profesor (con iconito adentro) */}
+        <div className="flex gap-2.5">
+          <div className="flex-1">
+            <label className="mb-2 block px-0.5 text-[13px] font-semibold text-ink/50">Sala</label>
+            <div className="relative">
+              <DoorIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/35" />
               <input
                 value={room}
                 onChange={(e) => setRoom(e.target.value)}
                 placeholder="Ej: C 304"
-                className="w-full rounded-xl bg-[rgb(var(--card))] px-3 py-2.5 text-[15px] text-ink placeholder:text-ink/30 outline-none focus:ring-1 focus:ring-ink/25"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="mb-2 block px-0.5 text-[13px] font-semibold text-ink/45">
-                Profesor <span className="font-medium text-ink/30">· opcional</span>
-              </label>
-              <input
-                value={professor}
-                onChange={(e) => setProfessor(e.target.value)}
-                className="w-full rounded-xl bg-[rgb(var(--card))] px-3 py-2.5 text-[15px] text-ink outline-none focus:ring-1 focus:ring-ink/25"
+                className="w-full rounded-2xl border border-ink/12 bg-[rgb(var(--card))] py-2.5 pl-9 pr-3 text-[15px] text-ink placeholder:text-ink/30 outline-none focus:border-ink/35"
               />
             </div>
           </div>
-        </section>
+          <div className="flex-1">
+            <label className="mb-2 block px-0.5 text-[13px] font-semibold text-ink/50">
+              Profesor <span className="font-medium text-ink/30">· opcional</span>
+            </label>
+            <div className="relative">
+              <UserIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/35" />
+              <input
+                value={professor}
+                onChange={(e) => setProfessor(e.target.value)}
+                placeholder="Agregar profesor"
+                className="w-full rounded-2xl border border-ink/12 bg-[rgb(var(--card))] py-2.5 pl-9 pr-3 text-[15px] text-ink placeholder:text-ink/30 outline-none focus:border-ink/35"
+              />
+            </div>
+          </div>
+        </div>
 
         {/* Advertencia de conflicto (no impide guardar) */}
         {conflict && conflictName && validTimes && (
-          <div className="flex items-center gap-2 rounded-2xl bg-amber-400/15 px-3 py-2.5 text-[13px] font-medium text-amber-700 dark:text-amber-200">
+          <div className="mt-4 flex items-center gap-2 rounded-2xl bg-amber-400/15 px-3 py-2.5 text-[13px] font-medium text-amber-700 dark:text-amber-200">
             <AlertIcon className="h-4 w-4 shrink-0" />
             Tienes {conflictName} el {DAY_SHORT[conflict.day]} en este horario.
           </div>
         )}
 
         {/* Acciones */}
-        <div className="flex items-center gap-3 pt-1">
+        <div className="mt-5 flex items-center gap-3">
           {block && (
             <button
               onClick={del}

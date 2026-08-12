@@ -24,6 +24,23 @@ export function ChevronLeft({ className }: IconProps) {
   )
 }
 
+export function ChevronDown({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  )
+}
+
+export function DoorIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="6" y="3" width="12" height="18" rx="1.5" />
+      <path d="M14.5 12h.01" />
+    </svg>
+  )
+}
+
 export function TrashIcon({ className }: IconProps) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
