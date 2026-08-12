@@ -133,9 +133,12 @@ export function SharedHorarioView({ token }: { token: string }) {
         />
       )}
 
-      <p className="mt-8 pb-4 text-center text-[12px] text-ink/35">
+      <a
+        href="https://www.brrody.app"
+        className="mt-8 block pb-4 text-center text-[12px] text-ink/35 active:opacity-70"
+      >
         Hecho con <span className="font-semibold text-ink/50">Brody</span> · brrody.app
-      </p>
+      </a>
     </div>
   )
 }
