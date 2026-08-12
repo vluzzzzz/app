@@ -34,13 +34,13 @@ export function SubjectHomeCard({
       style={{ background: bg }}
     >
       <span className="min-w-0">
+        <span className="block truncate text-xl font-bold text-white">{subject.name}</span>
         {label && (
-          <span className="mb-1.5 flex items-center gap-1.5 text-[13px] font-semibold text-white/60">
+          <span className="mt-1.5 flex items-center gap-1.5 text-[13px] font-semibold text-white/60">
             <ClockIcon className="h-3.5 w-3.5" />
             {label}
           </span>
         )}
-        <span className="block truncate text-xl font-bold text-white">{subject.name}</span>
       </span>
       <ChevronRight className="h-6 w-6 shrink-0 text-white/80" />
     </motion.button>

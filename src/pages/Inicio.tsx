@@ -56,6 +56,15 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
   // Próxima clase de hoy (si hay horario) — se muestra dentro del carrusel.
   const next = nextClassToday(classes, now)
 
+  // El ramo de la próxima clase se muestra primero (el orden rota según qué
+  // clase se aproxima); el resto conserva su orden original.
+  const orderedSubjects = next
+    ? [
+        ...subjects.filter((s) => s.id === next.block.subjectId),
+        ...subjects.filter((s) => s.id !== next.block.subjectId),
+      ]
+    : subjects
+
   return (
     <div className="flex h-full flex-col gap-7 overflow-y-auto px-5 pb-36 pt-4">
       {/* Header */}
@@ -139,7 +148,7 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
           </div>
         ) : (
           <RamosCarousel
-            subjects={subjects}
+            subjects={orderedSubjects}
             next={next}
             onOpen={(id) => navigate({ name: 'subject', id })}
           />
