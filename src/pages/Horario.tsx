@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useAppStore } from '../store/useAppStore'
 import type { ClassBlock } from '../lib/types'
@@ -8,13 +8,12 @@ import {
   DAY_SHORT,
   MONTH_NAMES,
   classesForDay,
-  nextClassToday,
   weekday,
 } from '../lib/schedule'
 import { accentRgb } from '../lib/accents'
 import { ClassSheet } from '../features/schedule/ClassSheet'
 import { ShareHorarioSheet } from '../features/schedule/ShareHorarioSheet'
-import { AgendaTimeline, ClassInfo, to12h } from '../features/schedule/AgendaTimeline'
+import { AgendaTimeline, ClassInfo } from '../features/schedule/AgendaTimeline'
 import { ClockIcon, PlusIcon, ShareIcon } from '../components/ui/Icons'
 
 /** Tarjeta de clase para la vista semanal (nombre afuera, info en capa interior). */
@@ -58,13 +57,6 @@ export function Horario() {
   const [shareOpen, setShareOpen] = useState(false)
   const [editing, setEditing] = useState<ClassBlock | null>(null)
 
-  // Refresca "próxima clase" cada 30s.
-  const [, setTick] = useState(0)
-  useEffect(() => {
-    const t = setInterval(() => setTick((v) => v + 1), 30_000)
-    return () => clearInterval(t)
-  }, [])
-
   // Semana actual (lunes → domingo) para la tira de días.
   const dow = weekday(now)
   const monday = new Date(now)
@@ -76,8 +68,6 @@ export function Horario() {
   })
 
   const dayClasses = classesForDay(classes, selectedDay)
-  const next = selectedDay === dow ? nextClassToday(classes, now) : null
-  const nextSubject = next ? subjects.find((s) => s.id === next.block.subjectId) : null
   const selectedDate = week[selectedDay]
 
   const subjectColor = (id: string) =>
@@ -175,41 +165,6 @@ export function Horario() {
             Ver semana
           </button>
         </div>
-      )}
-
-      {/* Próxima clase (solo hoy) */}
-      {next && nextSubject && !weekView && (
-        <motion.div
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass glow mb-5 rounded-[22px] p-4"
-          style={{ ['--glow' as string]: `rgb(${accentRgb(nextSubject.color ?? 'gray')} / 0.28)` }}
-        >
-          <div className="flex gap-2.5">
-            <span
-              className="w-[3px] shrink-0 self-stretch rounded-full"
-              style={{ background: `rgb(${accentRgb(nextSubject.color ?? 'gray')})` }}
-            />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between">
-                <p className="flex items-center gap-1.5 text-[13px] font-semibold text-ink/50">
-                  <ClockIcon className="h-4 w-4" />
-                  {next.status === 'now' ? 'Ahora en clase' : 'Próxima clase'}
-                </p>
-                {next.status === 'next' && (
-                  <span className="rounded-full bg-ink/[0.06] px-2.5 py-1 text-[12px] font-bold text-ink/60">
-                    {next.minutesTo < 60 ? `En ${next.minutesTo} min` : `A las ${to12h(next.block.start)}`}
-                  </span>
-                )}
-              </div>
-              <h3 className="mt-1.5 break-words text-[19px] font-bold text-ink">{nextSubject.name}</h3>
-              <p className="mt-0.5 text-sm tabular-nums text-ink/55">
-                {to12h(next.block.start)} — {to12h(next.block.end)}
-                {next.block.room ? ` · ${next.block.room}` : ''}
-              </p>
-            </div>
-          </div>
-        </motion.div>
       )}
 
       {classes.length === 0 ? (

@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { animate, motion, useMotionValue } from 'framer-motion'
 import type { Subject } from '../../lib/types'
+import type { NextClassInfo } from '../../lib/schedule'
 import { SubjectHomeCard } from './SubjectHomeCard'
 
 // Grises intercalados (oscuro / plomo) para las tarjetas.
@@ -13,9 +14,12 @@ const GAP = 16
  */
 export function RamosCarousel({
   subjects,
+  next,
   onOpen,
 }: {
   subjects: Subject[]
+  /** Próxima clase de hoy (para etiquetar el ramo correspondiente). */
+  next?: NextClassInfo | null
   onOpen: (id: string) => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -67,7 +71,12 @@ export function RamosCarousel({
         >
           {subjects.map((s, i) => (
             <div key={s.id} style={{ minWidth: width || '100%' }} className="shrink-0">
-              <SubjectHomeCard subject={s} bg={GRAYS[i % GRAYS.length]} onOpen={() => onOpen(s.id)} />
+              <SubjectHomeCard
+                subject={s}
+                bg={GRAYS[i % GRAYS.length]}
+                next={next?.block.subjectId === s.id ? next : null}
+                onOpen={() => onOpen(s.id)}
+              />
             </div>
           ))}
         </motion.div>
