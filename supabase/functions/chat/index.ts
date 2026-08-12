@@ -27,10 +27,11 @@ const ALLOWED_ORIGINS = [
 ]
 
 // Límites de entrada anti-abuso. El prompt del sistema de Brody es grande (incluye
-// horario, agenda y ejemplos), así que damos holgura — el modelo tiene contexto de sobra.
+// horario, agenda, personalidad y ejemplos), así que damos MUCHA holgura — el modelo
+// tiene contexto de sobra (~128k tokens ≈ 500k caracteres).
 const MAX_MESSAGES = 60
-const MAX_CHARS_PER_MSG = 12000
-const MAX_TOTAL_CHARS = 48000
+const MAX_CHARS_PER_MSG = 40000
+const MAX_TOTAL_CHARS = 200000
 
 // Verificador de ID tokens de Firebase (claves públicas rotativas de Google).
 const JWKS = createRemoteJWKSet(
