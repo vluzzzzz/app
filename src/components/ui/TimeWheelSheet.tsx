@@ -139,7 +139,7 @@ function WheelColumn({
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
-const MINS = Array.from({ length: 12 }, (_, i) => i * 5)
+const MINS = Array.from({ length: 60 }, (_, i) => i)
 
 function PickerBody({
   title,
@@ -154,7 +154,7 @@ function PickerBody({
 }) {
   const [hh, mm] = value.split(':').map(Number)
   const [h, setH] = useState(Number.isFinite(hh) ? hh : 8)
-  const [m, setM] = useState(Number.isFinite(mm) ? (Math.round(mm / 5) * 5) % 60 : 0)
+  const [m, setM] = useState(Number.isFinite(mm) ? mm : 0)
 
   // Precargar el sample del tick apenas se abre la rueda.
   useEffect(() => {
