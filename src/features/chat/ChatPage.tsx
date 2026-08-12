@@ -168,7 +168,7 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
                       : 'glass glass-highlight text-ink'
                 }`}
               >
-                <p className="whitespace-pre-wrap">{m.text}</p>
+                <RichText text={m.text} />
                 {m.applied && m.applied.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {m.applied.map((a, i) => (
@@ -229,6 +229,24 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
         </div>
       </div>
     </div>
+  )
+}
+
+/** Texto con soporte de **negritas** (markdown mínimo) y saltos de línea. */
+function RichText({ text }: { text: string }) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return (
+    <p className="whitespace-pre-wrap">
+      {parts.map((p, i) =>
+        p.startsWith('**') && p.endsWith('**') ? (
+          <strong key={i} className="font-bold">
+            {p.slice(2, -2)}
+          </strong>
+        ) : (
+          <span key={i}>{p}</span>
+        ),
+      )}
+    </p>
   )
 }
 
