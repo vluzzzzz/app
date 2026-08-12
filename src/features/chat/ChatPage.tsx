@@ -12,8 +12,9 @@ import { ChevronLeft } from '../../components/ui/Icons'
 import { useKeyboardInset } from '../../lib/useKeyboardInset'
 
 const SUGERENCIAS = [
-  'Crea Cálculo con controles 20% y pruebas 80%',
-  'Saqué 5,5 en el control 1 de Cálculo',
+  'Tengo prueba el martes a las 5 de Cálculo',
+  'Anota mi cumpleaños el 23 de octubre',
+  'Recuérdame entregar el informe de Física',
   '¿Qué necesito para pasar Cálculo?',
 ]
 
@@ -39,7 +40,7 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
     pushChat({ id: makeId(), role: 'user', text })
     setLoading(true)
     try {
-      const { subjects, defaultScale, userName } = useAppStore.getState()
+      const { subjects, defaultScale, userName, tasks, events } = useAppStore.getState()
       const history = useAppStore
         .getState()
         .chat.filter((m) => !m.error)
@@ -47,7 +48,7 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
       const messages = [
         {
           role: 'system' as const,
-          content: buildSystemPrompt(subjects, defaultScale, userName),
+          content: buildSystemPrompt(subjects, defaultScale, userName, tasks, events),
         },
         ...history,
       ]
@@ -102,8 +103,8 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
               className="mx-auto mb-3 h-16 w-16 object-contain"
             />
             <p className="mb-4 text-sm text-ink/55">
-              Soy Brody. Pídeme crear ramos, poner notas o pregúntame qué
-              necesitas para pasar.
+              Soy Brody. Pídeme crear ramos, poner notas, agendar pruebas o
+              cumpleaños, anotarte tareas, o pregúntame qué necesitas para pasar.
             </p>
             <div className="flex flex-col gap-2">
               {SUGERENCIAS.map((s) => (

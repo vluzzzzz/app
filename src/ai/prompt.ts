@@ -1,6 +1,7 @@
-import type { GradeNode, Subject } from '../lib/types'
+import type { CalendarEvent, GradeNode, Subject, Task } from '../lib/types'
 import { currentGrade, minGradeToPass } from '../lib/grades'
 import { formatGrade } from '../lib/format'
+import { DAY_NAMES, MONTH_NAMES, toDateKey, weekday } from '../lib/schedule'
 
 /** Renderiza el árbol de un ramo indentado (carpetas y notas con su %). */
 function renderNodes(nodes: GradeNode[], indent: number): string {
@@ -30,6 +31,19 @@ function stateSnapshot(subjects: Subject[]): string {
     .join('\n')
 }
 
+/** Lista compacta de tareas pendientes y próximos eventos (contexto para la IA). */
+function agendaSnapshot(tasks: Task[], events: CalendarEvent[]): string {
+  const pend = tasks.filter((t) => !t.done)
+  const taskLines = pend.length
+    ? pend.map((t) => `- ${t.title}${t.date ? ` (${t.date}${t.time ? ` ${t.time}` : ''})` : ''}`).join('\n')
+    : 'Sin tareas pendientes.'
+  const evs = [...events].sort((a, b) => a.date.localeCompare(b.date)).slice(0, 12)
+  const evLines = evs.length
+    ? evs.map((e) => `- ${e.title} — ${e.date}${e.time ? ` ${e.time}` : ''} (${e.type})`).join('\n')
+    : 'Sin eventos agendados.'
+  return `TAREAS PENDIENTES:\n${taskLines}\n\nEVENTOS DEL CALENDARIO:\n${evLines}`
+}
+
 export function buildSystemPrompt(
   subjects: Subject[],
   scale: {
@@ -38,8 +52,14 @@ export function buildSystemPrompt(
     pass: number
   },
   userName?: string,
+  tasks: Task[] = [],
+  events: CalendarEvent[] = [],
 ): string {
   const name = (userName ?? '').trim()
+  // Fecha de hoy, para resolver "el martes 14", "mañana", "el 23 de octubre", etc.
+  const now = new Date()
+  const todayKey = toDateKey(now)
+  const todayHuman = `${DAY_NAMES[weekday(now)]} ${now.getDate()} de ${MONTH_NAMES[now.getMonth()]} de ${now.getFullYear()}`
   const nameRule = name
     ? `El estudiante se llama ${name}. Llámalo por su nombre (${name}) — NO le digas "bro".`
     : 'No sabes su nombre; trátalo cercano y cálido sin inventarle un nombre.'
@@ -79,13 +99,22 @@ MENSAJES RANDOM / SIN SENTIDO (ej: "njk", "asdf", "cxnjfk"):
 
 Escala de notas: mínima ${scale.min}, máxima ${scale.max}, se aprueba con ${scale.pass}.
 
+FECHA DE HOY: ${todayHuman} (${todayKey}).
+- Úsala para resolver fechas relativas: "hoy", "mañana", "el martes", "el martes 14",
+  "el 23 de octubre", "en 3 días". SIEMPRE entrega la fecha final como "YYYY-MM-DD".
+- Si no dicen el año, asume el más cercano en el futuro (o el actual si aún no pasa).
+- Las horas van en 24h "HH:mm": "a las 5 de la tarde" → "17:00"; "9 am" → "09:00".
+
 REGLAS IMPORTANTES:
 - Responde SIEMPRE en JSON válido con esta forma: {"reply": string, "actions": Action[]}.
 - NUNCA hagas la matemática tú: para responder "¿qué necesito para pasar?", usa los datos
   ya calculados del estado (nota actual, estado, "necesita ~X").
-- Usa "actions" solo cuando el usuario pida crear/editar/poner notas. Si solo pregunta,
+- Usa "actions" solo cuando el usuario pida crear/editar/agendar/anotar. Si solo pregunta,
   deja actions vacío y responde en "reply".
-- Refiérete a las asignaturas/evaluaciones por su NOMBRE tal como aparecen.
+- Refiérete a las asignaturas/evaluaciones/tareas por su NOMBRE tal como aparecen.
+- DISTINGUE tarea vs evento: algo con FECHA concreta (prueba, examen, cumpleaños, entrega,
+  reunión) → add_event. Un pendiente sin fecha clara ("recordar comprar", "estudiar") →
+  add_task (con date/time solo si lo dan). Pruebas/exámenes/certámenes → eventType "evaluacion".
 
 MODELO DE UN RAMO (árbol anidado): un ramo tiene "nodos". Un nodo con "children" es una
 CARPETA (sección o subgrupo, ej. Cátedra, Controles); un nodo SIN children es una NOTA (con
@@ -102,6 +131,12 @@ ACCIONES disponibles (cada una es un objeto con "type"):
 - update_node: { type, subject, path, weight?, name? }
 - remove_node: { type, subject, path }
 - remove_subject: { type, subject }
+- add_task: { type, title, date?, time? }  (to-do de la Home; date/time opcionales)
+- complete_task: { type, title }  (marca una tarea pendiente como hecha, por su título)
+- remove_task: { type, title }
+- add_event: { type, title, date, time?, endTime?, eventType?, subject?, repeat?, location?, description? }
+    eventType = "evaluacion" | "tarea" | "evento" | "recordatorio" (default "evento").
+- remove_event: { type, title }
 
 EJEMPLO 1 (crear estructurado + nota):
 Usuario: "crea Cálculo: cátedra 60 (controles 40, pruebas 60) y laboratorio 40; saqué 5,5 en control 1"
@@ -128,6 +163,26 @@ Respuesta: {"reply":"Uy, tranqui, un 2 no define nada — para la próxima se da
  {"type":"add_note","subject":"Cálculo","name":"Nota 1","grade":2}
 ]}
 
+EJEMPLO 4 (prueba con fecha → evento tipo evaluación):
+Usuario: "tengo prueba el martes 14 a las 5 de cálculo"
+Respuesta: {"reply":"¡Anotado! Te agendé la prueba de Cálculo para el martes 14 a las 5 de la tarde 📅","actions":[
+ {"type":"add_event","title":"Prueba de Cálculo","date":"2026-04-14","time":"17:00","eventType":"evaluacion","subject":"Cálculo"}
+]}
+
+EJEMPLO 5 (cumpleaños → evento normal):
+Usuario: "mi cumple es el 23 de octubre, anótalo"
+Respuesta: {"reply":"¡Feliz mes anticipado! 🎂 Te lo dejé agendado el 23 de octubre.","actions":[
+ {"type":"add_event","title":"Mi cumpleaños","date":"2026-10-23","eventType":"evento"}
+]}
+
+EJEMPLO 6 (pendiente sin fecha → tarea):
+Usuario: "recuérdame comprar la calculadora"
+Respuesta: {"reply":"¡Listo! Te lo puse en tus tareas ✅","actions":[
+ {"type":"add_task","title":"Comprar la calculadora"}
+]}
+
 ESTADO ACTUAL DEL USUARIO:
-${stateSnapshot(subjects)}`
+${stateSnapshot(subjects)}
+
+${agendaSnapshot(tasks, events)}`
 }

@@ -109,6 +109,55 @@ export function applyActions(actions: AiAction[]): string[] {
         applied.push(`Borré ${a.subject}`)
         break
       }
+      case 'add_task': {
+        store.addTask({ title: a.title, date: a.date, time: a.time })
+        applied.push(`Tarea: ${a.title}`)
+        break
+      }
+      case 'complete_task': {
+        const t = [...useAppStore.getState().tasks]
+          .reverse()
+          .find((t) => norm(t.title) === norm(a.title) && !t.done)
+        if (!t) break
+        store.updateTask(t.id, { done: true })
+        applied.push(`Completé: ${a.title}`)
+        break
+      }
+      case 'remove_task': {
+        const t = [...useAppStore.getState().tasks]
+          .reverse()
+          .find((t) => norm(t.title) === norm(a.title))
+        if (!t) break
+        store.removeTask(t.id)
+        applied.push(`Borré la tarea ${a.title}`)
+        break
+      }
+      case 'add_event': {
+        if (!a.date) break
+        const subjectId = a.subject ? findSubject(subjects, a.subject)?.id : undefined
+        store.addEvent({
+          title: a.title,
+          date: a.date,
+          time: a.time,
+          endTime: a.endTime,
+          type: a.eventType ?? 'evento',
+          subjectId,
+          repeat: a.repeat ?? 'none',
+          location: a.location,
+          description: a.description,
+        })
+        applied.push(`Agendé: ${a.title}`)
+        break
+      }
+      case 'remove_event': {
+        const ev = [...useAppStore.getState().events]
+          .reverse()
+          .find((e) => norm(e.title) === norm(a.title))
+        if (!ev) break
+        store.removeEvent(ev.id)
+        applied.push(`Borré el evento ${a.title}`)
+        break
+      }
     }
   }
   return applied
