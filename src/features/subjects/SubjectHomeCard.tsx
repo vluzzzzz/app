@@ -30,20 +30,20 @@ export function SubjectHomeCard({
     <motion.button
       whileTap={{ scale: 0.98 }}
       onClick={onOpen}
-      className="flex h-[120px] w-full items-center justify-between gap-3 rounded-3xl px-6 text-left"
+      className="flex h-[120px] w-full items-center gap-3 rounded-3xl px-6 text-left"
       style={{ background: bg }}
     >
-      <span className="min-w-0 flex-1 pr-4">
-        <span className="line-clamp-2 break-words text-[19px] font-bold leading-tight text-white">
+      <div className="min-w-0 flex-1">
+        <div className="line-clamp-2 break-words text-[19px] font-bold leading-tight text-white">
           {subject.name}
-        </span>
+        </div>
         {label && (
-          <span className="mt-1.5 flex items-center gap-1.5 text-[13px] font-semibold text-white/60">
+          <div className="mt-1.5 flex items-center gap-1.5 text-[13px] font-semibold text-white/60">
             <ClockIcon className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">{label}</span>
-          </span>
+          </div>
         )}
-      </span>
+      </div>
       <ChevronRight className="h-6 w-6 shrink-0 text-white/80" />
     </motion.button>
   )
