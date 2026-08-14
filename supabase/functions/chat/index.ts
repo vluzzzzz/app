@@ -16,7 +16,10 @@
 import { createRemoteJWKSet, jwtVerify } from 'https://esm.sh/jose@5.9.6'
 
 const GROQ_KEY = Deno.env.get('GROQ_API_KEY')
+// Modo híbrido: modelo GRANDE (preciso) para crear/editar; modelo RÁPIDO para
+// preguntas y charla. El cliente manda tier 'smart' | 'fast'.
 const MODEL = Deno.env.get('GROQ_MODEL') ?? 'llama-3.3-70b-versatile'
+const FAST_MODEL = Deno.env.get('GROQ_FAST_MODEL') ?? 'llama-3.1-8b-instant'
 const PROJECT_ID = Deno.env.get('FIREBASE_PROJECT_ID') ?? 'brody-13148'
 
 // Dominios permitidos (CORS).
@@ -84,7 +87,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // 2) Validación de entrada.
-    const { messages } = await req.json()
+    const { messages, tier } = await req.json()
+    const model = tier === 'fast' ? FAST_MODEL : MODEL
     if (!Array.isArray(messages) || messages.length === 0) {
       return json({ error: 'messages requerido' }, 400, origin)
     }
@@ -107,7 +111,7 @@ Deno.serve(async (req: Request) => {
         Authorization: `Bearer ${GROQ_KEY}`,
       },
       body: JSON.stringify({
-        model: MODEL,
+        model,
         messages,
         temperature: 0.4,
         // Acota la generación: respuestas más rápidas y menos gasto de tokens/minuto.

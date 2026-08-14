@@ -6,7 +6,7 @@ import { accentGhost } from '../../lib/accents'
 import { makeId } from '../../lib/format'
 import { EASE } from '../../lib/motion'
 import { buildSystemPrompt } from '../../ai/prompt'
-import { aiConfigured, askAi } from '../../ai/client'
+import { aiConfigured, askAi, pickTier } from '../../ai/client'
 import { applyActions } from '../../ai/apply'
 import { ChevronLeft } from '../../components/ui/Icons'
 import { useKeyboardInset } from '../../lib/useKeyboardInset'
@@ -78,7 +78,7 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
         ...splitSystem(systemPrompt).map((content) => ({ role: 'system' as const, content })),
         ...history,
       ]
-      const res = await askAi(messages)
+      const res = await askAi(messages, pickTier(text))
       const applied =
         res.actions && res.actions.length ? applyActions(res.actions) : []
       pushChat({

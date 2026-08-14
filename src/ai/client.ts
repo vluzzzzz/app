@@ -10,15 +10,27 @@ export function aiConfigured(): boolean {
 }
 
 type Msg = { role: 'system' | 'user' | 'assistant'; content: string }
+export type Tier = 'fast' | 'smart'
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+// Verbos que implican CREAR/EDITAR/AGENDAR (o anotar una nota) → necesitan el
+// modelo grande (más preciso armando ramos y fechas). Lo demás (preguntas,
+// saludos, "¿qué tengo mañana?") va al modelo rápido.
+const ACTION_RE =
+  /\b(cre[aá]r?|cr[eé]ame|arm[aá]|h[aá]zme|agreg[aá]r?|a[ñn]ad[eií]r?|anot[aá]r?|ap[uú]nt[aá]|pon(?:g[aeoó]|me|le)?|ingres[aá]|registr[aá]|s[uú]mal?e?|saqu[eé]|me saqu[eé]|obtuve|sub[ií]|recu[eé]rdame|record[aá]|borr[aá]|elimin[aá]|quit[aá]|cambi[aá]|edit[aá]|modific[aá]|actualiz[aá]|renombr[aá]|agend[aá]|ag[eé]ndame|marc[aá]|complet[aá]|mu[eé]ve)\b/i
+
+/** Elige el modelo según el mensaje: orden de acción → 'smart', pregunta → 'fast'. */
+export function pickTier(text: string): Tier {
+  return ACTION_RE.test(text) ? 'smart' : 'fast'
+}
 
 /**
  * Llama al proxy (Supabase Edge Function) que reenvía a Groq con la key oculta.
  * Reintenta solo cuando Groq responde "rate limit" (tokens por minuto del plan gratis),
  * respetando el tiempo que sugiere, para no mostrarle al usuario un error feo.
  */
-export async function askAi(messages: Msg[], attempt = 0): Promise<AiResponse> {
+export async function askAi(messages: Msg[], tier: Tier = 'smart', attempt = 0): Promise<AiResponse> {
   if (!ENDPOINT) {
     throw new Error('Brody aún no está configurado.')
   }
@@ -31,7 +43,7 @@ export async function askAi(messages: Msg[], attempt = 0): Promise<AiResponse> {
       ...(ANON ? { Authorization: `Bearer ${ANON}`, apikey: ANON } : {}),
       ...(idToken ? { 'x-id-token': idToken } : {}),
     },
-    body: JSON.stringify({ messages }),
+    body: JSON.stringify({ messages, tier }),
   })
   if (!res.ok) {
     const detail = await res.text().catch(() => '')
@@ -41,7 +53,7 @@ export async function askAi(messages: Msg[], attempt = 0): Promise<AiResponse> {
       const m = /try again in ([\d.]+)s/i.exec(detail)
       const waitMs = m ? Math.ceil(parseFloat(m[1]) * 1000) + 400 : 2500
       await sleep(waitMs)
-      return askAi(messages, attempt + 1)
+      return askAi(messages, tier, attempt + 1)
     }
     if (isRateLimit) {
       throw new Error('Uff, me saturé un toque 🥵 dame unos segunditos y volvé a escribirme, bro.')
