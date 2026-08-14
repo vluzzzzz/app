@@ -19,10 +19,11 @@ const SUGERENCIAS = [
 ]
 
 /**
- * Parte el prompt del sistema en varios mensajes ≤ maxLen (el proxy limita el
- * tamaño POR mensaje). Corta por líneas para no romper el contenido.
+ * Parte el prompt del sistema en mensajes ≤ maxLen (el proxy limita el tamaño
+ * POR mensaje). Con el tope alto normalmente sale UN solo mensaje de sistema
+ * (el modelo sigue mejor un prompt coherente que varios trozos sueltos).
  */
-function splitSystem(prompt: string, maxLen = 5000): string[] {
+function splitSystem(prompt: string, maxLen = 30000): string[] {
   const chunks: string[] = []
   let buf = ''
   for (const line of prompt.split('\n')) {
@@ -63,7 +64,7 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
       const history = useAppStore
         .getState()
         .chat.filter((m) => !m.error)
-        .slice(-14) // últimos mensajes: mantiene contexto sin pasar el tope de tamaño
+        .slice(-8) // últimos mensajes: contexto suficiente sin inflar tokens (evita saturar Groq)
         .map((m) => ({ role: m.role, content: m.text }))
       const systemPrompt = buildSystemPrompt(
         subjects,

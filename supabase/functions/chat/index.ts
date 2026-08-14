@@ -110,6 +110,8 @@ Deno.serve(async (req: Request) => {
         model: MODEL,
         messages,
         temperature: 0.4,
+        // Acota la generación: respuestas más rápidas y menos gasto de tokens/minuto.
+        max_tokens: 1024,
         response_format: { type: 'json_object' },
       }),
     })
@@ -124,7 +126,21 @@ Deno.serve(async (req: Request) => {
     try {
       parsed = JSON.parse(content)
     } catch {
-      parsed = { reply: content }
+      // JSON roto: intenta rescatar el objeto {...} embebido; si no, muestra el
+      // texto solo si NO parece JSON (para no filtrar llaves crudas al chat).
+      const m = content.match(/\{[\s\S]*\}/)
+      if (m) {
+        try {
+          parsed = JSON.parse(m[0])
+        } catch {
+          parsed = {}
+        }
+      }
+      if (!parsed.reply) {
+        parsed = /^[\s{[]/.test(content.trim())
+          ? { reply: 'Se me cruzaron los cables un segundo 😅 volvé a escribirme, bro.' }
+          : { reply: content }
+      }
     }
     return json(
       {
