@@ -65,6 +65,7 @@ function buildClusters(classes: ClassBlock[]): Cluster[] {
 }
 
 const HOUR_PX = 76 // alto de cada hora en la agenda (bastante aire)
+const FULL_CARD_PX = 108 // alto aprox. de la tarjeta con capa completa (tipo + caja hora/sala)
 
 type Props = {
   classes: ClassBlock[]
@@ -116,8 +117,17 @@ export function AgendaTimeline({ classes, subjectName, subjectColor, onOpen }: P
       <div className="absolute inset-y-0" style={{ left: 52, right: 0 }}>
         {clusters.map((c, ci) => {
           const top = ((c.s - startHour * 60) / 60) * HOUR_PX
-          const minH = Math.max(((c.e - c.s) / 60) * HOUR_PX, 56) - 6
-          const tall = minH >= 72
+          // Espacio libre hasta la siguiente clase (o el fondo de la agenda).
+          // Como los clusters no se solapan, este hueco siempre es ≥ la propia
+          // duración → decidir por aquí muestra la capa completa aunque la clase
+          // sea corta, siempre que quepa sin pisar la de abajo.
+          const nextTop =
+            ci + 1 < clusters.length
+              ? ((clusters[ci + 1].s - startHour * 60) / 60) * HOUR_PX
+              : gridHeight
+          const availPx = nextTop - top
+          const tall = availPx >= FULL_CARD_PX
+          const minH = Math.max(((c.e - c.s) / 60) * HOUR_PX, tall ? FULL_CARD_PX - 6 : 56) - 6
           // Con 3+ choques: carrusel horizontal (máx ~2 visibles, el resto se desliza).
           const carousel = c.items.length > 2
           return (
