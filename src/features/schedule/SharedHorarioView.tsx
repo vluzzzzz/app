@@ -19,23 +19,11 @@ export function SharedHorarioView({ token }: { token: string }) {
   const now = new Date()
   const [selectedDay, setSelectedDay] = useState(weekday(now))
 
-  // Tema propio del visitante: parte según su sistema y se recuerda en el equipo.
-  const [dark, setDark] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('brody-shared-theme')
-      if (saved) return saved === 'dark'
-      return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false
-    } catch {
-      return false
-    }
-  })
+  // El horario compartido SIEMPRE abre en tema claro, sin importar el sistema
+  // del visitante. Con el botón puede pasarlo a oscuro dentro de la sesión.
+  const [dark, setDark] = useState(false)
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
-    try {
-      localStorage.setItem('brody-shared-theme', dark ? 'dark' : 'light')
-    } catch {
-      /* sin storage */
-    }
   }, [dark])
 
   useEffect(() => {
