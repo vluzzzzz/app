@@ -237,11 +237,11 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
   )
 }
 
-/** Texto con soporte de **negritas** (markdown mínimo) y saltos de línea. */
-function RichText({ text }: { text: string }) {
+/** Trozos con soporte de **negritas** (markdown mínimo). */
+function Bold({ text }: { text: string }) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g)
   return (
-    <p className="whitespace-pre-wrap">
+    <>
       {parts.map((p, i) =>
         p.startsWith('**') && p.endsWith('**') ? (
           <strong key={i} className="font-bold">
@@ -251,7 +251,32 @@ function RichText({ text }: { text: string }) {
           <span key={i}>{p}</span>
         ),
       )}
-    </p>
+    </>
+  )
+}
+
+/**
+ * Texto del chat, línea por línea. Las viñetas ("• " o "- ") llevan sangría
+ * colgante: si un nombre largo (ej. "Algoritmo y Estructura de Datos") salta
+ * de línea, la continuación queda alineada con el texto y no pegada al borde.
+ */
+function RichText({ text }: { text: string }) {
+  return (
+    <div>
+      {text.split('\n').map((line, i) =>
+        line.trim() === '' ? (
+          <div key={i} className="h-2.5" />
+        ) : (
+          <p
+            key={i}
+            className="whitespace-pre-wrap"
+            style={/^[•\-] /.test(line) ? { paddingLeft: '1.1em', textIndent: '-1.1em' } : undefined}
+          >
+            <Bold text={line} />
+          </p>
+        ),
+      )}
+    </div>
   )
 }
 

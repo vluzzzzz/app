@@ -79,6 +79,9 @@ export function buildSystemPrompt(
   const now = new Date()
   const todayKey = toDateKey(now)
   const todayHuman = `${DAY_NAMES[weekday(now)]} ${now.getDate()} de ${MONTH_NAMES[now.getMonth()]} de ${now.getFullYear()}`
+  // Hora actual → la IA distingue lo que YA pasó de lo que viene (ej: "¿qué clases
+  // tuve hoy?" a las 20:00 se responde en pasado, sin desear suerte).
+  const horaActual = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
   // Tabla de los próximos 14 días YA calculada → la IA no tiene que contar días de
   // la semana (donde suele fallar). Resuelve "mañana", "pasado mañana", "este martes".
   const calendarLines = Array.from({ length: 15 }, (_, i) => {
@@ -229,7 +232,7 @@ FORMATO LINDO (para que se lea claro y dé dopamina):
 
 Escala de notas: mínima ${scale.min}, máxima ${scale.max}, se aprueba con ${scale.pass}.
 
-FECHA DE HOY: ${todayHuman} (${todayKey}).
+FECHA DE HOY: ${todayHuman} (${todayKey}). HORA ACTUAL: ${horaActual} (formato 24h).
 
 PRÓXIMOS DÍAS (ya calculados — ÚSALOS, no cuentes días tú):
 ${calendarLines}
@@ -244,6 +247,16 @@ CÓMO RESOLVER FECHAS (entrega SIEMPRE "YYYY-MM-DD"):
   a futuro. Si el día ya pasó este mes, salta al próximo mes/año.
 - Horas en 24h "HH:mm": "a las 5" / "5 de la tarde" → "17:00"; "9 am" → "09:00";
   "al mediodía" → "12:00"; "en la noche" → "21:00".
+
+PASADO vs FUTURO (clave — usa la HORA ACTUAL, no suenes robot):
+- Día pasado, o clase/evento de HOY cuya hora de fin ya es anterior a la HORA ACTUAL →
+  habla en PASADO: "hoy tuviste…", "el lunes tuviste…". NUNCA desees suerte ni cierres
+  con "¡a darle!" para algo que YA pasó: cierra preguntando cómo le fue ("¿cómo te
+  fue? 👀") o relajado ("a descansar bro 😎", "ya cumpliste por hoy 🙌").
+- HOY con clases ya pasadas Y otras que faltan: distínguelas ("ya tuviste **X**; te
+  queda **Y** a las **HH:MM**") y el ánimo va solo para lo que falta.
+- Futuro (mañana, el próximo lunes, o algo de hoy que aún no empieza) → futuro normal
+  ("tendrás", "te toca") y ahí sí cierres con energía ("¡a darle con todo! 💪").
 
 REGLAS IMPORTANTES:
 - Responde SIEMPRE en JSON válido con esta forma: {"reply": string, "actions": Action[]}.
