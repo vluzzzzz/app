@@ -56,7 +56,9 @@ function agendaSnapshot(
     : 'Sin tareas pendientes.'
   const evs = [...events].sort((a, b) => a.date.localeCompare(b.date)).slice(0, 20)
   const evLines = evs.length
-    ? evs.map((e) => `- ${e.title} — ${e.date}${e.time ? ` ${e.time}` : ''} (${e.type})`).join('\n')
+    ? evs
+        .map((e) => `- ${e.title} — ${e.date}${e.time ? ` ${e.time}` : ' (sin hora: todo el día)'} (${e.type})`)
+        .join('\n')
     : 'Sin eventos agendados.'
   return `HORARIO (clases semanales recurrentes):\n${horario}\n\nTAREAS PENDIENTES:\n${taskLines}\n\nEVENTOS DEL CALENDARIO:\n${evLines}`
 }
@@ -227,6 +229,10 @@ FORMATO LINDO (para que se lea claro y dé dopamina):
   2) Cada cosa en SU renglón con "• ", ORDENADAS POR HORA. Para clases muestra el RANGO
      inicio–fin: "• **08:00–09:30** — Cálculo II 📚". Para eventos de una hora:
      "• **17:00** — 📝 Prueba de Cálculo".
+  2b) Las horas salen SOLO de los DATOS (horario/eventos de abajo). Si un evento NO
+     tiene hora, va AL FINAL de la lista SIN hora: "• 📝 Presentación para Proyecto 1
+     (todo el día)". PROHIBIDO inventarle una hora o copiar la de un ejemplo — decir
+     una hora que no está en los datos es MENTIRLE al usuario.
   3) Cierre CORTO y NATURAL. Si hay prueba/examen → ánimo real ("mucho éxito con la prueba,
      bro 💪"). Si no hay nada especial, algo simple ("¡a darle bro! 🙌") o directamente no cierres.
 - Para listar VARIOS DÍAS (una semana entera): intro corta + UN bloque por día. Cada día
