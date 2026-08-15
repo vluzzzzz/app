@@ -18,8 +18,9 @@ import { createRemoteJWKSet, jwtVerify } from 'https://esm.sh/jose@5.9.6'
 const GROQ_KEY = Deno.env.get('GROQ_API_KEY')
 // Modo híbrido: modelo GRANDE (preciso) para crear/editar; modelo RÁPIDO para
 // preguntas y charla. El cliente manda tier 'smart' | 'fast'.
-const MODEL = Deno.env.get('GROQ_MODEL') ?? 'llama-3.3-70b-versatile'
-const FAST_MODEL = Deno.env.get('GROQ_FAST_MODEL') ?? 'llama-3.1-8b-instant'
+// Groq apagó los Llama 3.x el 16-ago-2026; los reemplazos oficiales son los GPT-OSS.
+const MODEL = Deno.env.get('GROQ_MODEL') ?? 'openai/gpt-oss-120b'
+const FAST_MODEL = Deno.env.get('GROQ_FAST_MODEL') ?? 'openai/gpt-oss-20b'
 const PROJECT_ID = Deno.env.get('FIREBASE_PROJECT_ID') ?? 'brody-13148'
 
 // Dominios permitidos (CORS).
@@ -116,15 +117,19 @@ Deno.serve(async (req: Request) => {
           messages,
           temperature: 0.4,
           // Acota la generación: respuestas más rápidas y menos gasto de tokens/minuto.
-          max_tokens: 1024,
+          // (2048 porque en GPT-OSS el razonamiento interno cuenta contra este límite.)
+          max_tokens: 2048,
           response_format: { type: 'json_object' },
+          // GPT-OSS razona antes de responder; en 'low' contesta rápido y alcanza de
+          // sobra para armar el JSON. Solo aplica a esos modelos (otros lo rechazan).
+          ...(useModel.startsWith('openai/gpt-oss') ? { reasoning_effort: 'low' } : {}),
         }),
       })
 
     let r = await callGroq(model)
-    // Si el modelo grande (70B) se quedó sin cupo (rate limit / tokens por día del
-    // plan gratis), degradamos automáticamente al 8B para que la app NO se rompa.
-    // El 8B tiene un cupo diario mucho mayor. Solo aplica si no estábamos ya en el 8B.
+    // Si el modelo grande se quedó sin cupo (rate limit / tokens por día del plan
+    // gratis), degradamos automáticamente al rápido para que la app NO se rompa.
+    // El rápido tiene un cupo diario mayor. Solo aplica si no estábamos ya en él.
     if (!r.ok && model !== FAST_MODEL) {
       const why = await r.text().catch(() => '')
       if (r.status === 429 || /rate.?limit|tokens?\s*per|quota|capacity/i.test(why)) {

@@ -47,7 +47,8 @@ Abre la app → toca la barra **"Pregúntale a la IA…"** en el Inicio y prueba
 - *"¿Qué necesito para pasar Cálculo?"*
 
 ## Notas
-- Modelo por defecto: `llama-3.3-70b-versatile` (Groq, gratis). Se puede cambiar con el
-  secreto `GROQ_MODEL`.
+- Modelos por defecto: `openai/gpt-oss-120b` (crear/editar) y `openai/gpt-oss-20b`
+  (preguntas), ambos gratis en Groq. Se cambian con los secretos `GROQ_MODEL` y
+  `GROQ_FAST_MODEL`.
 - Para probar en local: crea un archivo `.env` con `VITE_AI_ENDPOINT=...` (ver `.env.example`).
 - Costo: Groq tier gratis (~14.400 mensajes/día) + Supabase free. $0 para uso normal.
