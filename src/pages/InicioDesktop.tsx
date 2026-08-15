@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import type { Route } from '../App'
-import type { Task } from '../lib/types'
+import type { CalendarEvent, EventType, Task } from '../lib/types'
 import { useAppStore } from '../store/useAppStore'
 import { accentGhost, accentRgb } from '../lib/accents'
-import { avatarSrc } from '../lib/avatars'
 import { currentGrade, minGradeToPass, realEvaluationCount } from '../lib/grades'
 import { formatGrade } from '../lib/format'
 import {
@@ -12,6 +11,7 @@ import {
   MONTH_NAMES,
   classesForDay,
   eventsOn,
+  fromDateKey,
   nextClassToday,
   toDateKey,
   weekday,
@@ -32,9 +32,16 @@ import {
  * Fila 2: "Tus tareas" + "Tus ramos" lado a lado.
  * La Home del celular vive intacta en Inicio.tsx.
  */
+/** Color por tipo de evento (cuando no tiene ramo asociado). */
+const EVENT_TYPE_RGB: Record<EventType, string> = {
+  evaluacion: '239 68 68',
+  tarea: '249 115 22',
+  evento: '59 130 246',
+  recordatorio: '139 92 246',
+}
+
 export function InicioDesktop({ navigate }: { navigate: (r: Route) => void }) {
   const userName = useAppStore((s) => s.userName)
-  const avatar = useAppStore((s) => s.avatar)
   const subjects = useAppStore((s) => s.subjects)
   const tasks = useAppStore((s) => s.tasks)
   const events = useAppStore((s) => s.events)
@@ -61,12 +68,31 @@ export function InicioDesktop({ navigate }: { navigate: (r: Route) => void }) {
   const next = nextClassToday(classes, now)
   const nextSubject = next ? subjects.find((s) => s.id === next.block.subjectId) : null
 
+  // Próximos eventos del calendario (14 días hacia adelante, uno por evento).
+  const proximos: { ev: CalendarEvent; date: string }[] = []
+  const vistos = new Set<string>()
+  for (let i = 0; i < 14 && proximos.length < 6; i++) {
+    const d = new Date(now)
+    d.setDate(now.getDate() + i)
+    const key = toDateKey(d)
+    for (const ev of eventsOn(events, key)) {
+      if (vistos.has(ev.id)) continue
+      vistos.add(ev.id)
+      proximos.push({ ev, date: key })
+      if (proximos.length >= 6) break
+    }
+  }
+  const eventColor = (e: CalendarEvent) => {
+    const subj = subjects.find((s) => s.id === e.subjectId)
+    return subj ? accentRgb(subj.color ?? 'gray') : EVENT_TYPE_RGB[e.type]
+  }
+
   const minsLabel = (m: number) =>
     m >= 60 ? `En ${Math.floor(m / 60)} h ${m % 60 ? `${m % 60} min` : ''}`.trim() : `En ${m} min`
 
   return (
     <div className="h-full overflow-y-auto px-10 pb-10 pt-8">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-6xl">
         {/* Hero */}
         <header className="mb-7 flex items-center justify-between">
           <div>
@@ -88,13 +114,6 @@ export function InicioDesktop({ navigate }: { navigate: (r: Route) => void }) {
               aria-label="Notificaciones"
             >
               <BellIcon className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => navigate({ name: 'profile' })}
-              className="card-hover flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-white shadow-[var(--card-shadow)] ring-1 ring-ink/5"
-              aria-label="Perfil"
-            >
-              <img src={avatarSrc(avatar || 'happy')} alt="" className="h-full w-full object-contain" />
             </button>
           </div>
         </header>
@@ -168,8 +187,8 @@ export function InicioDesktop({ navigate }: { navigate: (r: Route) => void }) {
           </div>
         </div>
 
-        {/* Fila 2: Tareas + Ramos */}
-        <div className="mt-5 grid grid-cols-2 gap-5">
+        {/* Fila 2: Tareas + Ramos + Próximos eventos (llenamos el ancho con info útil) */}
+        <div className="mt-5 grid grid-cols-2 gap-5 xl:grid-cols-3">
           {/* Tus tareas */}
           <div className="glass rounded-[26px] p-6">
             <div className="mb-4 flex items-baseline justify-between">
@@ -288,6 +307,59 @@ export function InicioDesktop({ navigate }: { navigate: (r: Route) => void }) {
                     </div>
                     <ChevronRight className="h-4 w-4 shrink-0 text-ink/25 transition-transform group-hover:translate-x-0.5" />
                   </motion.button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Próximo en el calendario */}
+          <div className="glass rounded-[26px] p-6">
+            <div className="mb-4 flex items-baseline justify-between">
+              <h2 className="text-[17px] font-bold text-ink">Próximo en el calendario</h2>
+              <button
+                onClick={() => navigate({ name: 'calendario' })}
+                className="text-[13px] font-semibold text-ink/40 hover:text-ink/70"
+              >
+                Ver calendario
+              </button>
+            </div>
+            <div className="space-y-1.5">
+              {proximos.length === 0 && (
+                <p className="py-4 text-center text-sm text-ink/40">
+                  Nada agendado en los próximos días
+                </p>
+              )}
+              {proximos.map(({ ev, date }) => {
+                const d = fromDateKey(date)
+                const esHoy = date === todayKey
+                return (
+                  <button
+                    key={ev.id}
+                    onClick={() => navigate({ name: 'calendario' })}
+                    className="flex w-full items-center gap-3 rounded-2xl px-2 py-2 text-left transition-colors hover:bg-ink/[0.04]"
+                  >
+                    <span
+                      className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl"
+                      style={{ background: `rgb(${eventColor(ev)} / 0.12)` }}
+                    >
+                      <span
+                        className="text-[15px] font-black leading-none tabular-nums"
+                        style={{ color: `rgb(${eventColor(ev)})` }}
+                      >
+                        {d.getDate()}
+                      </span>
+                      <span className="mt-0.5 text-[9.5px] font-bold uppercase text-ink/40">
+                        {MONTH_NAMES[d.getMonth()].slice(0, 3)}
+                      </span>
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[14.5px] font-semibold text-ink">{ev.title}</p>
+                      <p className="truncate text-[12px] text-ink/40">
+                        {esHoy ? 'Hoy' : DAY_NAMES[weekday(d)]}
+                        {ev.time ? ` · ${ev.time}` : ''}
+                      </p>
+                    </div>
+                  </button>
                 )
               })}
             </div>
