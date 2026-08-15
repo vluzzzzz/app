@@ -35,7 +35,14 @@ export function pickTier(text: string): Tier {
  * Reintenta solo cuando Groq responde "rate limit" (tokens por minuto del plan gratis),
  * respetando el tiempo que sugiere, para no mostrarle al usuario un error feo.
  */
-export async function askAi(messages: Msg[], tier: Tier = 'smart', attempt = 0): Promise<AiResponse> {
+export type AiFile = { mime: string; data: string }
+
+export async function askAi(
+  messages: Msg[],
+  tier: Tier = 'smart',
+  attempt = 0,
+  file?: AiFile,
+): Promise<AiResponse> {
   if (!ENDPOINT) {
     throw new Error('Brody aún no está configurado.')
   }
@@ -48,14 +55,14 @@ export async function askAi(messages: Msg[], tier: Tier = 'smart', attempt = 0):
       ...(ANON ? { Authorization: `Bearer ${ANON}`, apikey: ANON } : {}),
       ...(idToken ? { 'x-id-token': idToken } : {}),
     },
-    body: JSON.stringify({ messages, tier }),
+    body: JSON.stringify({ messages, tier, ...(file ? { file } : {}) }),
   })
   if (!res.ok) {
     const detail = await res.text().catch(() => '')
     // 401 = el ID token cacheado venció justo: lo renovamos a la fuerza y una más.
     if (res.status === 401 && attempt === 0 && auth?.currentUser) {
       await auth.currentUser.getIdToken(true).catch(() => null)
-      return askAi(messages, tier, attempt + 1)
+      return askAi(messages, tier, attempt + 1, file)
     }
     const isRateLimit = res.status === 429 || /rate.?limit/i.test(detail)
     if (isRateLimit && attempt < 3) {
@@ -63,7 +70,7 @@ export async function askAi(messages: Msg[], tier: Tier = 'smart', attempt = 0):
       const m = /try again in ([\d.]+)s/i.exec(detail)
       const waitMs = m ? Math.ceil(parseFloat(m[1]) * 1000) + 400 : 2500
       await sleep(waitMs)
-      return askAi(messages, tier, attempt + 1)
+      return askAi(messages, tier, attempt + 1, file)
     }
     if (isRateLimit) {
       throw new Error('Uff, me saturé un toque 🥵 dame unos segunditos y volvé a escribirme, bro.')
@@ -72,7 +79,7 @@ export async function askAi(messages: Msg[], tier: Tier = 'smart', attempt = 0):
     // veces en silencio, con más espera la segunda (el arranque tarda unos segundos).
     if (attempt < 2) {
       await sleep(800 * (attempt + 1) + 400)
-      return askAi(messages, tier, attempt + 1)
+      return askAi(messages, tier, attempt + 1, file)
     }
     throw new Error('Se me cruzaron los cables un segundo 😅 probá de nuevo, bro.')
   }
@@ -81,4 +88,24 @@ export async function askAi(messages: Msg[], tier: Tier = 'smart', attempt = 0):
     reply: typeof data.reply === 'string' ? data.reply : '(sin respuesta)',
     actions: Array.isArray(data.actions) ? data.actions : [],
   }
+}
+
+/** Manda una nota de voz al proxy y devuelve el texto transcrito (Whisper en Groq). */
+export async function transcribeAudio(blob: Blob): Promise<string> {
+  if (!ENDPOINT) throw new Error('Brody aún no está configurado.')
+  const idToken = auth?.currentUser ? await auth.currentUser.getIdToken() : ''
+  const ext = blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'webm'
+  const form = new FormData()
+  form.append('audio', blob, `nota.${ext}`)
+  const res = await fetch(`${ENDPOINT}/transcribe`, {
+    method: 'POST',
+    headers: {
+      ...(ANON ? { Authorization: `Bearer ${ANON}`, apikey: ANON } : {}),
+      ...(idToken ? { 'x-id-token': idToken } : {}),
+    },
+    body: form,
+  })
+  if (!res.ok) throw new Error('No pude escuchar el audio 😅 probá de nuevo, bro.')
+  const data = await res.json()
+  return typeof data.text === 'string' ? data.text : ''
 }

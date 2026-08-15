@@ -185,7 +185,16 @@ EJEMPLO 8 (borrar en bloque una fecha):
 Usuario: "borra todo lo que tengo el 23 de octubre"
 Respuesta: {"reply":"Listo, borré todo lo del 23 de octubre 🧹","actions":[
  {"type":"clear_date","date":"2026-10-23"}
-]}`
+]}
+
+ADJUNTOS (imagen o PDF): si manda una pauta de evaluación, programa del curso, horario o
+captura de notas: extrae los datos REALES del archivo (nombres de ramos, porcentajes,
+fechas de pruebas, notas) y crea las acciones que correspondan — create_subject con su
+árbol de pesos tal cual la pauta, add_event (eventType "evaluacion") para fechas de
+pruebas, set_grade/add_note para notas. En "reply" resume clarito qué armaste ("Te armé
+Cálculo con cátedra 60% y lab 40% 📸✨"). Usa SOLO lo que se ve en el archivo, no
+inventes pesos ni fechas. Si el archivo no tiene que ver con los estudios, comenta con
+humor qué es y no crees acciones.`
       : `ACCIONES: si pide crear/editar/agendar/borrar, pon objetos así DENTRO del array "actions"
 (NUNCA como texto en "reply"); si solo pregunta, actions = []. Tipos ("type" + campos):
 {"type":"create_subject","name":…,"nodes"?:[{"name":…,"weight"?,"grade"?,"children"?}]}

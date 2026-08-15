@@ -351,3 +351,21 @@ export function BellIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+export function MicIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="2.5" width="6" height="12" rx="3" />
+      <path d="M5 11a7 7 0 0 0 14 0" />
+      <path d="M12 18v3.5" />
+    </svg>
+  )
+}
+
+export function PaperclipIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="m21.4 11.05-8.9 8.9a5.5 5.5 0 0 1-7.8-7.8l8.9-8.9a3.7 3.7 0 0 1 5.2 5.2l-8.9 8.9a1.9 1.9 0 0 1-2.7-2.7l8.2-8.2" />
+    </svg>
+  )
+}

@@ -6,9 +6,9 @@ import { accentGhost } from '../../lib/accents'
 import { makeId } from '../../lib/format'
 import { EASE } from '../../lib/motion'
 import { buildSystemPrompt } from '../../ai/prompt'
-import { aiConfigured, askAi, pickTier } from '../../ai/client'
+import { aiConfigured, askAi, pickTier, transcribeAudio } from '../../ai/client'
 import { applyActions } from '../../ai/apply'
-import { ChevronLeft } from '../../components/ui/Icons'
+import { ChevronLeft, MicIcon, PaperclipIcon } from '../../components/ui/Icons'
 import { useKeyboardInset } from '../../lib/useKeyboardInset'
 
 const SUGERENCIAS = [
@@ -23,6 +23,41 @@ const SUGERENCIAS = [
  * POR mensaje). Con el tope alto normalmente sale UN solo mensaje de sistema
  * (el modelo sigue mejor un prompt coherente que varios trozos sueltos).
  */
+type Adjunto = { mime: string; data: string; name: string; kind: 'imagen' | 'pdf' }
+
+/** Comprime una imagen a JPEG (máx 1600px) para no mandar fotos de 8MB al proxy. */
+async function compressImage(f: File): Promise<Adjunto> {
+  const url = URL.createObjectURL(f)
+  try {
+    const img = await new Promise<HTMLImageElement>((ok, err) => {
+      const i = new Image()
+      i.onload = () => ok(i)
+      i.onerror = err
+      i.src = url
+    })
+    const scale = Math.min(1, 1600 / Math.max(img.width, img.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(img.width * scale)
+    canvas.height = Math.round(img.height * scale)
+    canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.82)
+    return { mime: 'image/jpeg', data: dataUrl.split(',')[1], name: f.name, kind: 'imagen' }
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+async function fileToAdjunto(f: File): Promise<Adjunto> {
+  if (f.type.startsWith('image/')) return compressImage(f)
+  const dataUrl = await new Promise<string>((ok, err) => {
+    const r = new FileReader()
+    r.onload = () => ok(String(r.result))
+    r.onerror = err
+    r.readAsDataURL(f)
+  })
+  return { mime: 'application/pdf', data: dataUrl.split(',')[1], name: f.name, kind: 'pdf' }
+}
+
 function splitSystem(prompt: string, maxLen = 30000): string[] {
   const chunks: string[] = []
   let buf = ''
@@ -45,15 +80,23 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
   const theme = useAppStore((s) => s.theme)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [adjunto, setAdjunto] = useState<Adjunto | null>(null)
+  const [grabando, setGrabando] = useState(false)
+  const [transcribiendo, setTranscribiendo] = useState(false)
   const kb = useKeyboardInset()
   const scrollRef = useRef<HTMLDivElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const recRef = useRef<MediaRecorder | null>(null)
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 1e9, behavior: 'smooth' })
   }, [chat, loading])
 
   async function send(textArg?: string) {
-    const text = (textArg ?? input).trim()
+    const file = adjunto
+    const typed = (textArg ?? input).trim()
+    // Con adjunto sin texto, la burbuja muestra el nombre del archivo.
+    const text = typed || (file ? `${file.kind === 'pdf' ? '📄' : '📸'} ${file.name}` : '')
     if (!text || loading) return
     setInput('')
     const userMsgId = makeId()
@@ -74,7 +117,8 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
         }))
       // El tier decide también el prompt: preguntas → prompt 'lite' (menos tokens =
       // respuesta rápida y sin chocar el límite por minuto del plan gratis de Groq).
-      const tier = pickTier(text)
+      // Con adjunto siempre 'smart': leer una pauta/PDF requiere el prompt completo.
+      const tier = file ? 'smart' : pickTier(text)
       const systemPrompt = buildSystemPrompt(
         subjects,
         defaultScale,
@@ -88,9 +132,10 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
         ...splitSystem(systemPrompt).map((content) => ({ role: 'system' as const, content })),
         ...history,
       ]
-      const res = await askAi(messages, tier)
+      const res = await askAi(messages, tier, 0, file ? { mime: file.mime, data: file.data } : undefined)
       const applied =
         res.actions && res.actions.length ? applyActions(res.actions) : []
+      setAdjunto(null)
       pushChat({
         id: makeId(),
         role: 'assistant',
@@ -100,11 +145,48 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
     } catch {
       // Falló todo (tras los reintentos silenciosos): sacamos el mensaje del chat y
       // lo devolvemos al input listo para reenviar — nada de burbujas de error.
+      // El adjunto queda puesto, listo para el reintento.
       const st = useAppStore.getState()
       st.setChat(st.chat.filter((m) => m.id !== userMsgId))
-      setInput(text)
+      setInput(typed)
     } finally {
       setLoading(false)
+    }
+  }
+
+  /** Nota de voz: un toque graba, otro corta → se transcribe y se manda solo. */
+  async function toggleMic() {
+    if (grabando) {
+      recRef.current?.stop()
+      return
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const rec = new MediaRecorder(stream)
+      const chunks: BlobPart[] = []
+      rec.ondataavailable = (e) => {
+        if (e.data.size) chunks.push(e.data)
+      }
+      rec.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop())
+        setGrabando(false)
+        const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' })
+        if (blob.size < 1500) return // toque accidental, sin audio real
+        setTranscribiendo(true)
+        let texto = ''
+        try {
+          texto = await transcribeAudio(blob)
+        } catch {
+          /* nada: puede volver a intentar */
+        }
+        setTranscribiendo(false)
+        if (texto) void send(texto)
+      }
+      recRef.current = rec
+      rec.start()
+      setGrabando(true)
+    } catch {
+      /* micrófono denegado: no hacemos nada */
     }
   }
 
@@ -196,10 +278,11 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
           ))}
         </AnimatePresence>
 
-        {loading && (
+        {(loading || transcribiendo) && (
           <div className="flex justify-start">
             <div className="glass glass-highlight rounded-3xl px-4 py-3 text-ink/50">
-              <span className="inline-flex gap-1">
+              <span className="inline-flex items-center gap-1">
+                {transcribiendo && <span className="mr-1 text-xs">🎧</span>}
                 <Dot /> <Dot d={0.15} /> <Dot d={0.3} />
               </span>
             </div>
@@ -212,7 +295,42 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
         className="px-4 pt-2 transition-[padding] duration-200"
         style={{ paddingBottom: `max(1rem, ${kb + 16}px)` }}
       >
-        <div className="glass glass-highlight flex items-end gap-2 rounded-3xl p-2">
+        {adjunto && (
+          <div className="glass glass-highlight mb-2 flex items-center gap-2 rounded-2xl px-3 py-2 text-sm text-ink/80">
+            <span>{adjunto.kind === 'pdf' ? '📄' : '📸'}</span>
+            <span className="min-w-0 flex-1 truncate">{adjunto.name}</span>
+            <button onClick={() => setAdjunto(null)} className="px-1 text-ink/50">
+              ✕
+            </button>
+          </div>
+        )}
+        <div className="glass glass-highlight flex items-end gap-1 rounded-3xl p-2">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*,application/pdf"
+            className="hidden"
+            onChange={async (e) => {
+              const f = e.target.files?.[0]
+              e.target.value = ''
+              if (!f) return
+              // PDFs gigantes no: el proxy los rechaza igual (tope ~10MB).
+              if (f.type === 'application/pdf' && f.size > 10_000_000) return
+              try {
+                setAdjunto(await fileToAdjunto(f))
+              } catch {
+                /* archivo ilegible */
+              }
+            }}
+          />
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => fileRef.current?.click()}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink/60"
+            aria-label="Adjuntar imagen o PDF"
+          >
+            <PaperclipIcon className="h-5 w-5" />
+          </motion.button>
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -223,13 +341,23 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
               }
             }}
             rows={1}
-            placeholder="Escribe un mensaje…"
-            className="max-h-28 min-h-[2.5rem] flex-1 resize-none bg-transparent px-3 py-2 text-[15px] text-ink outline-none placeholder:text-ink/40"
+            placeholder={grabando ? 'Grabando… tocá el mic para cortar' : 'Escribe un mensaje…'}
+            className="max-h-28 min-h-[2.5rem] flex-1 resize-none bg-transparent px-2 py-2 text-[15px] text-ink outline-none placeholder:text-ink/40"
           />
           <motion.button
             whileTap={{ scale: 0.9 }}
+            onClick={toggleMic}
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+              grabando ? 'animate-pulse bg-rose-500 text-white' : 'text-ink/60'
+            }`}
+            aria-label={grabando ? 'Cortar grabación' : 'Grabar nota de voz'}
+          >
+            <MicIcon className="h-5 w-5" />
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.9 }}
             onClick={() => send()}
-            disabled={!input.trim() || loading}
+            disabled={(!input.trim() && !adjunto) || loading}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink text-surface disabled:opacity-40"
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">

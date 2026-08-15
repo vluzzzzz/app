@@ -28,6 +28,11 @@ const FAST_MODEL = Deno.env.get('GROQ_FAST_MODEL') ?? 'openai/gpt-oss-20b'
 // fallaron (cuota del minuto agotada, caída, etc.). Cuota independiente de Groq.
 const GEMINI_KEY = Deno.env.get('GEMINI_API_KEY')
 const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-flash-lite-latest'
+// Notas de voz del chat: se transcriben con Whisper, que corre gratis en Groq.
+const WHISPER_MODEL = Deno.env.get('GROQ_WHISPER_MODEL') ?? 'whisper-large-v3-turbo'
+// Adjuntos que Brody sabe leer (los procesa Gemini, que es multimodal).
+const ALLOWED_FILE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+const MAX_FILE_B64_CHARS = 15_000_000 // ~11 MB reales; las fotos llegan comprimidas del cliente
 const PROJECT_ID = Deno.env.get('FIREBASE_PROJECT_ID') ?? 'brody-13148'
 
 // Dominios permitidos (CORS).
@@ -98,8 +103,32 @@ Deno.serve(async (req: Request) => {
       return json({ error: 'Sesión inválida' }, 401, origin)
     }
 
+    // 1b) Notas de voz: POST .../chat/transcribe con FormData { audio } → { text }.
+    if (new URL(req.url).pathname.endsWith('/transcribe')) {
+      const form = await req.formData()
+      const audio = form.get('audio')
+      if (!(audio instanceof File)) return json({ error: 'audio requerido' }, 400, origin)
+      if (audio.size > 12_000_000) return json({ error: 'Audio muy largo' }, 413, origin)
+      const gf = new FormData()
+      gf.append('file', audio, audio.name || 'audio.webm')
+      gf.append('model', WHISPER_MODEL)
+      gf.append('language', 'es')
+      const wr = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${GROQ_KEY}` },
+        body: gf,
+      })
+      if (!wr.ok) {
+        const detail = await wr.text().catch(() => '')
+        console.error('Whisper fallo', wr.status, detail)
+        return json({ error: 'Transcripción falló', detail }, 502, origin)
+      }
+      const wd = await wr.json()
+      return json({ text: typeof wd.text === 'string' ? wd.text.trim() : '' }, 200, origin)
+    }
+
     // 2) Validación de entrada.
-    const { messages, tier } = await req.json()
+    const { messages, tier, file } = await req.json()
     const model = tier === 'fast' ? FAST_MODEL : MODEL
     if (!Array.isArray(messages) || messages.length === 0) {
       return json({ error: 'messages requerido' }, 400, origin)
@@ -114,6 +143,18 @@ Deno.serve(async (req: Request) => {
       total += c.length
     }
     if (total > MAX_TOTAL_CHARS) return json({ error: 'Conversación muy larga' }, 413, origin)
+    // Adjunto opcional (imagen o PDF): { mime, data } con data en base64 pelado.
+    if (file) {
+      if (
+        typeof file.mime !== 'string' ||
+        typeof file.data !== 'string' ||
+        !ALLOWED_FILE_MIMES.includes(file.mime)
+      ) {
+        return json({ error: 'Adjunto no soportado' }, 415, origin)
+      }
+      if (file.data.length > MAX_FILE_B64_CHARS) return json({ error: 'Archivo muy grande' }, 413, origin)
+      if (!GEMINI_KEY) return json({ error: 'Adjuntos no configurados' }, 501, origin)
+    }
 
     // 3) Proxy a Groq, con FALLBACK de modelo.
     const callGroq = (useModel: string) =>
@@ -160,26 +201,67 @@ Deno.serve(async (req: Request) => {
         }),
       })
 
-    // Cadena de motores: modelo del tier → el otro modelo de Groq (cupo separado)
-    // → Gemini (proveedor aparte). El usuario solo ve error si fallan LOS TRES.
-    let r = await callGroq(model)
-    if (!r.ok) {
-      console.error('Groq fallo 1', r.status, await r.text().catch(() => ''))
-      r = await callGroq(model === FAST_MODEL ? MODEL : FAST_MODEL)
-    }
-    if (!r.ok && GEMINI_KEY) {
-      console.error('Groq fallo 2', r.status, await r.text().catch(() => ''))
-      r = await callGemini()
-    }
+    let content: string
+    if (file) {
+      // Con adjunto va DIRECTO a Gemini (los modelos de Groq no ven imágenes/PDF).
+      // API nativa: el prompt del sistema va aparte y el archivo como inline_data
+      // pegado al último mensaje del usuario.
+      const sys = messages
+        .filter((m: any) => m.role === 'system')
+        .map((m: any) => m.content)
+        .join('\n\n')
+      const hist = messages.filter((m: any) => m.role !== 'system')
+      const contents = hist.map((m: any, i: number) => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts:
+          i === hist.length - 1
+            ? [{ text: m.content }, { inline_data: { mime_type: file.mime, data: file.data } }]
+            : [{ text: m.content }],
+      }))
+      const gr = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY! },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: sys }] },
+            contents,
+            generationConfig: { temperature: 0.4, maxOutputTokens: 2048 },
+          }),
+        },
+      )
+      if (!gr.ok) {
+        const detail = await gr.text().catch(() => '')
+        console.error('Gemini adjunto fallo', gr.status, detail)
+        return json({ error: 'AI error', detail }, 502, origin)
+      }
+      const gd = await gr.json()
+      content =
+        (gd?.candidates?.[0]?.content?.parts ?? [])
+          .map((p: any) => p.text ?? '')
+          .join('') || '{}'
+    } else {
+      // Cadena de motores: modelo del tier → el otro modelo de Groq (cupo separado)
+      // → Gemini (proveedor aparte). El usuario solo ve error si fallan LOS TRES.
+      let r = await callGroq(model)
+      if (!r.ok) {
+        console.error('Groq fallo 1', r.status, await r.text().catch(() => ''))
+        r = await callGroq(model === FAST_MODEL ? MODEL : FAST_MODEL)
+      }
+      if (!r.ok && GEMINI_KEY) {
+        console.error('Groq fallo 2', r.status, await r.text().catch(() => ''))
+        r = await callGemini()
+      }
 
-    if (!r.ok) {
-      const detail = await r.text().catch(() => '')
-      console.error('Fallaron todos los motores', r.status, detail)
-      return json({ error: 'AI error', detail }, 502, origin)
-    }
+      if (!r.ok) {
+        const detail = await r.text().catch(() => '')
+        console.error('Fallaron todos los motores', r.status, detail)
+        return json({ error: 'AI error', detail }, 502, origin)
+      }
 
-    const data = await r.json()
-    const content = data?.choices?.[0]?.message?.content ?? '{}'
+      const data = await r.json()
+      content = data?.choices?.[0]?.message?.content ?? '{}'
+    }
     let parsed: { reply?: string; actions?: unknown[] } = {}
     try {
       parsed = JSON.parse(content)
