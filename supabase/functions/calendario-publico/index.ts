@@ -84,7 +84,7 @@ Deno.serve(async (req: Request) => {
       const token = new URL(req.url).searchParams.get('t') ?? ''
       if (!token || token.length < 16) return json({ error: 'Link inválido' }, 400, origin)
       const r = await rest(
-        `perfiles?share_calendario=eq.${encodeURIComponent(token)}&select=nombre,eventos,ramos,share_cal_meses`,
+        `perfiles?share_calendario=eq.${encodeURIComponent(token)}&select=nombre,eventos,ramos,horario,share_cal_meses,share_cal_clases`,
         { method: 'GET' },
       )
       if (!r.ok) return json({ error: 'db' }, 502, origin)
@@ -110,6 +110,9 @@ Deno.serve(async (req: Request) => {
           eventos,
           ramos: publicRamos(row.ramos),
           meses,
+          // Las clases del horario solo viajan si el dueño prendió el interruptor.
+          horario: row.share_cal_clases === true && Array.isArray(row.horario) ? row.horario : [],
+          clases: row.share_cal_clases === true,
         },
         200,
         origin,
@@ -138,7 +141,7 @@ Deno.serve(async (req: Request) => {
 
     const getRow = async () => {
       const r = await rest(
-        `perfiles?uid=eq.${encodeURIComponent(uid)}&select=share_calendario,share_cal_meses`,
+        `perfiles?uid=eq.${encodeURIComponent(uid)}&select=share_calendario,share_cal_meses,share_cal_clases`,
         { method: 'GET' },
       )
       if (!r.ok) return null
@@ -149,7 +152,11 @@ Deno.serve(async (req: Request) => {
     if (action === 'get') {
       const row = await getRow()
       return json(
-        { token: row?.share_calendario ?? null, meses: sanitizeMeses(row?.share_cal_meses) },
+        {
+          token: row?.share_calendario ?? null,
+          meses: sanitizeMeses(row?.share_cal_meses),
+          clases: row?.share_cal_clases === true,
+        },
         200,
         origin,
       )
@@ -157,35 +164,37 @@ Deno.serve(async (req: Request) => {
 
     if (action === 'enable') {
       const meses = sanitizeMeses(body?.meses)
+      const clases = body?.clases === true
       const row = await getRow()
       let token: string = row?.share_calendario ?? ''
       if (!token) token = crypto.randomUUID().replace(/-/g, '')
       const r = await rest(`perfiles?uid=eq.${encodeURIComponent(uid)}`, {
         method: 'PATCH',
-        body: JSON.stringify({ share_calendario: token, share_cal_meses: meses }),
+        body: JSON.stringify({ share_calendario: token, share_cal_meses: meses, share_cal_clases: clases }),
       })
       if (!r.ok) return json({ error: 'db', detail: await r.text() }, 502, origin)
-      return json({ token, meses }, 200, origin)
+      return json({ token, meses, clases }, 200, origin)
     }
 
     if (action === 'config') {
       const meses = sanitizeMeses(body?.meses)
+      const clases = body?.clases === true
       const r = await rest(`perfiles?uid=eq.${encodeURIComponent(uid)}`, {
         method: 'PATCH',
-        body: JSON.stringify({ share_cal_meses: meses }),
+        body: JSON.stringify({ share_cal_meses: meses, share_cal_clases: clases }),
       })
       if (!r.ok) return json({ error: 'db' }, 502, origin)
       const row = await getRow()
-      return json({ token: row?.share_calendario ?? null, meses }, 200, origin)
+      return json({ token: row?.share_calendario ?? null, meses, clases }, 200, origin)
     }
 
     if (action === 'disable') {
       const r = await rest(`perfiles?uid=eq.${encodeURIComponent(uid)}`, {
         method: 'PATCH',
-        body: JSON.stringify({ share_calendario: null, share_cal_meses: null }),
+        body: JSON.stringify({ share_calendario: null, share_cal_meses: null, share_cal_clases: null }),
       })
       if (!r.ok) return json({ error: 'db' }, 502, origin)
-      return json({ token: null, meses: null }, 200, origin)
+      return json({ token: null, meses: null, clases: false }, 200, origin)
     }
 
     return json({ error: 'Acción desconocida' }, 400, origin)

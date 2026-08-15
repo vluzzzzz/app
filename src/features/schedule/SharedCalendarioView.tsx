@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { CalendarEvent, EventType } from '../../lib/types'
 import {
+  CLASS_TYPE_LABEL,
   DAY_SHORT,
   DAY_NAMES,
   MONTH_NAMES,
+  classesForDay,
   eventsOn,
   fromDateKey,
   monthGrid,
@@ -13,7 +15,7 @@ import {
 } from '../../lib/schedule'
 import { accentRgb } from '../../lib/accents'
 import { fetchSharedCalendario, type SharedCalendario } from '../../lib/shareCal'
-import { ChevronLeft, ChevronRight, MoonIcon, SunIcon } from '../../components/ui/Icons'
+import { ChevronDown, ChevronLeft, ChevronRight, MoonIcon, SunIcon } from '../../components/ui/Icons'
 
 const EVENT_TYPE_RGB: Record<EventType, string> = {
   evaluacion: '239 68 68',
@@ -49,6 +51,10 @@ export function SharedCalendarioView({ token }: { token: string }) {
   const [expanded, setExpanded] = useState(false)
   const [peekKey, setPeekKey] = useState<string | null>(null)
   const [selectedKey, setSelectedKey] = useState(todayKey)
+  // Clases plegadas por defecto (detalle del día y vista rápida), como en la app.
+  const [clasesOpen, setClasesOpen] = useState(false)
+  const [peekClasesOpen, setPeekClasesOpen] = useState(false)
+  useEffect(() => setClasesOpen(false), [selectedKey])
 
   // El link compartido SIEMPRE abre en tema claro; el visitante puede alternar.
   const [dark, setDark] = useState(false)
@@ -280,6 +286,8 @@ export function SharedCalendarioView({ token }: { token: string }) {
         (() => {
           const sel = fromDateKey(selectedKey)
           const selEvents = eventsOn(data.eventos, selectedKey)
+          const selClasses = classesForDay(data.horario, weekday(sel))
+          const totalSel = selEvents.length + selClasses.length
           return (
             <>
               <div className="mb-3 mt-6 flex items-baseline justify-between px-1">
@@ -287,18 +295,76 @@ export function SharedCalendarioView({ token }: { token: string }) {
                   {DAY_NAMES[weekday(sel)]} {sel.getDate()}
                   <span className="font-semibold text-ink/40"> de {MONTH_NAMES[sel.getMonth()]}</span>
                 </h2>
-                {selEvents.length > 0 && (
+                {totalSel > 0 && (
                   <span className="shrink-0 text-sm font-semibold text-ink/40">
-                    {selEvents.length} {selEvents.length === 1 ? 'cosa' : 'cosas'}
+                    {totalSel} {totalSel === 1 ? 'cosa' : 'cosas'}
                   </span>
                 )}
               </div>
-              {selEvents.length === 0 ? (
+              {totalSel === 0 ? (
                 <div className="glass rounded-3xl p-8 text-center">
                   <p className="text-[15px] font-semibold text-ink">Nada para este día</p>
                 </div>
               ) : (
                 <div className="space-y-2.5">
+                  {selClasses.length > 0 && (
+                    <>
+                      <button
+                        onClick={() => setClasesOpen((v) => !v)}
+                        className="glass flex w-full items-center justify-between rounded-[20px] p-4 active:opacity-80"
+                      >
+                        <span className="text-[15px] font-bold text-ink">
+                          Clases <span className="font-semibold text-ink/40">({selClasses.length})</span>
+                        </span>
+                        <ChevronDown
+                          className={`h-4 w-4 text-ink/50 transition-transform duration-200 ${
+                            clasesOpen ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </button>
+                      <AnimatePresence initial={false}>
+                        {clasesOpen && (
+                          <motion.div
+                            key="shared-clases"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.24, ease: 'easeInOut' }}
+                            className="overflow-hidden"
+                          >
+                            <div className="space-y-2.5">
+                              {selClasses.map((c) => (
+                                <div key={c.id} className="glass rounded-[20px] p-4">
+                                  <div className="flex gap-2.5">
+                                    <span
+                                      className="w-[3px] shrink-0 self-stretch rounded-full"
+                                      style={{
+                                        background: `rgb(${accentRgb(ramo(c.subjectId)?.color ?? 'gray')})`,
+                                      }}
+                                    />
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-start justify-between gap-2">
+                                        <h3 className="break-words text-[15px] font-bold text-ink">
+                                          {ramo(c.subjectId)?.nombre ?? 'Clase'}
+                                        </h3>
+                                        <span className="shrink-0 text-[12px] font-medium text-ink/40">
+                                          Clase · {CLASS_TYPE_LABEL[c.type]}
+                                        </span>
+                                      </div>
+                                      <p className="mt-0.5 text-sm tabular-nums text-ink/55">
+                                        {c.start} — {c.end}
+                                        {c.room ? ` · ${c.room}` : ''}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </>
+                  )}
                   {selEvents.map((e, i) => (
                     <motion.div
                       key={e.id}
@@ -373,7 +439,10 @@ export function SharedCalendarioView({ token }: { token: string }) {
                       layoutId={`speek-x-${key}`}
                       layoutDependency={peekKey}
                       style={{ borderRadius: 16 }}
-                      onClick={() => setPeekKey(key)}
+                      onClick={() => {
+                        setPeekClasesOpen(false)
+                        setPeekKey(key)
+                      }}
                       className="min-h-[110px] px-1 pt-1.5 text-left align-top active:bg-ink/[0.03]"
                     >
                       <motion.div layout="position" className="flex flex-col gap-1">
@@ -416,6 +485,8 @@ export function SharedCalendarioView({ token }: { token: string }) {
           (() => {
             const pd = fromDateKey(peekKey)
             const pEvents = eventsOn(data.eventos, peekKey)
+            const pClasses = classesForDay(data.horario, weekday(pd))
+            const nPeek = pEvents.length + pClasses.length
             const layoutBase = 'speek-x'
             return (
               <motion.div
@@ -447,19 +518,70 @@ export function SharedCalendarioView({ token }: { token: string }) {
                         {DAY_NAMES[weekday(pd)]} {pd.getDate()}
                         <span className="font-semibold text-ink/40"> de {MONTH_NAMES[pd.getMonth()]}</span>
                       </h3>
-                      {pEvents.length > 0 && (
+                      {nPeek > 0 && (
                         <span className="shrink-0 text-sm font-semibold text-ink/40">
-                          {pEvents.length} {pEvents.length === 1 ? 'cosa' : 'cosas'}
+                          {nPeek} {nPeek === 1 ? 'cosa' : 'cosas'}
                         </span>
                       )}
                     </div>
 
-                    {pEvents.length === 0 ? (
+                    {nPeek === 0 ? (
                       <p className="py-6 text-center text-[15px] text-ink/50">
                         Nada para este día 😌
                       </p>
                     ) : (
                       <div className="space-y-2">
+                        {pClasses.length > 0 && (
+                          <>
+                            <button
+                              onClick={() => setPeekClasesOpen((v) => !v)}
+                              className="flex w-full items-center justify-between rounded-2xl bg-ink/[0.04] p-3 active:bg-ink/[0.07]"
+                            >
+                              <span className="text-[14px] font-bold text-ink">
+                                Clases <span className="font-semibold text-ink/40">({pClasses.length})</span>
+                              </span>
+                              <ChevronDown
+                                className={`h-4 w-4 text-ink/50 transition-transform duration-200 ${
+                                  peekClasesOpen ? 'rotate-180' : ''
+                                }`}
+                              />
+                            </button>
+                            <AnimatePresence initial={false}>
+                              {peekClasesOpen && (
+                                <motion.div
+                                  key="shared-peek-clases"
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.24, ease: 'easeInOut' }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="space-y-2">
+                                    {pClasses.map((c) => (
+                                      <div key={c.id} className="flex gap-2.5 rounded-2xl bg-ink/[0.04] p-3">
+                                        <span
+                                          className="w-[3px] shrink-0 self-stretch rounded-full"
+                                          style={{
+                                            background: `rgb(${accentRgb(ramo(c.subjectId)?.color ?? 'gray')})`,
+                                          }}
+                                        />
+                                        <div className="min-w-0">
+                                          <p className="break-words text-[14px] font-bold text-ink">
+                                            {ramo(c.subjectId)?.nombre ?? 'Clase'}
+                                          </p>
+                                          <p className="text-[12.5px] tabular-nums text-ink/55">
+                                            {c.start} — {c.end}
+                                            {c.room ? ` · ${c.room}` : ''} · {CLASS_TYPE_LABEL[c.type]}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </>
+                        )}
                         {pEvents.map((e) => (
                           <div key={e.id} className="flex gap-2.5 rounded-2xl bg-ink/[0.04] p-3">
                             <span

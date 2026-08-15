@@ -5,7 +5,7 @@ import {
   disableCalShare,
   enableCalShare,
   getCalShare,
-  setCalShareMeses,
+  setCalShareConfig,
   shareCalUrl,
 } from '../../lib/shareCal'
 import { MONTH_NAMES } from '../../lib/schedule'
@@ -31,6 +31,7 @@ export function ShareCalendarioSheet({ open, onClose }: Props) {
   const [token, setToken] = useState<string | null>(null)
   const [todo, setTodo] = useState(true)
   const [sel, setSel] = useState<string[]>([])
+  const [clases, setClases] = useState(false)
   const [copied, setCopied] = useState(false)
 
   const opts = monthOptions()
@@ -41,6 +42,7 @@ export function ShareCalendarioSheet({ open, onClose }: Props) {
     setCopied(false)
     getCalShare().then((st) => {
       setToken(st?.token ?? null)
+      setClases(st?.clases ?? false)
       if (st?.meses?.length) {
         setTodo(false)
         setSel(st.meses)
@@ -53,14 +55,14 @@ export function ShareCalendarioSheet({ open, onClose }: Props) {
   }, [open])
 
   /** Guarda la selección en el servidor (solo si el link ya existe). */
-  const persist = (nuevoTodo: boolean, nuevaSel: string[]) => {
-    if (token) void setCalShareMeses(nuevoTodo ? null : nuevaSel)
+  const persist = (nuevoTodo: boolean, nuevaSel: string[], nuevasClases: boolean) => {
+    if (token) void setCalShareConfig(nuevoTodo ? null : nuevaSel, nuevasClases)
   }
 
   const pickTodo = () => {
     setTodo(true)
     setSel([])
-    persist(true, [])
+    persist(true, [], clases)
   }
 
   const toggleMes = (key: string) => {
@@ -68,12 +70,18 @@ export function ShareCalendarioSheet({ open, onClose }: Props) {
     const nuevoTodo = nueva.length === 0
     setTodo(nuevoTodo)
     setSel(nueva)
-    persist(nuevoTodo, nueva)
+    persist(nuevoTodo, nueva, clases)
+  }
+
+  const toggleClases = () => {
+    const v = !clases
+    setClases(v)
+    persist(todo, sel, v)
   }
 
   const turnOn = async () => {
     setWorking(true)
-    const st = await enableCalShare(todo ? null : sel)
+    const st = await enableCalShare(todo ? null : sel, clases)
     setToken(st?.token ?? null)
     setWorking(false)
   }
@@ -124,7 +132,7 @@ export function ShareCalendarioSheet({ open, onClose }: Props) {
       >
         Todo el calendario
       </button>
-      <div className="mb-4 grid grid-cols-3 gap-1.5">
+      <div className="mb-3 grid grid-cols-3 gap-1.5">
         {opts.map((o) => {
           const on = sel.includes(o.key)
           return (
@@ -140,6 +148,25 @@ export function ShareCalendarioSheet({ open, onClose }: Props) {
           )
         })}
       </div>
+
+      {/* Interruptor: incluir (o no) las clases del horario en el link */}
+      <button
+        onClick={toggleClases}
+        className="mb-4 flex w-full items-center justify-between rounded-2xl bg-ink/5 px-3 py-3 active:bg-ink/10"
+      >
+        <span className="text-[14px] font-semibold text-ink">Compartir también mis clases</span>
+        <span
+          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ${
+            clases ? 'bg-ink' : 'bg-ink/15'
+          }`}
+        >
+          <span
+            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all duration-200 ${
+              clases ? 'left-[22px]' : 'left-0.5'
+            }`}
+          />
+        </span>
+      </button>
     </>
   )
 
