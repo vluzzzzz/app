@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useAppStore } from '../store/useAppStore'
 import type { CalendarEvent, EventType, Task } from '../lib/types'
 import {
@@ -43,6 +43,9 @@ export function Calendario() {
   const [month, setMonth] = useState(today.getMonth())
   const [selectedKey, setSelectedKey] = useState(todayKey)
   const [expanded, setExpanded] = useState(false)
+  // Día "espiado" en la vista ampliada: se agranda encima (como el visor de imagen)
+  // mostrando todo lo que tiene, en vez de volver a la vista compacta.
+  const [peekKey, setPeekKey] = useState<string | null>(null)
 
   const [eventSheetOpen, setEventSheetOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
@@ -142,16 +145,16 @@ export function Calendario() {
           )}
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-ink/60 active:bg-ink/5"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-ink/5 text-ink/70 active:bg-ink/10"
             aria-label={expanded ? 'Vista compacta' : 'Vista mensual'}
           >
             {expanded ? (
-              <svg viewBox="0 0 24 24" fill="currentColor" className="h-[18px] w-[18px]">
+              <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
                 <rect x="3.5" y="5" width="17" height="4.2" rx="1.6" />
                 <rect x="3.5" y="14.8" width="17" height="4.2" rx="1.6" />
               </svg>
             ) : (
-              <svg viewBox="0 0 24 24" fill="currentColor" className="h-[18px] w-[18px]">
+              <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
                 <rect x="3.5" y="3.5" width="7.5" height="7.5" rx="2" />
                 <rect x="13" y="3.5" width="7.5" height="7.5" rx="2" />
                 <rect x="3.5" y="13" width="7.5" height="7.5" rx="2" />
@@ -206,11 +209,11 @@ export function Calendario() {
                         {d.getDate()}
                       </span>
                     </span>
-                    <span className="mt-1 flex h-1.5 items-center gap-0.5">
+                    <span className="mt-1 flex h-2 items-center gap-[3px]">
                       {dots.map((it, i) => (
                         <span
                           key={i}
-                          className="h-1 w-1 rounded-full"
+                          className="h-1.5 w-1.5 rounded-full"
                           style={{ background: isSelected ? 'rgb(var(--surface) / 0.7)' : `rgb(${it.rgb})` }}
                         />
                       ))}
@@ -249,8 +252,9 @@ export function Calendario() {
                   <button
                     key={di}
                     onClick={() => {
+                      // Agranda el día encima (vista rápida) — no colapsa el mes.
                       setSelectedKey(key)
-                      setExpanded(false)
+                      setPeekKey(key)
                     }}
                     className="flex min-h-[122px] flex-col gap-1 px-1 pt-1.5 text-left align-top active:bg-ink/[0.03]"
                   >
@@ -424,6 +428,121 @@ export function Calendario() {
           )}
         </>
       )}
+
+      {/* Vista rápida de un día (desde el mes ampliado): se agranda por encima
+          mostrando todo lo que tiene, como el visor de imágenes del chat. */}
+      <AnimatePresence>
+        {peekKey &&
+          (() => {
+            const pd = fromDateKey(peekKey)
+            const pClasses = classesForDay(classes, weekday(pd))
+            const pEvents = eventsOn(events, peekKey)
+            const pTasks = tasks.filter((t) => t.date === peekKey)
+            const n = pClasses.length + pEvents.length + pTasks.length
+            return (
+              <motion.div
+                key="peek"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                onClick={() => setPeekKey(null)}
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-5 backdrop-blur-[2px]"
+              >
+                <motion.div
+                  initial={{ scale: 0.88, y: 12 }}
+                  animate={{ scale: 1, y: 0 }}
+                  exit={{ scale: 0.92, y: 8 }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="max-h-[75vh] w-full max-w-sm overflow-y-auto rounded-[28px] bg-surface p-5 shadow-2xl"
+                >
+                  <div className="mb-3 flex items-baseline justify-between gap-2">
+                    <h3 className="text-[18px] font-bold text-ink">
+                      {DAY_NAMES[weekday(pd)]} {pd.getDate()}
+                      <span className="font-semibold text-ink/40"> de {MONTH_NAMES[pd.getMonth()]}</span>
+                    </h3>
+                    {n > 0 && (
+                      <span className="shrink-0 text-sm font-semibold text-ink/40">
+                        {n} {n === 1 ? 'cosa' : 'cosas'}
+                      </span>
+                    )}
+                  </div>
+
+                  {n === 0 ? (
+                    <p className="py-6 text-center text-[15px] text-ink/50">
+                      Nada para este día — libreee 😎
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {pClasses.map((c) => (
+                        <div key={c.id} className="relative overflow-hidden rounded-2xl bg-ink/[0.04] p-3 pl-4">
+                          <span
+                            className="absolute inset-y-1.5 left-0 w-1 rounded-r-full"
+                            style={{ background: subjectColor(c.subjectId) }}
+                          />
+                          <p className="break-words text-[14px] font-bold text-ink">
+                            {subjectName(c.subjectId) ?? 'Clase'}
+                          </p>
+                          <p className="text-[12.5px] tabular-nums text-ink/55">
+                            {c.start} — {c.end}
+                            {c.room ? ` · ${c.room}` : ''} · {CLASS_TYPE_LABEL[c.type]}
+                          </p>
+                        </div>
+                      ))}
+                      {pEvents.map((e) => (
+                        <div key={e.id} className="relative overflow-hidden rounded-2xl bg-ink/[0.04] p-3 pl-4">
+                          <span
+                            className="absolute inset-y-1.5 left-0 w-1 rounded-r-full"
+                            style={{ background: `rgb(${eventRgb(e)})` }}
+                          />
+                          <p className="break-words text-[14px] font-bold text-ink">{e.title}</p>
+                          <p className="text-[12.5px] tabular-nums text-ink/55">
+                            {[EVENT_TYPE_LABEL[e.type], e.time ?? 'Todo el día', e.location]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </p>
+                        </div>
+                      ))}
+                      {pTasks.map((t) => (
+                        <div key={t.id} className="relative overflow-hidden rounded-2xl bg-ink/[0.04] p-3 pl-4">
+                          <span
+                            className="absolute inset-y-1.5 left-0 w-1 rounded-r-full"
+                            style={{
+                              background: t.color ? `rgb(${accentRgb(t.color)})` : 'rgb(var(--ink) / 0.8)',
+                            }}
+                          />
+                          <p
+                            className={`break-words text-[14px] font-bold text-ink ${
+                              t.done ? 'line-through opacity-60' : ''
+                            }`}
+                          >
+                            {t.title}
+                          </p>
+                          <p className="text-[12.5px] text-ink/55">
+                            Tarea
+                            {t.time ? ` · ${t.time}` : ''}
+                            {t.done ? ' · Completada' : ''}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setPeekKey(null)
+                      setExpanded(false)
+                    }}
+                    className="mt-4 w-full rounded-2xl bg-ink py-3 text-[15px] font-semibold text-surface"
+                  >
+                    Ver día completo
+                  </button>
+                </motion.div>
+              </motion.div>
+            )
+          })()}
+      </AnimatePresence>
 
       <EventSheet
         open={eventSheetOpen}
