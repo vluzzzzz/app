@@ -49,6 +49,10 @@ export function Calendario() {
   // Las clases del día van plegadas por defecto (ya se sabe que hay clases);
   // se despliegan con la flechita "Clases".
   const [peekClasesOpen, setPeekClasesOpen] = useState(false)
+  // Desde dónde crece la tarjeta: offset del centro de la celda tocada respecto
+  // al centro de la pantalla. La tarjeta crece UNIFORME (sin estirarse) mientras
+  // viaja desde ahí, y al cerrar vuelve al mismo punto.
+  const [peekFrom, setPeekFrom] = useState<{ dx: number; dy: number }>({ dx: 0, dy: 0 })
 
   const [eventSheetOpen, setEventSheetOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
@@ -252,12 +256,16 @@ export function Calendario() {
                 const isToday = key === todayKey
                 const items = itemsFor(d)
                 return (
-                  <motion.button
+                  <button
                     key={di}
-                    layoutId={`peek-${key}`}
-                    style={{ borderRadius: 14 }}
-                    onClick={() => {
+                    onClick={(e) => {
                       // Agranda el día encima (vista rápida) — no colapsa el mes.
+                      // Guardamos desde dónde crece: el centro de esta celda.
+                      const r = e.currentTarget.getBoundingClientRect()
+                      setPeekFrom({
+                        dx: r.left + r.width / 2 - window.innerWidth / 2,
+                        dy: r.top + r.height / 2 - window.innerHeight / 2,
+                      })
                       setSelectedKey(key)
                       setPeekClasesOpen(false)
                       setPeekKey(key)
@@ -287,7 +295,7 @@ export function Calendario() {
                         </span>
                       )}
                     </div>
-                  </motion.button>
+                  </button>
                 )
               })}
             </div>
@@ -455,12 +463,20 @@ export function Calendario() {
                 onClick={() => setPeekKey(null)}
                 className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-5 backdrop-blur-[2px]"
               >
-                {/* Container transform: la celda del día y esta tarjeta comparten
-                    layoutId → el día se TRANSFORMA en la tarjeta (y vuelve al cerrar). */}
+                {/* La tarjeta CRECE uniforme (misma escala en ambos ejes, sin
+                    estirarse) mientras VIAJA desde la celda tocada hasta el centro;
+                    al cerrar hace el camino inverso. */}
                 <motion.div
-                  layoutId={`peek-${peekKey}`}
-                  transition={{ layout: { type: 'spring', stiffness: 340, damping: 32 } }}
-                  style={{ borderRadius: 28 }}
+                  initial={{ scale: 0.12, x: peekFrom.dx, y: peekFrom.dy, opacity: 0 }}
+                  animate={{ scale: 1, x: 0, y: 0, opacity: 1 }}
+                  exit={{ scale: 0.12, x: peekFrom.dx, y: peekFrom.dy, opacity: 0 }}
+                  transition={{
+                    type: 'spring',
+                    stiffness: 320,
+                    damping: 30,
+                    opacity: { duration: 0.16 },
+                  }}
+                  style={{ borderRadius: 20 }}
                   onClick={(e) => e.stopPropagation()}
                   className="max-h-[75vh] w-full max-w-sm overflow-y-auto bg-surface p-5 shadow-2xl"
                 >
