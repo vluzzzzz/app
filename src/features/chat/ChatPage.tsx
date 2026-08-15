@@ -82,11 +82,21 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
   const [loading, setLoading] = useState(false)
   const [adjunto, setAdjunto] = useState<Adjunto | null>(null)
   const [grabando, setGrabando] = useState(false)
+  const [recSecs, setRecSecs] = useState(0)
   const [transcribiendo, setTranscribiendo] = useState(false)
   const kb = useKeyboardInset()
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const recRef = useRef<MediaRecorder | null>(null)
+  const cancelRef = useRef(false)
+
+  // Contador de la grabación (0:01, 0:02…) mientras está el mic abierto.
+  useEffect(() => {
+    if (!grabando) return
+    setRecSecs(0)
+    const id = setInterval(() => setRecSecs((s) => s + 1), 1000)
+    return () => clearInterval(id)
+  }, [grabando])
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 1e9, behavior: 'smooth' })
@@ -154,12 +164,8 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
     }
   }
 
-  /** Nota de voz: un toque graba, otro corta → se transcribe y se manda solo. */
-  async function toggleMic() {
-    if (grabando) {
-      recRef.current?.stop()
-      return
-    }
+  /** Abre el micrófono: la barra de abajo se transforma en modo grabación. */
+  async function startMic() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       const rec = new MediaRecorder(stream)
@@ -170,6 +176,7 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
       rec.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop())
         setGrabando(false)
+        if (cancelRef.current) return // tocó "Cancelar": se descarta sin gastar nada
         const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' })
         if (blob.size < 1500) return // toque accidental, sin audio real
         setTranscribiendo(true)
@@ -182,12 +189,19 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
         setTranscribiendo(false)
         if (texto) void send(texto)
       }
+      cancelRef.current = false
       recRef.current = rec
       rec.start()
       setGrabando(true)
     } catch {
       /* micrófono denegado: no hacemos nada */
     }
+  }
+
+  /** Corta la grabación: enviar (transcribe y manda) o cancelar (descarta). */
+  function stopMic(enviar: boolean) {
+    cancelRef.current = !enviar
+    recRef.current?.stop()
   }
 
   return (
@@ -295,15 +309,49 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
         className="px-4 pt-2 transition-[padding] duration-200"
         style={{ paddingBottom: `max(1rem, ${kb + 16}px)` }}
       >
-        {adjunto && (
-          <div className="glass glass-highlight mb-2 flex items-center gap-2 rounded-2xl px-3 py-2 text-sm text-ink/80">
-            <span>{adjunto.kind === 'pdf' ? '📄' : '📸'}</span>
+        {adjunto && !grabando && (
+          <div className="glass glass-highlight mb-2 flex items-center gap-2.5 rounded-2xl px-3 py-2 text-sm text-ink/80">
+            {adjunto.kind === 'imagen' ? (
+              <img
+                src={`data:${adjunto.mime};base64,${adjunto.data}`}
+                alt={adjunto.name}
+                className="h-12 w-12 shrink-0 rounded-xl object-cover"
+              />
+            ) : (
+              <span className="text-xl">📄</span>
+            )}
             <span className="min-w-0 flex-1 truncate">{adjunto.name}</span>
             <button onClick={() => setAdjunto(null)} className="px-1 text-ink/50">
               ✕
             </button>
           </div>
         )}
+        {grabando ? (
+          /* Modo grabación (estilo WhatsApp): contador + cancelar + enviar */
+          <div className="glass glass-highlight flex items-center gap-3 rounded-3xl p-2 pl-4">
+            <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-rose-500" />
+            <span className="text-[15px] tabular-nums text-ink/80">
+              {Math.floor(recSecs / 60)}:{String(recSecs % 60).padStart(2, '0')}
+            </span>
+            <span className="flex-1 truncate text-sm text-ink/40">Grabando…</span>
+            <button
+              onClick={() => stopMic(false)}
+              className="shrink-0 rounded-2xl px-3 py-2 text-sm font-medium text-ink/60"
+            >
+              Cancelar
+            </button>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => stopMic(true)}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink text-surface"
+              aria-label="Enviar nota de voz"
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+                <path d="m3.4 20.4 17.5-8.4a.8.8 0 0 0 0-1.5L3.4 2.1a.7.7 0 0 0-1 .8L4 10l11 2-11 2-1.6 7.1a.7.7 0 0 0 1 .8Z" />
+              </svg>
+            </motion.button>
+          </div>
+        ) : (
         <div className="glass glass-highlight flex items-end gap-1 rounded-3xl p-2">
           <input
             ref={fileRef}
@@ -341,16 +389,14 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
               }
             }}
             rows={1}
-            placeholder={grabando ? 'Grabando… tocá el mic para cortar' : 'Escribe un mensaje…'}
+            placeholder="Escribe un mensaje…"
             className="max-h-28 min-h-[2.5rem] flex-1 resize-none bg-transparent px-2 py-2 text-[15px] text-ink outline-none placeholder:text-ink/40"
           />
           <motion.button
             whileTap={{ scale: 0.9 }}
-            onClick={toggleMic}
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
-              grabando ? 'animate-pulse bg-rose-500 text-white' : 'text-ink/60'
-            }`}
-            aria-label={grabando ? 'Cortar grabación' : 'Grabar nota de voz'}
+            onClick={startMic}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink/60"
+            aria-label="Grabar nota de voz"
           >
             <MicIcon className="h-5 w-5" />
           </motion.button>
@@ -365,6 +411,7 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
             </svg>
           </motion.button>
         </div>
+        )}
       </div>
     </div>
   )
