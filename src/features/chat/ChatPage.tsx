@@ -56,7 +56,8 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
     const text = (textArg ?? input).trim()
     if (!text || loading) return
     setInput('')
-    pushChat({ id: makeId(), role: 'user', text })
+    const userMsgId = makeId()
+    pushChat({ id: userMsgId, role: 'user', text })
     setLoading(true)
     try {
       const { subjects, defaultScale, userName, tasks, events, classes } =
@@ -64,8 +65,13 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
       const history = useAppStore
         .getState()
         .chat.filter((m) => !m.error)
-        .slice(-8) // últimos mensajes: contexto suficiente sin inflar tokens (evita saturar Groq)
-        .map((m) => ({ role: m.role, content: m.text }))
+        .slice(-6) // últimos mensajes: contexto suficiente sin inflar tokens (evita saturar Groq)
+        // Respuestas largas (listas de la semana) se recortan: el detalle vive en los
+        // DATOS del prompt, no hace falta re-mandarlo entero como historial.
+        .map((m) => ({
+          role: m.role,
+          content: m.text.length > 600 ? `${m.text.slice(0, 600)}…` : m.text,
+        }))
       // El tier decide también el prompt: preguntas → prompt 'lite' (menos tokens =
       // respuesta rápida y sin chocar el límite por minuto del plan gratis de Groq).
       const tier = pickTier(text)
@@ -91,13 +97,12 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
         text: res.reply,
         applied: applied.length ? applied : undefined,
       })
-    } catch (e) {
-      pushChat({
-        id: makeId(),
-        role: 'assistant',
-        text: e instanceof Error ? e.message : 'Ups, algo falló.',
-        error: true,
-      })
+    } catch {
+      // Falló todo (tras los reintentos silenciosos): sacamos el mensaje del chat y
+      // lo devolvemos al input listo para reenviar — nada de burbujas de error.
+      const st = useAppStore.getState()
+      st.setChat(st.chat.filter((m) => m.id !== userMsgId))
+      setInput(text)
     } finally {
       setLoading(false)
     }

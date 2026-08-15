@@ -13,7 +13,10 @@
 //   supabase secrets set GROQ_API_KEY=tu_key
 //   supabase secrets set FIREBASE_PROJECT_ID=brody-13148   (opcional; default abajo)
 
-import { createRemoteJWKSet, jwtVerify } from 'https://esm.sh/jose@5.9.6'
+// npm: (no esm.sh): así el deploy EMPAQUETA la librería dentro de la función.
+// Con esm.sh se descargaba de internet en cada arranque en frío, y esa demora
+// mataba el primer pedido tras un rato de inactividad ("se me cruzaron los cables").
+import { createRemoteJWKSet, jwtVerify } from 'npm:jose@5.9.6'
 
 const GROQ_KEY = Deno.env.get('GROQ_API_KEY')
 // Modo híbrido: modelo GRANDE (preciso) para crear/editar; modelo RÁPIDO para
@@ -122,9 +125,10 @@ Deno.serve(async (req: Request) => {
           // Charla/preguntas (fast): más temperatura = suena humano y variado.
           // Crear/editar (smart): baja = JSON y datos precisos.
           temperature: tier === 'fast' ? 0.75 : 0.4,
-          // Acota la generación: respuestas más rápidas y menos gasto de tokens/minuto.
-          // (2048 porque en GPT-OSS el razonamiento interno cuenta contra este límite.)
-          max_tokens: 2048,
+          // Acota la generación: menos max_tokens = Groq "reserva" menos cupo del
+          // minuto por pedido (el estimado TPM cuenta input + max_tokens), o sea
+          // más mensajes seguidos sin chocar el límite del plan gratis.
+          max_tokens: tier === 'fast' ? 900 : 1800,
           // OJO: sin response_format json_object a propósito. Con GPT-OSS el modo JSON
           // estricto hace que Groq rechace con 400 (json_validate_failed) cuando el
           // modelo no lo clava, y el chat muere. El prompt ya exige JSON y abajo hay

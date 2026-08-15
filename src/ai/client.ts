@@ -68,10 +68,10 @@ export async function askAi(messages: Msg[], tier: Tier = 'smart', attempt = 0):
     if (isRateLimit) {
       throw new Error('Uff, me saturé un toque 🥵 dame unos segunditos y volvé a escribirme, bro.')
     }
-    // Fallo puntual (hipo del proxy o de Groq): reintentamos UNA vez en silencio
-    // antes de molestar al usuario — el patrón real es que el reintento funciona.
-    if (attempt < 1) {
-      await sleep(800)
+    // Fallo puntual (arranque en frío del proxy o hipo de Groq): reintentamos DOS
+    // veces en silencio, con más espera la segunda (el arranque tarda unos segundos).
+    if (attempt < 2) {
+      await sleep(800 * (attempt + 1) + 400)
       return askAi(messages, tier, attempt + 1)
     }
     throw new Error('Se me cruzaron los cables un segundo 😅 probá de nuevo, bro.')
