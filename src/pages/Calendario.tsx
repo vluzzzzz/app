@@ -17,7 +17,8 @@ import {
 import { accentRgb } from '../lib/accents'
 import { EventSheet, EVENT_TYPE_LABEL } from '../features/schedule/EventSheet'
 import { TaskEditor } from '../features/tasks/TaskEditor'
-import { CalendarIcon, CheckIcon, ChevronDown, ChevronLeft, ChevronRight, PlusIcon } from '../components/ui/Icons'
+import { ShareCalendarioSheet } from '../features/schedule/ShareCalendarioSheet'
+import { CalendarIcon, CheckIcon, ChevronDown, ChevronLeft, ChevronRight, PlusIcon, ShareIcon } from '../components/ui/Icons'
 
 /** Color de acento por tipo de evento (cuando no hay ramo asociado). */
 const EVENT_TYPE_RGB: Record<EventType, string> = {
@@ -54,6 +55,7 @@ export function Calendario() {
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
   const [taskSheetOpen, setTaskSheetOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [shareOpen, setShareOpen] = useState(false)
 
   const weeks = useMemo(() => monthGrid(year, month), [year, month])
   const selected = fromDateKey(selectedKey)
@@ -114,14 +116,24 @@ export function Calendario() {
           <p className="text-sm font-medium text-ink/50">Tus fechas</p>
           <h1 className="text-[34px] font-bold leading-tight text-ink">Calendario</h1>
         </div>
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={openNew}
-          className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink text-surface shadow-[0_6px_16px_-6px_rgba(0,0,0,0.4)]"
-          aria-label="Agregar"
-        >
-          <PlusIcon className="h-6 w-6" />
-        </motion.button>
+        <div className="flex items-center gap-2.5">
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setShareOpen(true)}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink/5 text-ink"
+            aria-label="Compartir calendario"
+          >
+            <ShareIcon className="h-5 w-5" />
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={openNew}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink text-surface shadow-[0_6px_16px_-6px_rgba(0,0,0,0.4)]"
+            aria-label="Agregar"
+          >
+            <PlusIcon className="h-6 w-6" />
+          </motion.button>
+        </div>
       </header>
 
       {/* Navegación de mes (izq) + controles Hoy/expandir (der) */}
@@ -654,6 +666,7 @@ export function Calendario() {
         task={editingTask}
         defaultDate={selectedKey}
       />
+      <ShareCalendarioSheet open={shareOpen} onClose={() => setShareOpen(false)} />
     </div>
   )
 }

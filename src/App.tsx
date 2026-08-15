@@ -14,6 +14,7 @@ import { ChatPage } from './features/chat/ChatPage'
 import { ProfilePage } from './features/profile/ProfilePage'
 import { AuthGate } from './features/auth/AuthGate'
 import { SharedHorarioView } from './features/schedule/SharedHorarioView'
+import { SharedCalendarioView } from './features/schedule/SharedCalendarioView'
 import { Onboarding } from './features/onboarding/Onboarding'
 import { FpsMeter } from './components/dev/FpsMeter'
 import { EASE } from './lib/motion'
@@ -44,7 +45,7 @@ export default function App() {
   // (interruptor en SharedHorarioView), no el tema guardado de la app.
   const isSharedRoute =
     typeof window !== 'undefined' &&
-    (/^\/horario\//.test(window.location.pathname) ||
+    (/^\/(horario|calendario)\//.test(window.location.pathname) ||
       new URLSearchParams(window.location.search).has('h'))
 
   useEffect(() => {
@@ -91,6 +92,21 @@ export default function App() {
       <>
         <AnimatedMesh />
         <SharedHorarioView token={sharedToken} />
+      </>
+    )
+  }
+
+  // Link público de calendario (/calendario/token): igual que el horario.
+  const sharedCalToken = (() => {
+    if (typeof window === 'undefined') return null
+    const m = window.location.pathname.match(/^\/calendario\/([A-Za-z0-9]{16,})/)
+    return m ? m[1] : null
+  })()
+  if (sharedCalToken) {
+    return (
+      <>
+        <AnimatedMesh />
+        <SharedCalendarioView token={sharedCalToken} />
       </>
     )
   }
