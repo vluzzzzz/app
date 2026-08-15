@@ -114,7 +114,7 @@ export function Calendario() {
 
   return (
     <div className="h-full overflow-y-auto px-5 pb-36 pt-6 lg:px-8 lg:pb-10 lg:pt-8">
-      <div className="lg:mx-auto lg:max-w-2xl">
+      <div className="lg:mx-auto lg:max-w-5xl">
       <header className="mb-6 flex items-end justify-between">
         <div>
           <p className="text-sm font-medium text-ink/50">Tus fechas</p>
@@ -132,14 +132,23 @@ export function Calendario() {
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={openNew}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink text-surface shadow-[0_6px_16px_-6px_rgba(0,0,0,0.4)]"
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink text-surface shadow-[0_6px_16px_-6px_rgba(0,0,0,0.4)] lg:w-auto lg:gap-2 lg:px-4"
             aria-label="Agregar"
           >
-            <PlusIcon className="h-6 w-6" />
+            <PlusIcon className="h-6 w-6 lg:h-5 lg:w-5" />
+            <span className="hidden text-[15px] font-semibold lg:inline">Crear evento</span>
           </motion.button>
         </div>
       </header>
 
+      {/* PC: mes a la izquierda + agenda del día a la derecha (como una app de
+          escritorio); ampliado ocupa todo. En celu estos wrappers son invisibles. */}
+      <div
+        className={`lg:grid lg:items-start lg:gap-8 ${
+          expanded ? '' : 'lg:grid-cols-[minmax(0,1fr)_360px]'
+        }`}
+      >
+      <div className="lg:min-w-0">
       {/* Navegación de mes (izq) + controles Hoy/expandir (der) */}
       <div className="mb-4 flex items-center justify-between px-1">
         <div className="flex items-center gap-0.5">
@@ -352,11 +361,14 @@ export function Calendario() {
           </motion.div>
         </motion.div>
       )}
+      </div>
 
-      {/* Detalle del día seleccionado (solo en vista compacta) */}
+      {/* Detalle del día seleccionado (solo en vista compacta; en PC es la
+          columna derecha, siempre a la vista) */}
+      <div className="lg:min-w-0">
       {!expanded && (
         <>
-          <div className="mb-3 mt-6 flex items-baseline justify-between px-1">
+          <div className="mb-3 mt-6 flex items-baseline justify-between px-1 lg:mt-0">
             <h2 className="text-[18px] font-bold text-ink">
               {DAY_NAMES[weekday(selected)]} {selected.getDate()}
               <span className="font-semibold text-ink/40"> de {MONTH_NAMES[selected.getMonth()]}</span>
@@ -527,6 +539,8 @@ export function Calendario() {
           )}
         </>
       )}
+      </div>
+      </div>
 
       {/* Vista rápida de un día (desde el mes ampliado): se agranda por encima
           mostrando todo lo que tiene, como el visor de imágenes del chat. */}

@@ -4,6 +4,8 @@ import type { Route } from '../App'
 import { useAppStore } from '../store/useAppStore'
 import { SubjectCard } from '../features/subjects/SubjectCard'
 import { AddSubjectWizard } from '../features/subjects/AddSubjectWizard'
+import { SubjectDetail } from '../features/subjects/SubjectDetail'
+import { useIsDesktop } from '../lib/useIsDesktop'
 import { CalculatorIcon, PlusIcon } from '../components/ui/Icons'
 import { EASE } from '../lib/motion'
 
@@ -14,12 +16,16 @@ export function Calculadora({
   navigate: (r: Route) => void
   startAdding?: boolean
 }) {
+  const isDesktop = useIsDesktop()
   const subjects = useAppStore((s) => s.subjects)
   const [adding, setAdding] = useState(!!startAdding)
+  // PC: ramo seleccionado para el panel de detalle (lista + detalle simultáneo).
+  const [selected, setSelected] = useState<string | null>(null)
+  const selId = subjects.some((s) => s.id === selected) ? selected : (subjects[0]?.id ?? null)
 
   return (
     <div className="h-full overflow-y-auto px-5 pb-28 pt-6 lg:px-8 lg:pb-10 lg:pt-8">
-      <div className="lg:mx-auto lg:max-w-4xl">
+      <div className="lg:mx-auto lg:max-w-6xl">
       <header className="mb-6 flex items-end justify-between">
         <div>
           <p className="text-sm font-medium text-ink/50">Tus ramos</p>
@@ -31,9 +37,10 @@ export function Calculadora({
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => setAdding(true)}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink text-surface shadow-glass"
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink text-surface shadow-glass lg:w-auto lg:gap-2 lg:px-4"
           >
-            <PlusIcon className="h-6 w-6" />
+            <PlusIcon className="h-6 w-6 lg:h-5 lg:w-5" />
+            <span className="hidden text-[15px] font-semibold lg:inline">Agregar ramo</span>
           </motion.button>
         )}
       </header>
@@ -48,8 +55,39 @@ export function Calculadora({
         />
       ) : subjects.length === 0 ? (
         <EmptyState onAdd={() => setAdding(true)} />
+      ) : isDesktop ? (
+        /* PC: lista de ramos a la izquierda + detalle en vivo a la derecha
+           (sin cambiar de página, como una app de escritorio de verdad). */
+        <div className="grid grid-cols-[320px_minmax(0,1fr)] items-start gap-6">
+          <div className="space-y-3">
+            {subjects.map((s) => (
+              <div
+                key={s.id}
+                className={`rounded-2xl transition-shadow ${
+                  selId === s.id ? 'ring-2 ring-ink/70' : ''
+                }`}
+              >
+                <SubjectCard subject={s} onOpen={() => setSelected(s.id)} />
+              </div>
+            ))}
+          </div>
+          <div className="min-w-0">
+            {selId && (
+              <SubjectDetail
+                id={selId}
+                embedded
+                navigate={(r) => {
+                  // Al borrar el ramo, el detalle "vuelve a calculadora":
+                  // acá eso significa seleccionar el siguiente de la lista.
+                  if (r.name === 'calculadora') setSelected(null)
+                  else navigate(r)
+                }}
+              />
+            )}
+          </div>
+        </div>
       ) : (
-        <motion.div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
+        <motion.div className="space-y-3">
           <AnimatePresence initial={false}>
             {subjects.map((s, i) => (
               <motion.div

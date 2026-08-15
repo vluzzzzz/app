@@ -21,9 +21,12 @@ import { ChevronLeft, TrashIcon } from '../../components/ui/Icons'
 export function SubjectDetail({
   id,
   navigate,
+  embedded = false,
 }: {
   id: string
   navigate: (r: Route) => void
+  /** Modo PC: incrustado como panel derecho de la Calculadora (sin volver ni scroller propio). */
+  embedded?: boolean
 }) {
   const subject = useAppStore((s) => s.subjects.find((x) => x.id === id))
   const removeSubject = useAppStore((s) => s.removeSubject)
@@ -88,17 +91,25 @@ export function SubjectDetail({
   }[needBox.tone]
 
   return (
-    <div className="h-full overflow-y-auto px-5 pb-36 pt-6 lg:px-8 lg:pb-10 lg:pt-8">
-      <div className="lg:mx-auto lg:max-w-3xl">
+    <div
+      className={
+        embedded
+          ? 'min-w-0'
+          : 'h-full overflow-y-auto px-5 pb-36 pt-6 lg:px-8 lg:pb-10 lg:pt-8'
+      }
+    >
+      <div className={embedded ? '' : 'lg:mx-auto lg:max-w-3xl'}>
       {/* Header */}
-      <header className="mb-5 flex items-center justify-between">
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={() => navigate({ name: 'calculadora' })}
-          className="glass rounded-2xl p-2.5 text-ink/80"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </motion.button>
+      <header className={`mb-5 flex items-center ${embedded ? 'justify-end' : 'justify-between'}`}>
+        {!embedded && (
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => navigate({ name: 'calculadora' })}
+            className="glass rounded-2xl p-2.5 text-ink/80"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </motion.button>
+        )}
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={handleDelete}
