@@ -6,6 +6,17 @@ import type { AiAction, AiNode } from './types'
 
 const norm = (s: string) => s.trim().toLowerCase()
 
+// Día hablado → índice de ClassBlock (0=Lunes … 6=Domingo), con y sin tilde.
+const DAY_INDEX: Record<string, number> = {
+  lunes: 0, martes: 1, miercoles: 2, miércoles: 2, jueves: 3,
+  viernes: 4, sabado: 5, sábado: 5, domingo: 6,
+}
+function parseDay(d: string | number): number | null {
+  if (typeof d === 'number') return d >= 0 && d <= 6 ? d : null
+  return DAY_INDEX[norm(d)] ?? null
+}
+const DAY_LABEL = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+
 function findSubject(subjects: Subject[], name: string): Subject | undefined {
   return subjects.find((s) => norm(s.name) === norm(name))
 }
@@ -156,6 +167,43 @@ export function applyActions(actions: AiAction[]): string[] {
         if (!ev) break
         store.removeEvent(ev.id)
         applied.push(`Borré el evento ${a.title}`)
+        break
+      }
+      case 'add_class': {
+        const day = parseDay(a.day)
+        if (day == null || !a.start || !a.end) break
+        let s = findSubject(subjects, a.subject)
+        if (!s) {
+          // Ramo mencionado al vuelo ("agrégame Cálculo 2 los lunes"): se crea solo.
+          store.addSubject({ name: a.subject, nodes: [] })
+          s = findSubject(useAppStore.getState().subjects, a.subject)
+          if (s) applied.push(`Creé ${a.subject}`)
+        }
+        if (!s) break
+        store.addClass({
+          subjectId: s.id,
+          day,
+          start: a.start,
+          end: a.end,
+          type: a.classType ?? 'catedra',
+          ...(a.room ? { room: a.room } : {}),
+          ...(a.professor ? { professor: a.professor } : {}),
+        })
+        applied.push(`Horario: ${a.subject} los ${DAY_LABEL[day]} ${a.start}–${a.end}`)
+        break
+      }
+      case 'remove_class': {
+        const day = parseDay(a.day)
+        const s = findSubject(subjects, a.subject)
+        if (!s || day == null) break
+        const matches = useAppStore
+          .getState()
+          .classes.filter(
+            (c) => c.subjectId === s.id && c.day === day && (!a.start || c.start === a.start),
+          )
+        if (!matches.length) break
+        for (const c of matches) store.removeClass(c.id)
+        applied.push(`Saqué ${a.subject} del ${DAY_LABEL[day]}`)
         break
       }
       case 'clear_date': {

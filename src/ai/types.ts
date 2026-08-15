@@ -1,4 +1,4 @@
-import type { EventType } from '../lib/types'
+import type { ClassType, EventType } from '../lib/types'
 
 /** Nodo del árbol que la IA puede mandar al crear un ramo (carpeta si trae children). */
 export type AiNode = {
@@ -45,6 +45,21 @@ export type AiAction =
   | { type: 'remove_event'; title: string }
   /** Borra en bloque lo agendado en una fecha ("borra todo lo del 23 de octubre"). */
   | { type: 'clear_date'; date: string; scope?: 'all' | 'events' | 'tasks' }
+  // --- Horario semanal (bloques de clases recurrentes, pestaña Horario) ---
+  | {
+      type: 'add_class'
+      /** Ramo por nombre; si no existe se crea solo. */
+      subject: string
+      /** Día en español ("lunes".."domingo") o número 0=Lunes…6=Domingo. */
+      day: string | number
+      start: string
+      end: string
+      room?: string
+      professor?: string
+      /** catedra | laboratorio | ayudantia | taller | otro (default: catedra). */
+      classType?: ClassType
+    }
+  | { type: 'remove_class'; subject: string; day: string | number; start?: string }
 
 /** Respuesta esperada de la IA (JSON). */
 export type AiResponse = {

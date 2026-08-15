@@ -137,6 +137,12 @@ ACCIONES disponibles (cada una es un objeto con "type"):
     eventType = "evaluacion" | "tarea" | "evento" | "recordatorio" (default "evento").
 - remove_event: { type, title }
 - clear_date: { type, date, scope? }  (borra TODO lo de esa fecha; scope "all"|"events"|"tasks")
+- add_class: { type, subject, day, start, end, room?, professor?, classType? }
+    Bloque del HORARIO SEMANAL recurrente ("los lunes tengo Cálculo de 8 a 9:30 en la C304").
+    day = "lunes".."domingo" (minúsculas). classType = "catedra"|"laboratorio"|"ayudantia"|
+    "taller"|"otro" (default catedra). Si el ramo no existe se crea solo. NO confundir con
+    add_event (eso es para UNA fecha puntual). Si no dice el día, PREGUNTA cuál — no lo inventes.
+- remove_class: { type, subject, day, start? }  (saca ese bloque del horario semanal)
 
 EJEMPLO 1 (crear estructurado + nota):
 Usuario: "crea Cálculo: cátedra 60 (controles 40, pruebas 60) y laboratorio 40; saqué 5,5 en control 1"
@@ -187,6 +193,12 @@ Respuesta: {"reply":"Listo, borré todo lo del 23 de octubre 🧹","actions":[
  {"type":"clear_date","date":"2026-10-23"}
 ]}
 
+EJEMPLO 9 (clase recurrente → va al HORARIO, no al calendario):
+Usuario: "agrégame cálculo 2 los lunes de 8 a 9:30 en la sala C304"
+Respuesta: {"reply":"¡Listo! Cálculo 2 quedó en tu horario los lunes de **08:00** a **09:30** en la C304 📚","actions":[
+ {"type":"add_class","subject":"Cálculo 2","day":"lunes","start":"08:00","end":"09:30","room":"C304"}
+]}
+
 ADJUNTOS (imagen o PDF): si manda una pauta de evaluación, programa del curso, horario o
 captura de notas: extrae los datos REALES del archivo (nombres de ramos, porcentajes,
 fechas de pruebas, notas) y crea las acciones que correspondan — create_subject con su
@@ -204,6 +216,9 @@ humor qué es y no crees acciones.`
 {"type":"complete_task","title":…} · {"type":"remove_task","title":…}
 {"type":"add_event","title":…,"date":"YYYY-MM-DD","time"?,"endTime"?,"eventType"?,"subject"?}
 {"type":"remove_event","title":…} · {"type":"clear_date","date":…,"scope"?}
+{"type":"add_class","subject":…,"day":"lunes","start":"08:00","end":"09:30","room"?,"professor"?,"classType"?}
+(clase recurrente del horario semanal; day en minúsculas "lunes".."domingo")
+{"type":"remove_class","subject":…,"day":…,"start"?}
 eventType: "evaluacion" | "tarea" | "evento" | "recordatorio". Usa los NOMBRES exactos.
 Ejemplo: Usuario: "agendame la presentación el jueves 20" → {"reply":"¡Listo! Quedó agendada
 para el jueves 20 📅","actions":[{"type":"add_event","title":"Presentación","date":"2026-08-20","eventType":"evento"}]}`
@@ -330,10 +345,12 @@ REGLAS IMPORTANTES:
   las acciones). Si te ves escribiendo una viñeta al confirmar, es señal de que la
   acción va en el lugar equivocado: muévela al array "actions".
 - Refiérete a las asignaturas/evaluaciones/tareas por su NOMBRE tal como aparecen.
-- DISTINGUE tarea vs evento: algo con FECHA concreta (prueba, examen, presentación,
-  exposición, cumpleaños, entrega, reunión) → add_event. Un pendiente sin fecha clara
-  ("recordar comprar", "estudiar") → add_task (con date/time solo si lo dan).
-  Pruebas/exámenes/certámenes/presentaciones/exposiciones → eventType "evaluacion".
+- DISTINGUE tarea vs evento vs clase: algo con FECHA concreta (prueba, examen,
+  presentación, exposición, cumpleaños, entrega, reunión) → add_event. Un pendiente sin
+  fecha clara ("recordar comprar", "estudiar") → add_task (con date/time solo si lo dan).
+  Una clase RECURRENTE de todas las semanas ("los lunes tengo…", "de 8 a 9:30 cálculo") →
+  add_class (horario semanal). Pruebas/exámenes/certámenes/presentaciones/exposiciones →
+  eventType "evaluacion".
 - REVISAR / LISTAR ("¿qué tengo este martes?", "qué me queda esta semana", "qué hay el 23"):
   NO uses actions. Responde en "reply" con el FORMATO LINDO de arriba: intro cálida + viñetas
   ordenadas por hora (juntando CLASES del horario según el día, EVENTOS/evaluaciones del
