@@ -119,7 +119,10 @@ Deno.serve(async (req: Request) => {
           // Acota la generación: respuestas más rápidas y menos gasto de tokens/minuto.
           // (2048 porque en GPT-OSS el razonamiento interno cuenta contra este límite.)
           max_tokens: 2048,
-          response_format: { type: 'json_object' },
+          // OJO: sin response_format json_object a propósito. Con GPT-OSS el modo JSON
+          // estricto hace que Groq rechace con 400 (json_validate_failed) cuando el
+          // modelo no lo clava, y el chat muere. El prompt ya exige JSON y abajo hay
+          // un parser que rescata el objeto aunque venga con texto alrededor.
           // GPT-OSS razona antes de responder; en 'low' contesta rápido y alcanza de
           // sobra para armar el JSON. Solo aplica a esos modelos (otros lo rechazan).
           ...(useModel.startsWith('openai/gpt-oss') ? { reasoning_effort: 'low' } : {}),
@@ -127,19 +130,27 @@ Deno.serve(async (req: Request) => {
       })
 
     let r = await callGroq(model)
-    // Si el modelo grande se quedó sin cupo (rate limit / tokens por día del plan
-    // gratis), degradamos automáticamente al rápido para que la app NO se rompa.
-    // El rápido tiene un cupo diario mayor. Solo aplica si no estábamos ya en él.
-    if (!r.ok && model !== FAST_MODEL) {
+    if (!r.ok) {
       const why = await r.text().catch(() => '')
-      if (r.status === 429 || /rate.?limit|tokens?\s*per|quota|capacity/i.test(why)) {
+      const isRate = r.status === 429 || /rate.?limit|tokens?\s*per|quota|capacity/i.test(why)
+      console.error('Groq fallo 1', r.status, why)
+      if (model !== FAST_MODEL) {
+        // El modelo grande falló (cuota, caída puntual, lo que sea): degradamos al
+        // rápido para que la app NO se rompa.
         r = await callGroq(FAST_MODEL)
+      } else if (!isRate) {
+        // El rápido falló por algo transitorio (no es cuota): un reintento y listo.
+        // Si es cuota NO reintenamos al tiro (seguiría 429): se lo devolvemos al
+        // cliente, que sabe esperar lo que Groq sugiere y reintentar solo.
+        r = await callGroq(FAST_MODEL)
+      } else {
+        return json({ error: 'Groq error', detail: why }, 502, origin)
       }
     }
 
     if (!r.ok) {
       const detail = await r.text().catch(() => '')
-      console.error('Groq error', r.status, detail)
+      console.error('Groq fallo 2', r.status, detail)
       return json({ error: 'Groq error', detail }, 502, origin)
     }
 
