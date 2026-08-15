@@ -64,10 +64,18 @@ export function Calendario() {
   /** Color de un evento: el del ramo si tiene, si no el de su tipo. */
   const eventRgb = (e: CalendarEvent) => (e.subjectId ? subjectRgb(e.subjectId) : EVENT_TYPE_RGB[e.type])
 
+  // Dirección del último cambio de mes (para deslizar la grilla hacia ese lado).
+  const [monthDir, setMonthDir] = useState(0)
   const changeMonth = (delta: number) => {
+    setMonthDir(delta)
     const d = new Date(year, month + delta, 1)
     setYear(d.getFullYear())
     setMonth(d.getMonth())
+  }
+  /** Swipe horizontal → cambia de mes (el celu es touch, bro). */
+  const onSwipe = (_: unknown, info: { offset: { x: number } }) => {
+    if (info.offset.x < -70) changeMonth(1)
+    else if (info.offset.x > 70) changeMonth(-1)
   }
   const goToday = () => {
     setYear(today.getFullYear())
@@ -170,7 +178,17 @@ export function Calendario() {
 
       {/* --- COMPACTA: calendario dentro de una tarjeta --- */}
       {!expanded && (
-        <div className="glass rounded-[28px] p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 10, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.22, ease: 'easeOut' }}
+          drag="x"
+          dragDirectionLock
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.12}
+          onDragEnd={onSwipe}
+          className="glass rounded-[28px] p-4"
+        >
           <div className="mb-2 grid grid-cols-7">
             {DAY_SHORT.map((d) => (
               <span key={d} className="text-center text-[11px] font-semibold uppercase text-ink/30">
@@ -178,6 +196,12 @@ export function Calendario() {
               </span>
             ))}
           </div>
+          <motion.div
+            key={`${year}-${month}`}
+            initial={{ x: monthDir * 44, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+          >
           {weeks.map((w, wi) => (
             <div key={wi} className="grid grid-cols-7">
               {w.map((d, di) => {
@@ -226,15 +250,21 @@ export function Calendario() {
               })}
             </div>
           ))}
-        </div>
+          </motion.div>
+        </motion.div>
       )}
 
       {/* --- AMPLIADA: mes a pantalla completa con los eventos dentro de cada día --- */}
       {expanded && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.2 }}
+          initial={{ opacity: 0, y: 14, scale: 0.985 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.26, ease: 'easeOut' }}
+          drag="x"
+          dragDirectionLock
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.12}
+          onDragEnd={onSwipe}
           className="-mx-4"
         >
           <div className="grid grid-cols-7 px-1 pb-1.5">
@@ -244,6 +274,12 @@ export function Calendario() {
               </span>
             ))}
           </div>
+          <motion.div
+            key={`${year}-${month}`}
+            initial={{ x: monthDir * 44, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+          >
           {weeks.map((w, wi) => (
             <div key={wi} className="grid grid-cols-7 border-t border-ink/[0.06]">
               {w.map((d, di) => {
@@ -255,6 +291,7 @@ export function Calendario() {
                   <motion.button
                     key={di}
                     layoutId={`peek-${key}`}
+                    layoutDependency={peekKey}
                     style={{ borderRadius: 16 }}
                     onClick={() => {
                       // Agranda el día encima (vista rápida) — no colapsa el mes.
@@ -296,6 +333,7 @@ export function Calendario() {
               })}
             </div>
           ))}
+          </motion.div>
         </motion.div>
       )}
 
@@ -461,26 +499,26 @@ export function Calendario() {
                 onClick={() => setPeekKey(null)}
                 className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-5 backdrop-blur-[2px]"
               >
-                {/* Container transform de verdad: la CAJA de la celda se expande
-                    hasta ser esta tarjeta (comparten layoutId). El contenido va en
-                    un hijo con layout="position": viaja como unidad, NO se estira. */}
-                <motion.div
-                  layout
-                  layoutId={`peek-${peekKey}`}
-                  transition={{ type: 'spring', stiffness: 280, damping: 30 }}
-                  style={{ borderRadius: 20 }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="max-h-[75vh] w-full max-w-sm overflow-y-auto bg-surface shadow-2xl"
-                >
-                  {/* El contenido aparece en fade mientras la caja se expande, y al
-                      cerrar se VACÍA rápido: la caja viaja limpia hacia el día. */}
+                {/* DOS CAPAS (como el container transform de verdad):
+                    1) La CAJA voladora: solo fondo + sombra, SIN contenido → puede
+                       expandirse/comprimirse sin deformar nada y sin warpear esquinas.
+                    2) El CONTENIDO: nunca se transforma, solo hace fade.
+                    layoutDependency: la caja solo re-anima al abrir/cerrar, NO cuando
+                    el acordeón de Clases cambia la altura (adiós parpadeo del radius). */}
+                <div className="relative w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
                   <motion.div
-                    layout="position"
+                    layoutId={`peek-${peekKey}`}
+                    layoutDependency={peekKey}
+                    transition={{ type: 'spring', stiffness: 280, damping: 30 }}
+                    style={{ borderRadius: 20 }}
+                    className="absolute inset-0 bg-surface shadow-2xl"
+                  />
+                  <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0, transition: { duration: 0.1 } }}
-                    transition={{ delay: 0.08, duration: 0.22 }}
-                    className="p-5"
+                    transition={{ delay: 0.1, duration: 0.2 }}
+                    className="relative max-h-[75vh] overflow-y-auto p-5"
                   >
                     <div className="mb-3 flex items-baseline justify-between gap-2">
                       <h3 className="text-[18px] font-bold text-ink">
@@ -594,7 +632,7 @@ export function Calendario() {
                       </div>
                     )}
                   </motion.div>
-                </motion.div>
+                </div>
               </motion.div>
             )
           })()}
