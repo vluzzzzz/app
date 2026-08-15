@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAppStore } from '../store/useAppStore'
 import type { CalendarEvent, EventType, Task } from '../lib/types'
@@ -48,8 +48,11 @@ export function Calendario() {
   // mostrando todo lo que tiene, en vez de volver a la vista compacta.
   const [peekKey, setPeekKey] = useState<string | null>(null)
   // Las clases del día van plegadas por defecto (ya se sabe que hay clases);
-  // se despliegan con la flechita "Clases".
+  // se despliegan con la flechita "Clases". Una para la vista rápida (peek)
+  // y otra para el detalle del día en la vista compacta.
   const [peekClasesOpen, setPeekClasesOpen] = useState(false)
+  const [clasesOpen, setClasesOpen] = useState(false)
+  useEffect(() => setClasesOpen(false), [selectedKey])
 
   const [eventSheetOpen, setEventSheetOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
@@ -374,33 +377,64 @@ export function Calendario() {
             </div>
           ) : (
             <div className="space-y-2.5">
-              {/* Clases del horario (derivadas) */}
-              {dayClasses.map((c, i) => (
-                <motion.div
-                  key={c.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: Math.min(i, 8) * 0.03 }}
-                  className="glass relative overflow-hidden rounded-[20px] p-4 pl-5 opacity-95"
-                >
-                  <span
-                    className="absolute inset-y-2 left-0 w-1 rounded-r-full"
-                    style={{ background: subjectColor(c.subjectId) }}
-                  />
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="break-words text-[15px] font-bold text-ink">
-                      {subjectName(c.subjectId) ?? 'Clase'}
-                    </h3>
-                    <span className="shrink-0 text-[12px] font-medium text-ink/40">
-                      Clase · {CLASS_TYPE_LABEL[c.type]}
+              {/* Clases del horario: plegadas por defecto, igual que en la vista
+                  rápida — lo importante del día son los eventos y tareas. */}
+              {dayClasses.length > 0 && (
+                <>
+                  <button
+                    onClick={() => setClasesOpen((v) => !v)}
+                    className="glass flex w-full items-center justify-between rounded-[20px] p-4 active:opacity-80"
+                  >
+                    <span className="text-[15px] font-bold text-ink">
+                      Clases <span className="font-semibold text-ink/40">({dayClasses.length})</span>
                     </span>
-                  </div>
-                  <p className="mt-0.5 text-sm tabular-nums text-ink/55">
-                    {c.start} — {c.end}
-                    {c.room ? ` · ${c.room}` : ''}
-                  </p>
-                </motion.div>
-              ))}
+                    <ChevronDown
+                      className={`h-4 w-4 text-ink/50 transition-transform duration-200 ${
+                        clasesOpen ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {clasesOpen && (
+                      <motion.div
+                        key="detalle-clases"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.24, ease: 'easeInOut' }}
+                        className="overflow-hidden"
+                      >
+                        <div className="space-y-2.5">
+                          {dayClasses.map((c) => (
+                            <div key={c.id} className="glass rounded-[20px] p-4">
+                              <div className="flex gap-2.5">
+                                <span
+                                  className="w-[3px] shrink-0 self-stretch rounded-full"
+                                  style={{ background: subjectColor(c.subjectId) }}
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <h3 className="break-words text-[15px] font-bold text-ink">
+                                      {subjectName(c.subjectId) ?? 'Clase'}
+                                    </h3>
+                                    <span className="shrink-0 text-[12px] font-medium text-ink/40">
+                                      Clase · {CLASS_TYPE_LABEL[c.type]}
+                                    </span>
+                                  </div>
+                                  <p className="mt-0.5 text-sm tabular-nums text-ink/55">
+                                    {c.start} — {c.end}
+                                    {c.room ? ` · ${c.room}` : ''}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </>
+              )}
 
               {/* Eventos */}
               {dayEvents.map((e, i) => {
@@ -410,29 +444,33 @@ export function Calendario() {
                     key={e.id}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: Math.min(dayClasses.length + i, 8) * 0.03 }}
+                    transition={{ delay: Math.min(i, 8) * 0.03 }}
                     whileTap={{ scale: 0.985 }}
                     onClick={() => {
                       setEditingEvent(e)
                       setEventSheetOpen(true)
                     }}
-                    className={`glass relative w-full overflow-hidden rounded-[20px] p-4 pl-5 text-left ${past ? 'opacity-60' : ''}`}
+                    className={`glass w-full rounded-[20px] p-4 text-left ${past ? 'opacity-60' : ''}`}
                   >
-                    <span
-                      className="absolute inset-y-2 left-0 w-1 rounded-r-full"
-                      style={{ background: `rgb(${eventRgb(e)})` }}
-                    />
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="break-words text-[15px] font-bold text-ink">{e.title}</h3>
-                      <span className="shrink-0 text-[12px] font-medium text-ink/40">
-                        {EVENT_TYPE_LABEL[e.type]}
-                      </span>
+                    <div className="flex gap-2.5">
+                      <span
+                        className="w-[3px] shrink-0 self-stretch rounded-full"
+                        style={{ background: `rgb(${eventRgb(e)})` }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="break-words text-[15px] font-bold text-ink">{e.title}</h3>
+                          <span className="shrink-0 text-[12px] font-medium text-ink/40">
+                            {EVENT_TYPE_LABEL[e.type]}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-sm tabular-nums text-ink/55">
+                          {[subjectName(e.subjectId), e.time ?? 'Todo el día', e.location]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </p>
+                      </div>
                     </div>
-                    <p className="mt-0.5 text-sm tabular-nums text-ink/55">
-                      {[subjectName(e.subjectId), e.time ?? 'Todo el día', e.location]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </p>
                   </motion.button>
                 )
               })}
@@ -445,14 +483,14 @@ export function Calendario() {
                     key={t.id}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: Math.min(dayClasses.length + dayEvents.length + i, 8) * 0.03 }}
-                    className={`glass relative overflow-hidden rounded-[20px] p-4 pl-5 ${t.done ? 'opacity-60' : ''}`}
+                    transition={{ delay: Math.min(dayEvents.length + i, 8) * 0.03 }}
+                    className={`glass flex gap-2.5 rounded-[20px] p-4 ${t.done ? 'opacity-60' : ''}`}
                   >
                     <span
-                      className="absolute inset-y-2 left-0 w-1 rounded-r-full"
+                      className="w-[3px] shrink-0 self-stretch rounded-full"
                       style={{ background: t.color ? `rgb(${accentRgb(t.color)})` : 'rgb(var(--ink) / 0.8)' }}
                     />
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
                       <button
                         onClick={() => {
                           setEditingTask(t)

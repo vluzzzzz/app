@@ -48,6 +48,7 @@ export function SharedCalendarioView({ token }: { token: string }) {
   const [monthDir, setMonthDir] = useState(0)
   const [expanded, setExpanded] = useState(false)
   const [peekKey, setPeekKey] = useState<string | null>(null)
+  const [selectedKey, setSelectedKey] = useState(todayKey)
 
   // El link compartido SIEMPRE abre en tema claro; el visitante puede alternar.
   const [dark, setDark] = useState(false)
@@ -66,6 +67,7 @@ export function SharedCalendarioView({ token }: { token: string }) {
           const [y, m] = d.meses[0].split('-').map(Number)
           setYear(y)
           setMonth(m - 1)
+          setSelectedKey(toDateKey(new Date(y, m - 1, 1)))
         }
       } else {
         setState('error')
@@ -225,33 +227,46 @@ export function SharedCalendarioView({ token }: { token: string }) {
                   if (!d) return <span key={di} />
                   const key = toDateKey(d)
                   const isToday = key === todayKey
+                  const isSelected = key === selectedKey
                   const dots = itemsFor(d).slice(0, 3)
                   return (
-                    <motion.button
+                    <button
                       key={di}
-                      layoutId={`speek-${key}`}
-                      layoutDependency={peekKey}
-                      style={{ borderRadius: 16 }}
-                      onClick={() => setPeekKey(key)}
+                      onClick={() => setSelectedKey(key)}
                       className="flex flex-col items-center py-1.5"
                     >
-                      <span
-                        className={`relative flex h-9 w-9 items-center justify-center rounded-full text-[15px] tabular-nums ${
-                          isToday ? 'bg-ink font-bold text-surface' : 'font-medium text-ink/70'
-                        }`}
-                      >
-                        {d.getDate()}
+                      <span className="relative flex h-9 w-9 items-center justify-center">
+                        {isSelected && (
+                          <motion.span
+                            layoutId="shared-cal-daysel"
+                            transition={{ type: 'spring', stiffness: 520, damping: 40 }}
+                            className="absolute inset-0 rounded-full bg-ink"
+                          />
+                        )}
+                        <span
+                          className={`relative z-10 text-[15px] tabular-nums ${
+                            isSelected
+                              ? 'font-bold text-surface'
+                              : isToday
+                                ? 'font-bold text-ink'
+                                : 'font-medium text-ink/70'
+                          }`}
+                        >
+                          {d.getDate()}
+                        </span>
                       </span>
                       <span className="mt-1 flex h-2 items-center gap-[3px]">
                         {dots.map((it, i) => (
                           <span
                             key={i}
                             className="h-1.5 w-1.5 rounded-full"
-                            style={{ background: `rgb(${it.rgb})` }}
+                            style={{
+                              background: isSelected ? 'rgb(var(--surface) / 0.7)' : `rgb(${it.rgb})`,
+                            }}
                           />
                         ))}
                       </span>
-                    </motion.button>
+                    </button>
                   )
                 })}
               </div>
@@ -259,6 +274,65 @@ export function SharedCalendarioView({ token }: { token: string }) {
           </motion.div>
         </motion.div>
       )}
+
+      {/* Detalle del día seleccionado (vista compacta, igual que la app) */}
+      {!expanded &&
+        (() => {
+          const sel = fromDateKey(selectedKey)
+          const selEvents = eventsOn(data.eventos, selectedKey)
+          return (
+            <>
+              <div className="mb-3 mt-6 flex items-baseline justify-between px-1">
+                <h2 className="text-[18px] font-bold text-ink">
+                  {DAY_NAMES[weekday(sel)]} {sel.getDate()}
+                  <span className="font-semibold text-ink/40"> de {MONTH_NAMES[sel.getMonth()]}</span>
+                </h2>
+                {selEvents.length > 0 && (
+                  <span className="shrink-0 text-sm font-semibold text-ink/40">
+                    {selEvents.length} {selEvents.length === 1 ? 'cosa' : 'cosas'}
+                  </span>
+                )}
+              </div>
+              {selEvents.length === 0 ? (
+                <div className="glass rounded-3xl p-8 text-center">
+                  <p className="text-[15px] font-semibold text-ink">Nada para este día</p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {selEvents.map((e, i) => (
+                    <motion.div
+                      key={e.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: Math.min(i, 8) * 0.03 }}
+                      className="glass rounded-[20px] p-4"
+                    >
+                      <div className="flex gap-2.5">
+                        <span
+                          className="w-[3px] shrink-0 self-stretch rounded-full"
+                          style={{ background: `rgb(${eventRgb(e)})` }}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="break-words text-[15px] font-bold text-ink">{e.title}</h3>
+                            <span className="shrink-0 text-[12px] font-medium text-ink/40">
+                              {EVENT_TYPE_LABEL[e.type]}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 text-sm tabular-nums text-ink/55">
+                            {[ramo(e.subjectId)?.nombre, e.time ?? 'Todo el día', e.location]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </>
+          )
+        })()}
 
       {/* --- AMPLIADA --- */}
       {expanded && (
@@ -342,7 +416,7 @@ export function SharedCalendarioView({ token }: { token: string }) {
           (() => {
             const pd = fromDateKey(peekKey)
             const pEvents = eventsOn(data.eventos, peekKey)
-            const layoutBase = expanded ? 'speek-x' : 'speek'
+            const layoutBase = 'speek-x'
             return (
               <motion.div
                 key="peek"

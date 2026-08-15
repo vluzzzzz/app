@@ -13,13 +13,13 @@ import { useAppStore } from '../../store/useAppStore'
 
 type Props = { open: boolean; onClose: () => void }
 
-/** Próximos 12 meses (desde el actual) como opciones "YYYY-MM" + etiqueta. */
+/** Meses del año ACTUAL desde el mes en curso hasta diciembre (solo el nombre). */
 function monthOptions(): { key: string; label: string }[] {
   const now = new Date()
-  return Array.from({ length: 12 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-    return { key, label: `${MONTH_NAMES[d.getMonth()].slice(0, 3)} ${String(d.getFullYear()).slice(2)}` }
+  const y = now.getFullYear()
+  return Array.from({ length: 12 - now.getMonth() }, (_, i) => {
+    const m = now.getMonth() + i
+    return { key: `${y}-${String(m + 1).padStart(2, '0')}`, label: MONTH_NAMES[m] }
   })
 }
 
@@ -124,14 +124,14 @@ export function ShareCalendarioSheet({ open, onClose }: Props) {
       >
         Todo el calendario
       </button>
-      <div className="mb-4 grid grid-cols-4 gap-1.5">
+      <div className="mb-4 grid grid-cols-3 gap-1.5">
         {opts.map((o) => {
           const on = sel.includes(o.key)
           return (
             <button
               key={o.key}
               onClick={() => toggleMes(o.key)}
-              className={`rounded-xl py-2 text-[12.5px] font-semibold ${
+              className={`truncate rounded-xl px-1 py-2.5 text-[13px] font-semibold ${
                 on ? 'bg-ink text-surface' : 'bg-ink/5 text-ink/70 active:bg-ink/10'
               }`}
             >
