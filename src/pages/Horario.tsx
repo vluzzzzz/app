@@ -14,6 +14,8 @@ import { accentRgb } from '../lib/accents'
 import { ClassSheet } from '../features/schedule/ClassSheet'
 import { ShareHorarioSheet } from '../features/schedule/ShareHorarioSheet'
 import { AgendaTimeline, ClassInfo } from '../features/schedule/AgendaTimeline'
+import { WeekGrid } from '../features/schedule/WeekGrid'
+import { useIsDesktop } from '../lib/useIsDesktop'
 import { ClockIcon, PlusIcon, ShareIcon } from '../components/ui/Icons'
 
 /** Tarjeta de clase para la vista semanal (nombre afuera, info en capa interior). */
@@ -47,6 +49,7 @@ function ClassCard({ block, onOpen }: { block: ClassBlock; onOpen: () => void })
 }
 
 export function Horario() {
+  const isDesktop = useIsDesktop()
   const classes = useAppStore((s) => s.classes)
   const subjects = useAppStore((s) => s.subjects)
 
@@ -85,7 +88,7 @@ export function Horario() {
 
   return (
     <div className="h-full overflow-y-auto px-5 pb-36 pt-6 lg:px-8 lg:pb-10 lg:pt-8">
-      <div className="lg:mx-auto lg:max-w-3xl">
+      <div className="lg:mx-auto lg:max-w-6xl">
       <header className="mb-6 flex items-end justify-between">
         <div>
           <p className="text-sm font-medium text-ink/50">Tus clases</p>
@@ -103,15 +106,18 @@ export function Horario() {
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={openNew}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink text-surface shadow-[0_6px_16px_-6px_rgba(0,0,0,0.4)]"
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink text-surface shadow-[0_6px_16px_-6px_rgba(0,0,0,0.4)] lg:w-auto lg:gap-2 lg:px-4"
             aria-label="Agregar clase"
           >
-            <PlusIcon className="h-6 w-6" />
+            <PlusIcon className="h-6 w-6 lg:h-5 lg:w-5" />
+            <span className="hidden text-[15px] font-semibold lg:inline">Agregar clase</span>
           </motion.button>
         </div>
       </header>
 
-      {/* Tira de días — selector premium con cápsula oscura deslizante */}
+      {/* Tira de días — selector premium con cápsula oscura deslizante (solo celu:
+          en PC la semana completa está a la vista en la grilla) */}
+      {!isDesktop && (
       <div className="glass mb-5 flex items-stretch justify-between gap-1 rounded-[26px] p-2">
         {week.map((d, i) => {
           const selected = i === selectedDay
@@ -151,9 +157,10 @@ export function Horario() {
           )
         })}
       </div>
+      )}
 
       {/* Encabezado del día seleccionado */}
-      {!weekView && (
+      {!isDesktop && !weekView && (
         <div className="mb-4 flex items-baseline justify-between px-1">
           <h2 className="text-[19px] font-bold text-ink">
             {DAY_NAMES[selectedDay]} {selectedDate.getDate()}
@@ -183,6 +190,14 @@ export function Horario() {
             <PlusIcon className="h-5 w-5" /> Agregar clase
           </button>
         </div>
+      ) : isDesktop ? (
+        /* PC: la semana completa como calendario real, con línea de la hora actual */
+        <WeekGrid
+          classes={classes}
+          subjectName={subjectName}
+          subjectColor={subjectColor}
+          onOpen={openEdit}
+        />
       ) : weekView ? (
         /* Vista semanal: lista compacta por día */
         <div className="space-y-5">
