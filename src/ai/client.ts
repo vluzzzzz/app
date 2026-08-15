@@ -9,6 +9,15 @@ export function aiConfigured(): boolean {
   return !!ENDPOINT
 }
 
+/**
+ * Despierta el servidor de la IA (cold start) con un toque silencioso.
+ * Se llama al abrir el chat: así el primer mensaje/audio no paga el bostezo
+ * del servidor dormido y responde al tiro.
+ */
+export function warmUpAi(): void {
+  if (ENDPOINT) void fetch(ENDPOINT, { method: 'OPTIONS' }).catch(() => {})
+}
+
 type Msg = { role: 'system' | 'user' | 'assistant'; content: string }
 export type Tier = 'fast' | 'smart'
 
@@ -109,7 +118,9 @@ export async function transcribeAudio(blob: Blob, attempt = 0): Promise<string> 
         ...(idToken ? { 'x-id-token': idToken } : {}),
       },
       body: form,
-      signal: AbortSignal.timeout(25000),
+      // 10s de tope: si el servidor está lento, mejor cortar y reintentar rápido
+      // que dejar al usuario mirando los puntitos.
+      signal: AbortSignal.timeout(10000),
     })
     if (!res.ok) throw new Error(`transcribe ${res.status}`)
     const data = await res.json()

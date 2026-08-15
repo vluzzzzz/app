@@ -6,7 +6,7 @@ import { accentGhost } from '../../lib/accents'
 import { makeId } from '../../lib/format'
 import { EASE } from '../../lib/motion'
 import { buildSystemPrompt } from '../../ai/prompt'
-import { aiConfigured, askAi, pickTier, transcribeAudio } from '../../ai/client'
+import { aiConfigured, askAi, pickTier, transcribeAudio, warmUpAi } from '../../ai/client'
 import { applyActions } from '../../ai/apply'
 import { ChevronLeft, MicIcon, PaperclipIcon } from '../../components/ui/Icons'
 import { useKeyboardInset } from '../../lib/useKeyboardInset'
@@ -107,6 +107,12 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 1e9, behavior: 'smooth' })
   }, [chat, loading])
+
+  // Despierta el servidor apenas se abre el chat: el primer mensaje/audio
+  // ya no paga el arranque en frío ("se queda cargando la primera vez").
+  useEffect(() => {
+    warmUpAi()
+  }, [])
 
   async function send(textArg?: string) {
     const file = adjunto
