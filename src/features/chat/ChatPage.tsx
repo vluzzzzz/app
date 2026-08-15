@@ -89,6 +89,7 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
   const [grabando, setGrabando] = useState(false)
   const [recSecs, setRecSecs] = useState(0)
   const [transcribiendo, setTranscribiendo] = useState(false)
+  const [verImg, setVerImg] = useState<string | null>(null)
   const kb = useKeyboardInset()
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -115,6 +116,9 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
     const text = typed || (file ? (file.kind === 'pdf' ? `📄 ${file.name}` : '📸 Imagen') : '')
     if (!text || loading) return
     setInput('')
+    // El chip de previsualización se va apenas tocás enviar: la imagen ya quedó
+    // en su burbuja del chat. Si el envío falla, el catch lo repone.
+    setAdjunto(null)
     const userMsgId = makeId()
     if (file?.kind === 'imagen') {
       localImgs.set(userMsgId, `data:${file.mime};base64,${file.data}`)
@@ -154,7 +158,6 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
       const res = await askAi(messages, tier, 0, file ? { mime: file.mime, data: file.data } : undefined)
       const applied =
         res.actions && res.actions.length ? applyActions(res.actions) : []
-      setAdjunto(null)
       pushChat({
         id: makeId(),
         role: 'assistant',
@@ -169,6 +172,7 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
       st.setChat(st.chat.filter((m) => m.id !== userMsgId))
       localImgs.delete(userMsgId)
       setInput(typed)
+      if (file) setAdjunto(file)
     } finally {
       setLoading(false)
     }
@@ -276,19 +280,24 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
               className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[80%] rounded-3xl px-4 py-2.5 text-[15px] ${
-                  m.role === 'user'
-                    ? 'bg-ink text-surface'
-                    : m.error
-                      ? 'bg-rose-500/15 text-rose-700 dark:text-rose-200'
-                      : 'glass glass-highlight text-ink'
+                className={`max-w-[80%] rounded-3xl text-[15px] ${
+                  localImgs.has(m.id) && m.text === '📸 Imagen'
+                    ? 'overflow-hidden' /* imagen sola: sin fondo ni marco, al ras */
+                    : m.role === 'user'
+                      ? 'bg-ink px-4 py-2.5 text-surface'
+                      : m.error
+                        ? 'bg-rose-500/15 px-4 py-2.5 text-rose-700 dark:text-rose-200'
+                        : 'glass glass-highlight px-4 py-2.5 text-ink'
                 }`}
               >
                 {localImgs.has(m.id) && (
                   <img
                     src={localImgs.get(m.id)}
                     alt=""
-                    className="mb-1.5 max-h-48 w-full rounded-2xl object-cover"
+                    onClick={() => setVerImg(localImgs.get(m.id) ?? null)}
+                    className={`max-h-56 w-full cursor-zoom-in rounded-2xl object-cover ${
+                      m.text === '📸 Imagen' ? '' : 'mb-1.5'
+                    }`}
                   />
                 )}
                 {!(localImgs.has(m.id) && m.text === '📸 Imagen') && <RichText text={m.text} />}
@@ -309,11 +318,22 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
           ))}
         </AnimatePresence>
 
-        {(loading || transcribiendo) && (
+        {/* Transcribiendo TU audio → a la derecha (lado del usuario), como un
+            mensaje tuyo en camino. Los puntos de la izquierda son solo la IA. */}
+        {transcribiendo && (
+          <div className="flex justify-end">
+            <div className="rounded-3xl bg-ink px-4 py-3">
+              <span className="inline-flex items-center gap-1">
+                <span className="mr-1 text-xs">🎙️</span>
+                <Dot light /> <Dot light d={0.15} /> <Dot light d={0.3} />
+              </span>
+            </div>
+          </div>
+        )}
+        {loading && (
           <div className="flex justify-start">
             <div className="glass glass-highlight rounded-3xl px-4 py-3 text-ink/50">
-              <span className="inline-flex items-center gap-1">
-                {transcribiendo && <span className="mr-1 text-xs">🎧</span>}
+              <span className="inline-flex gap-1">
                 <Dot /> <Dot d={0.15} /> <Dot d={0.3} />
               </span>
             </div>
@@ -332,7 +352,8 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
               <img
                 src={`data:${adjunto.mime};base64,${adjunto.data}`}
                 alt={adjunto.name}
-                className="h-12 w-12 shrink-0 rounded-xl object-cover"
+                onClick={() => setVerImg(`data:${adjunto.mime};base64,${adjunto.data}`)}
+                className="h-12 w-12 shrink-0 cursor-zoom-in rounded-xl object-cover"
               />
             ) : (
               <span className="text-xl">📄</span>
@@ -430,6 +451,30 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
         </div>
         )}
       </div>
+
+      {/* Visor de imagen a pantalla completa (local, no gasta nada) */}
+      <AnimatePresence>
+        {verImg && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onClick={() => setVerImg(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
+          >
+            <motion.img
+              initial={{ scale: 0.92 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.92 }}
+              transition={{ duration: 0.18, ease: EASE.smooth }}
+              src={verImg}
+              alt=""
+              className="max-h-full max-w-full rounded-2xl object-contain"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -477,10 +522,10 @@ function RichText({ text }: { text: string }) {
   )
 }
 
-function Dot({ d = 0 }: { d?: number }) {
+function Dot({ d = 0, light = false }: { d?: number; light?: boolean }) {
   return (
     <motion.span
-      className="inline-block h-2 w-2 rounded-full bg-ink/40"
+      className={`inline-block h-2 w-2 rounded-full ${light ? 'bg-surface/70' : 'bg-ink/40'}`}
       animate={{ opacity: [0.3, 1, 0.3] }}
       transition={{ duration: 1, repeat: Infinity, delay: d }}
     />

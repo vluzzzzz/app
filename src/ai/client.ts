@@ -90,22 +90,35 @@ export async function askAi(
   }
 }
 
-/** Manda una nota de voz al proxy y devuelve el texto transcrito (Whisper en Groq). */
-export async function transcribeAudio(blob: Blob): Promise<string> {
+/**
+ * Manda una nota de voz al proxy y devuelve el texto transcrito (Whisper en Groq).
+ * Con tope de 25s y un reintento: si el servidor está despertando o hay un hipo,
+ * no deja el indicador congelado para siempre.
+ */
+export async function transcribeAudio(blob: Blob, attempt = 0): Promise<string> {
   if (!ENDPOINT) throw new Error('Brody aún no está configurado.')
   const idToken = auth?.currentUser ? await auth.currentUser.getIdToken() : ''
   const ext = blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'webm'
   const form = new FormData()
   form.append('audio', blob, `nota.${ext}`)
-  const res = await fetch(`${ENDPOINT}/transcribe`, {
-    method: 'POST',
-    headers: {
-      ...(ANON ? { Authorization: `Bearer ${ANON}`, apikey: ANON } : {}),
-      ...(idToken ? { 'x-id-token': idToken } : {}),
-    },
-    body: form,
-  })
-  if (!res.ok) throw new Error('No pude escuchar el audio 😅 probá de nuevo, bro.')
-  const data = await res.json()
-  return typeof data.text === 'string' ? data.text : ''
+  try {
+    const res = await fetch(`${ENDPOINT}/transcribe`, {
+      method: 'POST',
+      headers: {
+        ...(ANON ? { Authorization: `Bearer ${ANON}`, apikey: ANON } : {}),
+        ...(idToken ? { 'x-id-token': idToken } : {}),
+      },
+      body: form,
+      signal: AbortSignal.timeout(25000),
+    })
+    if (!res.ok) throw new Error(`transcribe ${res.status}`)
+    const data = await res.json()
+    return typeof data.text === 'string' ? data.text : ''
+  } catch (e) {
+    if (attempt < 1) {
+      await sleep(700)
+      return transcribeAudio(blob, attempt + 1)
+    }
+    throw e
+  }
 }
