@@ -66,6 +66,9 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
         .chat.filter((m) => !m.error)
         .slice(-8) // últimos mensajes: contexto suficiente sin inflar tokens (evita saturar Groq)
         .map((m) => ({ role: m.role, content: m.text }))
+      // El tier decide también el prompt: preguntas → prompt 'lite' (menos tokens =
+      // respuesta rápida y sin chocar el límite por minuto del plan gratis de Groq).
+      const tier = pickTier(text)
       const systemPrompt = buildSystemPrompt(
         subjects,
         defaultScale,
@@ -73,12 +76,13 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
         tasks,
         events,
         classes,
+        tier === 'fast' ? 'lite' : 'full',
       )
       const messages = [
         ...splitSystem(systemPrompt).map((content) => ({ role: 'system' as const, content })),
         ...history,
       ]
-      const res = await askAi(messages, pickTier(text))
+      const res = await askAi(messages, tier)
       const applied =
         res.actions && res.actions.length ? applyActions(res.actions) : []
       pushChat({
