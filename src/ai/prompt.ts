@@ -84,12 +84,25 @@ export function buildSystemPrompt(
   // Hora actual → la IA distingue lo que YA pasó de lo que viene (ej: "¿qué clases
   // tuve hoy?" a las 20:00 se responde en pasado, sin desear suerte).
   const horaActual = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-  // Tabla de los próximos 14 días YA calculada → la IA no tiene que contar días de
-  // la semana (donde suele fallar). Resuelve "mañana", "pasado mañana", "este martes".
-  const calendarLines = Array.from({ length: 15 }, (_, i) => {
+  // Tabla de días YA calculada → la IA no tiene que contar días de la semana (donde
+  // suele fallar). Arranca en ANTEAYER: sin las filas del pasado, "¿qué clases tuve
+  // ayer?" la hacía inventar el nombre del día ("ayer domingo" siendo viernes).
+  const calendarLines = Array.from({ length: 17 }, (_, idx) => {
+    const i = idx - 2
     const d = new Date(now)
     d.setDate(now.getDate() + i)
-    const tag = i === 0 ? ' ← hoy' : i === 1 ? ' ← mañana' : i === 2 ? ' ← pasado mañana' : ''
+    const tag =
+      i === -2
+        ? ' ← anteayer (YA PASÓ)'
+        : i === -1
+          ? ' ← AYER (YA PASÓ)'
+          : i === 0
+            ? ' ← HOY'
+            : i === 1
+              ? ' ← mañana'
+              : i === 2
+                ? ' ← pasado mañana'
+                : ''
     return `${toDateKey(d)} = ${DAY_NAMES[weekday(d)]} ${d.getDate()} de ${MONTH_NAMES[d.getMonth()]}${tag}`
   }).join('\n')
   const nameRule = name
@@ -254,11 +267,12 @@ Escala de notas: mínima ${scale.min}, máxima ${scale.max}, se aprueba con ${sc
 
 FECHA DE HOY: ${todayHuman} (${todayKey}). HORA ACTUAL: ${horaActual} (formato 24h).
 
-PRÓXIMOS DÍAS (ya calculados — ÚSALOS, no cuentes días tú):
+TABLA DE DÍAS (ya calculada — ÚSALA SIEMPRE, jamás cuentes días tú; incluye ayer y anteayer):
 ${calendarLines}
 
 CÓMO RESOLVER FECHAS (entrega SIEMPRE "YYYY-MM-DD"):
-- "hoy" / "mañana" / "pasado mañana" → mira la tabla de arriba (están marcados).
+- "hoy" / "mañana" / "pasado mañana" / "ayer" / "anteayer" → mira la tabla (están
+  marcados). El nombre del día de AYER es el de ESA fila — no lo adivines jamás.
 - "este jueves" / "el jueves" / "el jueves que viene" / "el próximo jueves" → el PRIMER
   jueves a futuro de la tabla (si hoy es jueves, es hoy). En el habla real TODAS esas
   formas apuntan al jueves más cercano.
@@ -276,10 +290,12 @@ CÓMO RESOLVER FECHAS (entrega SIEMPRE "YYYY-MM-DD"):
   "al mediodía" → "12:00"; "en la noche" → "21:00".
 
 PASADO vs FUTURO (clave — usa la HORA ACTUAL, no suenes robot):
-- Día pasado, o clase/evento de HOY cuya hora de fin ya es anterior a la HORA ACTUAL →
-  habla en PASADO: "hoy tuviste…", "el lunes tuviste…". NUNCA desees suerte ni cierres
-  con "¡a darle!" para algo que YA pasó: cierra preguntando cómo le fue ("¿cómo te
-  fue? 👀") o relajado ("a descansar bro 😎", "ya cumpliste por hoy 🙌").
+- Día pasado (marcado "YA PASÓ" en la tabla), o clase/evento de HOY cuya hora de fin ya
+  es anterior a la HORA ACTUAL → habla en PASADO: "hoy tuviste…", "ayer tuviste…".
+  PROHIBIDO para días que YA pasaron: "suerte", "¡a darle!", "aprovecha el día",
+  "nos vemos mañana", "con más energía" o CUALQUIER ánimo hacia adelante — esas cosas
+  solo tienen sentido a futuro. Cierra preguntando cómo le fue ("¿cómo te fue? 👀",
+  "¿cómo estuvo? 😌") o no cierres con nada.
 - HOY con clases ya pasadas Y otras que faltan: distínguelas ("ya tuviste **X**; te
   queda **Y** a las **HH:MM**") y el ánimo va solo para lo que falta.
 - Futuro (mañana, el próximo lunes, o algo de hoy que aún no empieza) → futuro normal
