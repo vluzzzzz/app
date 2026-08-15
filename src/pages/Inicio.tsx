@@ -5,10 +5,10 @@ import type { Task } from '../lib/types'
 import { useAppStore } from '../store/useAppStore'
 import { avatarSrc } from '../lib/avatars'
 import { AiBar } from '../features/chat/AiBar'
-import { GRAYS, RamosCarousel } from '../features/subjects/RamosCarousel'
-import { SubjectHomeCard } from '../features/subjects/SubjectHomeCard'
+import { RamosCarousel } from '../features/subjects/RamosCarousel'
 import { nextClassToday } from '../lib/schedule'
 import { useIsDesktop } from '../lib/useIsDesktop'
+import { InicioDesktop } from './InicioDesktop'
 import { TaskCard } from '../features/tasks/TaskCard'
 import { TaskEditor } from '../features/tasks/TaskEditor'
 import { DashedBox } from '../components/ui/DashedBox'
@@ -16,8 +16,15 @@ import { BellIcon, CalendarIcon, FileUploadIcon, PlusIcon } from '../components/
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
+/** Selector: Home de PC (dashboard real) o la Home del celular, intacta. */
 export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
   const isDesktop = useIsDesktop()
+  // Componentes separados (no un early-return con hooks después): así el árbol
+  // de hooks de cada versión es independiente y cruzar el breakpoint no crashea.
+  return isDesktop ? <InicioDesktop navigate={navigate} /> : <InicioMobile navigate={navigate} />
+}
+
+function InicioMobile({ navigate }: { navigate: (r: Route) => void }) {
   const userName = useAppStore((s) => s.userName)
   const avatar = useAppStore((s) => s.avatar)
   const subjects = useAppStore((s) => s.subjects)
@@ -152,19 +159,6 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
               </span>
               <span className="text-[13px] text-ink/40">Cálculo, Álgebra, etc.</span>
             </DashedBox>
-          </div>
-        ) : isDesktop ? (
-          /* PC: grilla (el carrusel de gestos no tiene sentido con mouse). */
-          <div className="grid grid-cols-2 gap-4 2xl:grid-cols-3">
-            {orderedSubjects.map((s, i) => (
-              <SubjectHomeCard
-                key={s.id}
-                subject={s}
-                bg={GRAYS[i % GRAYS.length]}
-                next={next?.block.subjectId === s.id ? next : null}
-                onOpen={() => navigate({ name: 'subject', id: s.id })}
-              />
-            ))}
           </div>
         ) : (
           <RamosCarousel
