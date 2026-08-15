@@ -75,7 +75,7 @@ export function SharedHorarioView({ token }: { token: string }) {
   const selectedDate = week[selectedDay]
 
   return (
-    <div className="mx-auto h-full w-full max-w-md overflow-y-auto px-5 pb-16 pt-6">
+    <div className="mx-auto h-full w-full max-w-md overflow-y-auto px-5 pb-16 pt-6 lg:max-w-2xl lg:pt-10">
       <header className="mb-6 flex items-end justify-between">
         <div>
           <p className="text-sm font-medium text-ink/50">Horario de</p>

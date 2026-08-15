@@ -137,7 +137,7 @@ export function SharedCalendarioView({ token }: { token: string }) {
     eventsOn(data.eventos, toDateKey(d)).map((e) => ({ title: e.title, rgb: eventRgb(e) }))
 
   return (
-    <div className="mx-auto h-full w-full max-w-md overflow-y-auto px-5 pb-16 pt-6">
+    <div className="mx-auto h-full w-full max-w-md overflow-y-auto px-5 pb-16 pt-6 lg:max-w-2xl lg:pt-10">
       <header className="mb-6 flex items-end justify-between">
         <div>
           <p className="text-sm font-medium text-ink/50">Calendario de</p>

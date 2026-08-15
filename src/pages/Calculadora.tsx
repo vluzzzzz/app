@@ -18,7 +18,8 @@ export function Calculadora({
   const [adding, setAdding] = useState(!!startAdding)
 
   return (
-    <div className="h-full overflow-y-auto px-5 pb-28 pt-6">
+    <div className="h-full overflow-y-auto px-5 pb-28 pt-6 lg:px-8 lg:pb-10 lg:pt-8">
+      <div className="lg:mx-auto lg:max-w-4xl">
       <header className="mb-6 flex items-end justify-between">
         <div>
           <p className="text-sm font-medium text-ink/50">Tus ramos</p>
@@ -48,7 +49,7 @@ export function Calculadora({
       ) : subjects.length === 0 ? (
         <EmptyState onAdd={() => setAdding(true)} />
       ) : (
-        <motion.div className="space-y-3">
+        <motion.div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
           <AnimatePresence initial={false}>
             {subjects.map((s, i) => (
               <motion.div
@@ -67,6 +68,7 @@ export function Calculadora({
           </AnimatePresence>
         </motion.div>
       )}
+      </div>
     </div>
   )
 }

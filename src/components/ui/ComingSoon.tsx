@@ -11,7 +11,8 @@ export function ComingSoon({
   text: string
 }) {
   return (
-    <div className="h-full overflow-y-auto px-5 pb-32 pt-6">
+    <div className="h-full overflow-y-auto px-5 pb-32 pt-6 lg:px-8 lg:pb-10 lg:pt-8">
+      <div className="lg:mx-auto lg:max-w-2xl">
       <header className="mb-6">
         <p className="text-sm font-medium text-ink/50">Próximamente</p>
         <h1 className="text-[34px] font-bold leading-tight text-ink">{title}</h1>
@@ -27,6 +28,7 @@ export function ComingSoon({
         <h2 className="mb-2 text-xl font-semibold text-ink">En construcción</h2>
         <p className="mx-auto max-w-xs text-sm text-ink/55">{text}</p>
       </motion.div>
+      </div>
     </div>
   )
 }

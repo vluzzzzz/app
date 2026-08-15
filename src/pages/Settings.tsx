@@ -32,7 +32,8 @@ export function Settings({ navigate }: { navigate: (r: Route) => void }) {
   const isCustom = !COUNTRY_SCALES.some((c) => isPreset(c.scale))
 
   return (
-    <div className="h-full overflow-y-auto px-5 pb-24 pt-6">
+    <div className="h-full overflow-y-auto px-5 pb-24 pt-6 lg:px-8 lg:pb-10 lg:pt-8">
+      <div className="lg:mx-auto lg:max-w-2xl">
       <header className="mb-6 flex items-center gap-3">
         <motion.button
           whileTap={{ scale: 0.9 }}
@@ -191,6 +192,7 @@ export function Settings({ navigate }: { navigate: (r: Route) => void }) {
       <p className="mt-8 text-center text-xs text-ink/30">
         Brody · v0.1
       </p>
+      </div>
     </div>
   )
 }

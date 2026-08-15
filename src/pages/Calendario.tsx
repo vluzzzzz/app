@@ -113,7 +113,8 @@ export function Calendario() {
   const showHoy = year !== today.getFullYear() || month !== today.getMonth() || selectedKey !== todayKey
 
   return (
-    <div className="h-full overflow-y-auto px-5 pb-36 pt-6">
+    <div className="h-full overflow-y-auto px-5 pb-36 pt-6 lg:px-8 lg:pb-10 lg:pt-8">
+      <div className="lg:mx-auto lg:max-w-2xl">
       <header className="mb-6 flex items-end justify-between">
         <div>
           <p className="text-sm font-medium text-ink/50">Tus fechas</p>
@@ -705,6 +706,7 @@ export function Calendario() {
         defaultDate={selectedKey}
       />
       <ShareCalendarioSheet open={shareOpen} onClose={() => setShareOpen(false)} />
+      </div>
     </div>
   )
 }

@@ -110,7 +110,8 @@ export function ProfilePage({ navigate }: { navigate: (r: Route) => void }) {
   }
 
   return (
-    <div className="h-full overflow-y-auto px-5 pb-28 pt-6">
+    <div className="h-full overflow-y-auto px-5 pb-28 pt-6 lg:px-8 lg:pb-10 lg:pt-8">
+      <div className="lg:mx-auto lg:max-w-2xl">
       <header className="mb-5 flex items-center gap-3">
         <motion.button
           whileTap={{ scale: 0.9 }}
@@ -288,6 +289,7 @@ export function ProfilePage({ navigate }: { navigate: (r: Route) => void }) {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }
