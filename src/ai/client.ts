@@ -17,8 +17,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 // Verbos que implican CREAR/EDITAR/AGENDAR (o anotar una nota) → necesitan el
 // modelo grande (más preciso armando ramos y fechas). Lo demás (preguntas,
 // saludos, "¿qué tengo mañana?") va al modelo rápido.
+// El grupo final acepta pronombres pegados al imperativo: "agregaLO", "anotaME",
+// "creaMELO", "borraLAS" — sin él, "agregalo" caía al modo pregunta y no ejecutaba.
+// Las vocales van con y sin tilde porque el imperativo con pronombre la corre:
+// "agrégalo", "anótame", "bórralo", "súmale". Los bordes son lookarounds en vez
+// de \b porque \b no reconoce vocales acentuadas ("saqué " no tiene \b tras la é).
 const ACTION_RE =
-  /\b(cre[aá]r?|cr[eé]ame|arm[aá]|h[aá]zme|agreg[aá]r?|a[ñn]ad[eií]r?|anot[aá]r?|ap[uú]nt[aá]|pon(?:g[aeoó]|me|le)?|ingres[aá]|registr[aá]|s[uú]mal?e?|saqu[eé]|me saqu[eé]|obtuve|sub[ií]|recu[eé]rdame|record[aá]|borr[aá]|elimin[aá]|quit[aá]|cambi[aá]|edit[aá]|modific[aá]|actualiz[aá]|renombr[aá]|agend[aá]|ag[eé]ndame|marc[aá]|complet[aá]|mu[eé]ve)\b/i
+  /(?<![a-záéíóúüñ])(cr[eé][aá]|[aá]rm[aá]|h[aá]zme|agr[eé]g[aá]|a[ñn][aá]d[eií]|an[oó]t[aá]|ap[uú]nt[aá]|p[oó]n(?:g[aeoó]|me|le|l[oa])?|ingr[eé]s[aá]|reg[ií]str[aá]|s[uú]m[aá]|saqu[eé]|obtuve|s[uú]b[eií]|recu[eé]rd[aá]|record[aá]|b[oó]rr[aá]|elim[ií]n[aá]|qu[ií]t[aá]|c[aá]mbi[aá]|ed[ií]t[aá]|modif[ií]c[aá]|actual[ií]z[aá]|ren[oó]mbr[aá]|ag[eé]nd[aá]|m[aá]rc[aá]|compl[eé]t[aá]|mu[eé]v[eé])(?:r|l[oa]s?|les?|me(?:l[oa]s?)?|te(?:l[oa]s?)?)?(?![a-záéíóúüñ])/i
 
 /** Elige el modelo según el mensaje: orden de acción → 'smart', pregunta → 'fast'. */
 export function pickTier(text: string): Tier {

@@ -171,12 +171,18 @@ Usuario: "borra todo lo que tengo el 23 de octubre"
 Respuesta: {"reply":"Listo, borré todo lo del 23 de octubre 🧹","actions":[
  {"type":"clear_date","date":"2026-10-23"}
 ]}`
-      : `ACCIONES (solo si pide crear/editar/agendar/borrar; si solo pregunta, actions = []):
-create_subject{name,nodes?:[{name,weight?,grade?,children?}]}, add_note{subject,path?,name,grade?},
-set_grade{subject,path,grade}, update_node{subject,path,weight?,name?}, remove_node{subject,path},
-remove_subject{subject}, add_task{title,date?,time?}, complete_task{title}, remove_task{title},
-add_event{title,date,time?,endTime?,eventType?,subject?}, remove_event{title}, clear_date{date,scope?}.
-eventType: "evaluacion" | "tarea" | "evento" | "recordatorio". Refiérete a todo por su NOMBRE exacto.`
+      : `ACCIONES: si pide crear/editar/agendar/borrar, pon objetos así DENTRO del array "actions"
+(NUNCA como texto en "reply"); si solo pregunta, actions = []. Tipos ("type" + campos):
+{"type":"create_subject","name":…,"nodes"?:[{"name":…,"weight"?,"grade"?,"children"?}]}
+{"type":"add_note","subject":…,"path"?:[…],"name":…,"grade"?} · {"type":"set_grade","subject":…,"path":[…],"grade":…}
+{"type":"update_node","subject":…,"path":[…],"weight"?,"name"?} · {"type":"remove_node","subject":…,"path":[…]}
+{"type":"remove_subject","subject":…} · {"type":"add_task","title":…,"date"?,"time"?}
+{"type":"complete_task","title":…} · {"type":"remove_task","title":…}
+{"type":"add_event","title":…,"date":"YYYY-MM-DD","time"?,"endTime"?,"eventType"?,"subject"?}
+{"type":"remove_event","title":…} · {"type":"clear_date","date":…,"scope"?}
+eventType: "evaluacion" | "tarea" | "evento" | "recordatorio". Usa los NOMBRES exactos.
+Ejemplo: Usuario: "agendame la presentación el jueves 20" → {"reply":"¡Listo! Quedó agendada
+para el jueves 20 📅","actions":[{"type":"add_event","title":"Presentación","date":"2026-08-20","eventType":"evento"}]}`
   return `Te llamas **Brody**, el asistente de una app de notas para estudiantes
 en Latinoamérica.
 
@@ -272,6 +278,10 @@ REGLAS IMPORTANTES:
   ya calculados del estado (nota actual, estado, "necesita ~X").
 - Usa "actions" solo cuando el usuario pida crear/editar/agendar/anotar. Si solo pregunta,
   deja actions vacío y responde en "reply".
+- Las acciones van ÚNICAMENTE dentro del array "actions". JAMÁS escribas una acción ni su
+  JSON dentro del texto de "reply" (el usuario NO debe ver código).
+- NUNCA digas "listo/agregué/anotado" si en ESTA misma respuesta no va la acción en
+  "actions": sin acción en el array, NADA se guarda de verdad.
 - Refiérete a las asignaturas/evaluaciones/tareas por su NOMBRE tal como aparecen.
 - DISTINGUE tarea vs evento: algo con FECHA concreta (prueba, examen, cumpleaños, entrega,
   reunión) → add_event. Un pendiente sin fecha clara ("recordar comprar", "estudiar") →
