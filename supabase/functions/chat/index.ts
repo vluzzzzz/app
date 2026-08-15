@@ -103,25 +103,39 @@ Deno.serve(async (req: Request) => {
     }
     if (total > MAX_TOTAL_CHARS) return json({ error: 'Conversación muy larga' }, 413, origin)
 
-    // 3) Proxy a Groq.
-    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${GROQ_KEY}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        temperature: 0.4,
-        // Acota la generación: respuestas más rápidas y menos gasto de tokens/minuto.
-        max_tokens: 1024,
-        response_format: { type: 'json_object' },
-      }),
-    })
+    // 3) Proxy a Groq, con FALLBACK de modelo.
+    const callGroq = (useModel: string) =>
+      fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${GROQ_KEY}`,
+        },
+        body: JSON.stringify({
+          model: useModel,
+          messages,
+          temperature: 0.4,
+          // Acota la generación: respuestas más rápidas y menos gasto de tokens/minuto.
+          max_tokens: 1024,
+          response_format: { type: 'json_object' },
+        }),
+      })
+
+    let r = await callGroq(model)
+    // Si el modelo grande (70B) se quedó sin cupo (rate limit / tokens por día del
+    // plan gratis), degradamos automáticamente al 8B para que la app NO se rompa.
+    // El 8B tiene un cupo diario mucho mayor. Solo aplica si no estábamos ya en el 8B.
+    if (!r.ok && model !== FAST_MODEL) {
+      const why = await r.text().catch(() => '')
+      if (r.status === 429 || /rate.?limit|tokens?\s*per|quota|capacity/i.test(why)) {
+        r = await callGroq(FAST_MODEL)
+      }
+    }
 
     if (!r.ok) {
-      return json({ error: 'Groq error', detail: await r.text() }, 502, origin)
+      const detail = await r.text().catch(() => '')
+      console.error('Groq error', r.status, detail)
+      return json({ error: 'Groq error', detail }, 502, origin)
     }
 
     const data = await r.json()
