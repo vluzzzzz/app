@@ -49,10 +49,6 @@ export function Calendario() {
   // Las clases del día van plegadas por defecto (ya se sabe que hay clases);
   // se despliegan con la flechita "Clases".
   const [peekClasesOpen, setPeekClasesOpen] = useState(false)
-  // Desde dónde crece la tarjeta: offset del centro de la celda tocada respecto
-  // al centro de la pantalla. La tarjeta crece UNIFORME (sin estirarse) mientras
-  // viaja desde ahí, y al cerrar vuelve al mismo punto.
-  const [peekFrom, setPeekFrom] = useState<{ dx: number; dy: number }>({ dx: 0, dy: 0 })
 
   const [eventSheetOpen, setEventSheetOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
@@ -256,46 +252,46 @@ export function Calendario() {
                 const isToday = key === todayKey
                 const items = itemsFor(d)
                 return (
-                  <button
+                  <motion.button
                     key={di}
-                    onClick={(e) => {
+                    layoutId={`peek-${key}`}
+                    style={{ borderRadius: 16 }}
+                    onClick={() => {
                       // Agranda el día encima (vista rápida) — no colapsa el mes.
-                      // Guardamos desde dónde crece: el centro de esta celda.
-                      const r = e.currentTarget.getBoundingClientRect()
-                      setPeekFrom({
-                        dx: r.left + r.width / 2 - window.innerWidth / 2,
-                        dy: r.top + r.height / 2 - window.innerHeight / 2,
-                      })
                       setSelectedKey(key)
                       setPeekClasesOpen(false)
                       setPeekKey(key)
                     }}
-                    className="flex min-h-[122px] flex-col gap-1 px-1 pt-1.5 text-left align-top active:bg-ink/[0.03]"
+                    className="min-h-[122px] px-1 pt-1.5 text-left align-top active:bg-ink/[0.03]"
                   >
-                    <span
-                      className={`mx-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[13px] tabular-nums ${
-                        isToday ? 'bg-ink font-bold text-surface' : 'font-semibold text-ink/70'
-                      }`}
-                    >
-                      {d.getDate()}
-                    </span>
-                    <div className="flex flex-col gap-1 overflow-hidden">
-                      {items.slice(0, 3).map((it, i) => (
-                        <span
-                          key={i}
-                          className="truncate rounded-md px-1 py-0.5 text-[10.5px] font-semibold leading-tight text-ink/80"
-                          style={{ background: `rgb(${it.rgb} / 0.16)` }}
-                        >
-                          {it.title}
-                        </span>
-                      ))}
-                      {items.length > 3 && (
-                        <span className="pl-1 text-[10px] font-semibold text-ink/40">
-                          +{items.length - 3} más
-                        </span>
-                      )}
-                    </div>
-                  </button>
+                    {/* layout="position": el contenido viaja como UNIDAD durante el
+                        morph de la caja — sin estirarse ni deformarse. */}
+                    <motion.div layout="position" className="flex flex-col gap-1">
+                      <span
+                        className={`mx-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[13px] tabular-nums ${
+                          isToday ? 'bg-ink font-bold text-surface' : 'font-semibold text-ink/70'
+                        }`}
+                      >
+                        {d.getDate()}
+                      </span>
+                      <div className="flex flex-col gap-1 overflow-hidden">
+                        {items.slice(0, 3).map((it, i) => (
+                          <span
+                            key={i}
+                            className="truncate rounded-md px-1 py-0.5 text-[10.5px] font-semibold leading-tight text-ink/80"
+                            style={{ background: `rgb(${it.rgb} / 0.16)` }}
+                          >
+                            {it.title}
+                          </span>
+                        ))}
+                        {items.length > 3 && (
+                          <span className="pl-1 text-[10px] font-semibold text-ink/40">
+                            +{items.length - 3} más
+                          </span>
+                        )}
+                      </div>
+                    </motion.div>
+                  </motion.button>
                 )
               })}
             </div>
@@ -463,28 +459,23 @@ export function Calendario() {
                 onClick={() => setPeekKey(null)}
                 className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-5 backdrop-blur-[2px]"
               >
-                {/* La tarjeta CRECE uniforme (misma escala en ambos ejes, sin
-                    estirarse) mientras VIAJA desde la celda tocada hasta el centro;
-                    al cerrar hace el camino inverso. */}
+                {/* Container transform de verdad: la CAJA de la celda se expande
+                    hasta ser esta tarjeta (comparten layoutId). El contenido va en
+                    un hijo con layout="position": viaja como unidad, NO se estira. */}
                 <motion.div
-                  initial={{ scale: 0.12, x: peekFrom.dx, y: peekFrom.dy, opacity: 0 }}
-                  animate={{ scale: 1, x: 0, y: 0, opacity: 1 }}
-                  exit={{ scale: 0.12, x: peekFrom.dx, y: peekFrom.dy, opacity: 0 }}
-                  transition={{
-                    type: 'spring',
-                    stiffness: 320,
-                    damping: 30,
-                    opacity: { duration: 0.16 },
-                  }}
+                  layoutId={`peek-${peekKey}`}
+                  transition={{ type: 'spring', stiffness: 280, damping: 30 }}
                   style={{ borderRadius: 20 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="max-h-[75vh] w-full max-w-sm overflow-y-auto bg-surface p-5 shadow-2xl"
+                  className="max-h-[75vh] w-full max-w-sm overflow-y-auto bg-surface shadow-2xl"
                 >
-                  {/* El contenido aparece en fade mientras la caja vuela (padre→hijo). */}
+                  {/* El contenido aparece en fade mientras la caja se expande. */}
                   <motion.div
+                    layout="position"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: 0.1, duration: 0.2 }}
+                    transition={{ delay: 0.08, duration: 0.22 }}
+                    className="p-5"
                   >
                     <div className="mb-3 flex items-baseline justify-between gap-2">
                       <h3 className="text-[18px] font-bold text-ink">
@@ -521,30 +512,38 @@ export function Calendario() {
                                 }`}
                               />
                             </button>
-                            {peekClasesOpen &&
-                              pClasses.map((c, i) => (
+                            <AnimatePresence initial={false}>
+                              {peekClasesOpen && (
                                 <motion.div
-                                  key={c.id}
-                                  initial={{ opacity: 0, y: -4 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ delay: i * 0.03 }}
-                                  className="flex gap-2.5 rounded-2xl bg-ink/[0.04] p-3"
+                                  key="clases-lista"
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.24, ease: 'easeInOut' }}
+                                  className="overflow-hidden"
                                 >
-                                  <span
-                                    className="w-[3px] shrink-0 self-stretch rounded-full"
-                                    style={{ background: subjectColor(c.subjectId) }}
-                                  />
-                                  <div className="min-w-0">
-                                    <p className="break-words text-[14px] font-bold text-ink">
-                                      {subjectName(c.subjectId) ?? 'Clase'}
-                                    </p>
-                                    <p className="text-[12.5px] tabular-nums text-ink/55">
-                                      {c.start} — {c.end}
-                                      {c.room ? ` · ${c.room}` : ''} · {CLASS_TYPE_LABEL[c.type]}
-                                    </p>
+                                  <div className="space-y-2">
+                                    {pClasses.map((c) => (
+                                      <div key={c.id} className="flex gap-2.5 rounded-2xl bg-ink/[0.04] p-3">
+                                        <span
+                                          className="w-[3px] shrink-0 self-stretch rounded-full"
+                                          style={{ background: subjectColor(c.subjectId) }}
+                                        />
+                                        <div className="min-w-0">
+                                          <p className="break-words text-[14px] font-bold text-ink">
+                                            {subjectName(c.subjectId) ?? 'Clase'}
+                                          </p>
+                                          <p className="text-[12.5px] tabular-nums text-ink/55">
+                                            {c.start} — {c.end}
+                                            {c.room ? ` · ${c.room}` : ''} · {CLASS_TYPE_LABEL[c.type]}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    ))}
                                   </div>
                                 </motion.div>
-                              ))}
+                              )}
+                            </AnimatePresence>
                           </>
                         )}
                         {pEvents.map((e) => (
