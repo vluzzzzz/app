@@ -131,24 +131,17 @@ Deno.serve(async (req: Request) => {
 
     let r = await callGroq(model)
     if (!r.ok) {
+      // Falló (cuota del minuto, caída puntual, lo que sea): probamos el OTRO modelo
+      // al tiro. Cada modelo tiene su cupo por minuto SEPARADO en el plan gratis, así
+      // que esto duplica el cupo efectivo y evita dejar al usuario esperando.
       const why = await r.text().catch(() => '')
-      const isRate = r.status === 429 || /rate.?limit|tokens?\s*per|quota|capacity/i.test(why)
       console.error('Groq fallo 1', r.status, why)
-      if (model !== FAST_MODEL) {
-        // El modelo grande falló (cuota, caída puntual, lo que sea): degradamos al
-        // rápido para que la app NO se rompa.
-        r = await callGroq(FAST_MODEL)
-      } else if (!isRate) {
-        // El rápido falló por algo transitorio (no es cuota): un reintento y listo.
-        // Si es cuota NO reintenamos al tiro (seguiría 429): se lo devolvemos al
-        // cliente, que sabe esperar lo que Groq sugiere y reintentar solo.
-        r = await callGroq(FAST_MODEL)
-      } else {
-        return json({ error: 'Groq error', detail: why }, 502, origin)
-      }
+      r = await callGroq(model === FAST_MODEL ? MODEL : FAST_MODEL)
     }
 
     if (!r.ok) {
+      // Los dos modelos fallaron. Si es cuota, el cliente sabe esperar lo que Groq
+      // sugiere y reintentar solo; cualquier otra cosa muestra su mensaje amable.
       const detail = await r.text().catch(() => '')
       console.error('Groq fallo 2', r.status, detail)
       return json({ error: 'Groq error', detail }, 502, origin)
