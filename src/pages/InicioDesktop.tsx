@@ -5,7 +5,7 @@ import type { Task } from '../lib/types'
 import { useAppStore } from '../store/useAppStore'
 import { accentGhost, accentRgb } from '../lib/accents'
 import { avatarSrc } from '../lib/avatars'
-import { currentGrade, minGradeToPass } from '../lib/grades'
+import { currentGrade, minGradeToPass, realEvaluationCount } from '../lib/grades'
 import { formatGrade } from '../lib/format'
 import {
   DAY_NAMES,
@@ -17,7 +17,6 @@ import {
   weekday,
 } from '../lib/schedule'
 import { TaskEditor } from '../features/tasks/TaskEditor'
-import { DashedBox } from '../components/ui/DashedBox'
 import {
   BellIcon,
   CalendarIcon,
@@ -72,7 +71,7 @@ export function InicioDesktop({ navigate }: { navigate: (r: Route) => void }) {
         <header className="mb-7 flex items-center justify-between">
           <div>
             <h1 className="text-[30px] font-bold leading-tight text-ink">
-              ¡Hola, {userName || 'Estudiante'}! 👋
+              ¡Hola, {userName || 'Estudiante'}!
             </h1>
             <p className="mt-0.5 text-[15px] text-ink/50">Aquí tienes un resumen de tu día.</p>
           </div>
@@ -109,11 +108,23 @@ export function InicioDesktop({ navigate }: { navigate: (r: Route) => void }) {
               <span className="font-semibold text-ink/40"> de {MONTH_NAMES[now.getMonth()]}</span>
             </h2>
             <div className="mt-5 flex items-center gap-8">
-              <Stat n={clasesHoy.length} label={clasesHoy.length === 1 ? 'Clase' : 'Clases'} />
-              <span className="h-8 w-px bg-ink/10" />
-              <Stat n={tareasPend.length} label={tareasPend.length === 1 ? 'Tarea' : 'Tareas'} />
-              <span className="h-8 w-px bg-ink/10" />
-              <Stat n={evalsHoy.length} label={evalsHoy.length === 1 ? 'Evaluación' : 'Evaluaciones'} />
+              <Stat
+                icon={<ClockIcon className="h-4.5 w-4.5" />}
+                n={clasesHoy.length}
+                label={clasesHoy.length === 1 ? 'Clase' : 'Clases'}
+              />
+              <span className="h-9 w-px bg-ink/10" />
+              <Stat
+                icon={<CheckIcon className="h-4.5 w-4.5" />}
+                n={tareasPend.length}
+                label={tareasPend.length === 1 ? 'Tarea' : 'Tareas'}
+              />
+              <span className="h-9 w-px bg-ink/10" />
+              <Stat
+                icon={<CalendarIcon className="h-4.5 w-4.5" />}
+                n={evalsHoy.length}
+                label={evalsHoy.length === 1 ? 'Evaluación' : 'Evaluaciones'}
+              />
             </div>
           </div>
 
@@ -143,7 +154,7 @@ export function InicioDesktop({ navigate }: { navigate: (r: Route) => void }) {
               </>
             ) : (
               <>
-                <h3 className="mt-1.5 text-[19px] font-bold text-ink">Nada más por hoy 😎</h3>
+                <h3 className="mt-1.5 text-[19px] font-bold text-ink">Nada más por hoy</h3>
                 <p className="mt-1 text-[14px] text-ink/55">
                   {clasesHoy.length ? 'Ya cumpliste con tus clases.' : 'Día libre de clases.'}
                 </p>
@@ -171,7 +182,7 @@ export function InicioDesktop({ navigate }: { navigate: (r: Route) => void }) {
             </div>
             <div className="space-y-1.5">
               {tasks.length === 0 && (
-                <p className="py-4 text-center text-sm text-ink/40">Sin tareas — libreee 😎</p>
+                <p className="py-4 text-center text-sm text-ink/40">Sin tareas pendientes</p>
               )}
               {tasks.slice(0, 7).map((t) => (
                 <div
@@ -212,18 +223,15 @@ export function InicioDesktop({ navigate }: { navigate: (r: Route) => void }) {
                 </div>
               ))}
             </div>
-            <div className="mt-3">
-              <DashedBox
-                rx={18}
-                onClick={() => {
-                  setEditing(null)
-                  setEditorOpen(true)
-                }}
-                className="flex w-full items-center justify-center gap-2 py-3 text-[14px] font-semibold text-ink/55"
-              >
-                <PlusIcon className="h-4.5 w-4.5" /> Agregar tarea
-              </DashedBox>
-            </div>
+            <button
+              onClick={() => {
+                setEditing(null)
+                setEditorOpen(true)
+              }}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-ink/15 py-3 text-[14px] font-semibold text-ink/55 transition-colors hover:border-ink/30 hover:text-ink/80"
+            >
+              <PlusIcon className="h-4 w-4" /> Agregar tarea
+            </button>
           </div>
 
           {/* Tus ramos */}
@@ -268,11 +276,16 @@ export function InicioDesktop({ navigate }: { navigate: (r: Route) => void }) {
                     />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[14.5px] font-semibold text-ink">{s.name}</p>
-                      <p className="text-[12px] text-ink/40">Promedio</p>
+                      <p className="text-[12px] text-ink/40">
+                        {realEvaluationCount(s)} evaluaciones
+                      </p>
                     </div>
-                    <span className={`shrink-0 text-[19px] font-black tabular-nums ${tone}`}>
-                      {formatGrade(prom)}
-                    </span>
+                    <div className="shrink-0 text-right">
+                      <p className="text-[11px] font-medium text-ink/35">Promedio</p>
+                      <p className={`text-[19px] font-black leading-tight tabular-nums ${tone}`}>
+                        {formatGrade(prom)}
+                      </p>
+                    </div>
                     <ChevronRight className="h-4 w-4 shrink-0 text-ink/25 transition-transform group-hover:translate-x-0.5" />
                   </motion.button>
                 )
@@ -287,11 +300,16 @@ export function InicioDesktop({ navigate }: { navigate: (r: Route) => void }) {
   )
 }
 
-function Stat({ n, label }: { n: number; label: string }) {
+function Stat({ icon, n, label }: { icon: React.ReactNode; n: number; label: string }) {
   return (
-    <div>
-      <p className="text-[26px] font-black tabular-nums leading-tight text-ink">{n}</p>
-      <p className="text-[13px] font-medium text-ink/45">{label}</p>
+    <div className="flex items-center gap-3">
+      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-ink/5 text-ink/60">
+        {icon}
+      </span>
+      <div>
+        <p className="text-[22px] font-black tabular-nums leading-tight text-ink">{n}</p>
+        <p className="text-[12.5px] font-medium text-ink/45">{label}</p>
+      </div>
     </div>
   )
 }

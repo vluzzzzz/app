@@ -527,7 +527,7 @@ export function SharedCalendarioView({ token }: { token: string }) {
 
                     {nPeek === 0 ? (
                       <p className="py-6 text-center text-[15px] text-ink/50">
-                        Nada para este día 😌
+                        Nada para este día
                       </p>
                     ) : (
                       <div className="space-y-2">
