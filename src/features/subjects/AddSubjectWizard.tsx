@@ -129,6 +129,7 @@ export function AddSubjectWizard({
                     key={a.id}
                     onClick={() => setColor(a.id)}
                     whileTap={{ scale: 0.9 }}
+                    initial={false}
                     animate={{ borderRadius: selected ? '32%' : '50%' }}
                     aria-label={a.label}
                     className="aspect-square"

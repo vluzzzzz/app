@@ -184,6 +184,7 @@ export function Onboarding() {
                         whileTap={{ scale: 0.9 }}
                         onClick={() => setAccent(a.id)}
                         aria-label={a.label}
+                        initial={false}
                         animate={{ borderRadius: selected ? '30%' : '50%' }}
                         transition={{ type: 'spring', stiffness: 420, damping: 26 }}
                         className="aspect-square"

@@ -226,6 +226,8 @@ function AppearanceColors() {
             onClick={() => setAccent(a.id)}
             aria-label={a.label}
             // Círculo por defecto; al seleccionar se MORPHEA a cuadrado redondeado.
+            // initial={false}: nace ya en su forma final (sin el flash cuadrado→círculo).
+            initial={false}
             animate={{ borderRadius: selected ? '30%' : '50%' }}
             transition={{ type: 'spring', stiffness: 420, damping: 26 }}
             className="aspect-square"
