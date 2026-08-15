@@ -80,10 +80,14 @@ Deno.serve(async (req: Request) => {
 
     // 1) Autenticación: exige un ID token de Firebase válido.
     const idToken = req.headers.get('x-id-token') ?? ''
-    if (!idToken) return json({ error: 'No autorizado' }, 401, origin)
+    if (!idToken) {
+      console.error('Auth fallo: sin token')
+      return json({ error: 'No autorizado' }, 401, origin)
+    }
     try {
       await verifyFirebaseToken(idToken)
-    } catch {
+    } catch (e) {
+      console.error('Auth fallo: token inválido —', String(e))
       return json({ error: 'Sesión inválida' }, 401, origin)
     }
 
@@ -180,6 +184,7 @@ Deno.serve(async (req: Request) => {
       origin,
     )
   } catch (e) {
+    console.error('Excepción no manejada:', String(e))
     return json({ error: String(e) }, 500, origin)
   }
 })
