@@ -5,7 +5,8 @@ import type { NextClassInfo } from '../../lib/schedule'
 import { SubjectHomeCard } from './SubjectHomeCard'
 
 // Grises intercalados (oscuro / plomo) para las tarjetas.
-const GRAYS = ['rgb(39 39 42)', 'rgb(82 82 91)']
+// Exportado: la grilla de ramos del modo PC usa la misma paleta.
+export const GRAYS = ['rgb(39 39 42)', 'rgb(82 82 91)']
 const GAP = 16
 
 /**

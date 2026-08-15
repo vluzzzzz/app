@@ -5,8 +5,10 @@ import type { Task } from '../lib/types'
 import { useAppStore } from '../store/useAppStore'
 import { avatarSrc } from '../lib/avatars'
 import { AiBar } from '../features/chat/AiBar'
-import { RamosCarousel } from '../features/subjects/RamosCarousel'
+import { GRAYS, RamosCarousel } from '../features/subjects/RamosCarousel'
+import { SubjectHomeCard } from '../features/subjects/SubjectHomeCard'
 import { nextClassToday } from '../lib/schedule'
+import { useIsDesktop } from '../lib/useIsDesktop'
 import { TaskCard } from '../features/tasks/TaskCard'
 import { TaskEditor } from '../features/tasks/TaskEditor'
 import { DashedBox } from '../components/ui/DashedBox'
@@ -15,6 +17,7 @@ import { BellIcon, CalendarIcon, FileUploadIcon, PlusIcon } from '../components/
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
 export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
+  const isDesktop = useIsDesktop()
   const userName = useAppStore((s) => s.userName)
   const avatar = useAppStore((s) => s.avatar)
   const subjects = useAppStore((s) => s.subjects)
@@ -66,9 +69,9 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
     : subjects
 
   return (
-    <div className="flex h-full flex-col gap-7 overflow-y-auto px-5 pb-36 pt-4">
+    <div className="flex h-full flex-col gap-7 overflow-y-auto px-5 pb-36 pt-4 lg:gap-8 lg:px-10 lg:pb-10 lg:pt-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between lg:mx-auto lg:w-full lg:max-w-6xl">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white shadow-[var(--card-shadow)] ring-1 ring-ink/5">
             <img
@@ -101,6 +104,10 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
         </div>
       </div>
 
+      {/* En PC: dos columnas (principal + tareas al costado). En celu este
+          wrapper es transparente: mismo orden y mismos gaps de siempre. */}
+      <div className="flex flex-col gap-7 lg:mx-auto lg:w-full lg:max-w-6xl lg:flex-row lg:items-start lg:gap-10">
+      <div className="flex min-w-0 flex-col gap-7 lg:flex-1">
       {/* Tira de la semana (tarjeta blanca, compacta; hoy = caja plomo) */}
       <div className="glass flex items-stretch justify-between gap-1 rounded-[26px] p-2">
         {week.map((d, i) => {
@@ -146,6 +153,19 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
               <span className="text-[13px] text-ink/40">Cálculo, Álgebra, etc.</span>
             </DashedBox>
           </div>
+        ) : isDesktop ? (
+          /* PC: grilla (el carrusel de gestos no tiene sentido con mouse). */
+          <div className="grid grid-cols-2 gap-4 2xl:grid-cols-3">
+            {orderedSubjects.map((s, i) => (
+              <SubjectHomeCard
+                key={s.id}
+                subject={s}
+                bg={GRAYS[i % GRAYS.length]}
+                next={next?.block.subjectId === s.id ? next : null}
+                onOpen={() => navigate({ name: 'subject', id: s.id })}
+              />
+            ))}
+          </div>
         ) : (
           <RamosCarousel
             subjects={orderedSubjects}
@@ -155,11 +175,14 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
         )}
       </section>
 
-      {/* Barra de Brody (chica y centrada) */}
-      <AiBar onOpen={() => navigate({ name: 'chat' })} />
+      {/* Barra de Brody (chica y centrada) — en PC la reemplaza el panel lateral */}
+      <div className="lg:hidden">
+        <AiBar onOpen={() => navigate({ name: 'chat' })} />
+      </div>
+      </div>
 
       {/* Tareas */}
-      <section className="space-y-4">
+      <section className="space-y-4 lg:w-[340px] lg:shrink-0">
         <h2 className="px-1 text-[17px] font-bold text-ink/70">Tareas</h2>
         <motion.div layout className="space-y-3">
           <AnimatePresence initial={false}>
@@ -184,6 +207,7 @@ export function Inicio({ navigate }: { navigate: (r: Route) => void }) {
           <PlusIcon className="h-5 w-5" /> Agregar tarea
         </DashedBox>
       </section>
+      </div>
 
       <TaskEditor open={editorOpen} onClose={() => setEditorOpen(false)} task={editing} />
     </div>
