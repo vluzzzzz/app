@@ -65,9 +65,8 @@ export function AppMenuSheet({
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             style={{
               ...(view === 'appearance' ? lightGlass : darkGlass),
-              transformOrigin: 'bottom right',
             }}
-            className="fixed bottom-32 right-4 z-50 w-80 overflow-hidden rounded-3xl p-2 shadow-glass-lg"
+            className="fixed bottom-32 right-4 z-50 w-80 origin-bottom-right overflow-hidden rounded-3xl p-2 shadow-glass-lg lg:bottom-6 lg:left-[260px] lg:right-auto lg:origin-bottom-left"
           >
             <AnimatePresence mode="wait" initial={false}>
               {view === 'menu' && (
