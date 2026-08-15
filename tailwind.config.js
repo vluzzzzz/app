@@ -1,6 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: 'class',
+  // hover: solo aplica en dispositivos con puntero real (mouse) — así los
+  // hover del modo PC jamás quedan "pegados" en las pantallas táctiles.
+  future: { hoverOnlyWhenSupported: true },
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
