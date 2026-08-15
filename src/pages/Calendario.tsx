@@ -454,7 +454,9 @@ export function Calendario() {
                 key="peek"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                // Al cerrar, el telón (sombra+blur) aguanta casi todo el vuelo de la
+                // caja de vuelta al día — si se cae antes, parece que todo se borra.
+                exit={{ opacity: 0, transition: { duration: 0.32, delay: 0.1, ease: 'easeIn' } }}
                 transition={{ duration: 0.18 }}
                 onClick={() => setPeekKey(null)}
                 className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-5 backdrop-blur-[2px]"
@@ -463,17 +465,20 @@ export function Calendario() {
                     hasta ser esta tarjeta (comparten layoutId). El contenido va en
                     un hijo con layout="position": viaja como unidad, NO se estira. */}
                 <motion.div
+                  layout
                   layoutId={`peek-${peekKey}`}
                   transition={{ type: 'spring', stiffness: 280, damping: 30 }}
                   style={{ borderRadius: 20 }}
                   onClick={(e) => e.stopPropagation()}
                   className="max-h-[75vh] w-full max-w-sm overflow-y-auto bg-surface shadow-2xl"
                 >
-                  {/* El contenido aparece en fade mientras la caja se expande. */}
+                  {/* El contenido aparece en fade mientras la caja se expande, y al
+                      cerrar se VACÍA rápido: la caja viaja limpia hacia el día. */}
                   <motion.div
                     layout="position"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
+                    exit={{ opacity: 0, transition: { duration: 0.1 } }}
                     transition={{ delay: 0.08, duration: 0.22 }}
                     className="p-5"
                   >
