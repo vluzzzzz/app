@@ -25,7 +25,7 @@ export function TaskCard({ task, onEdit }: { task: Task; onEdit: () => void }) {
   const bar = { background: neutral ? 'rgb(var(--ink))' : 'rgb(var(--accent))' }
 
   return (
-    <motion.div layout className="glass relative flex items-stretch gap-3.5 rounded-3xl p-5">
+    <motion.div layout className="glass card-hover relative flex items-stretch gap-3.5 rounded-3xl p-5">
       {/* Barra de color (toca para completar) */}
       <button
         onClick={() => toggleTask(task.id)}

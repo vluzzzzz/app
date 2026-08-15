@@ -30,7 +30,7 @@ export function SubjectHomeCard({
     <motion.button
       whileTap={{ scale: 0.98 }}
       onClick={onOpen}
-      className="flex h-[120px] w-full items-center gap-3 rounded-3xl px-6 text-left"
+      className="card-hover flex h-[120px] w-full items-center gap-3 rounded-3xl px-6 text-left"
       style={{ background: bg }}
     >
       <div className="min-w-0 flex-1">

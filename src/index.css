@@ -176,3 +176,16 @@ body {
   width: 0;
   height: 0;
 }
+
+/* Hover del modo PC: las tarjetas se elevan con el mouse. Solo aplica en
+   dispositivos con puntero real (hover: hover) - las pantallas tactiles
+   ni se enteran. */
+@media (hover: hover) {
+  .card-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 34px -14px rgba(0, 0, 0, 0.28);
+  }
+}
