@@ -24,6 +24,10 @@ const GROQ_KEY = Deno.env.get('GROQ_API_KEY')
 // Groq apagó los Llama 3.x el 16-ago-2026; los reemplazos oficiales son los GPT-OSS.
 const MODEL = Deno.env.get('GROQ_MODEL') ?? 'openai/gpt-oss-120b'
 const FAST_MODEL = Deno.env.get('GROQ_FAST_MODEL') ?? 'openai/gpt-oss-20b'
+// Tercer motor (Google Gemini, gratis): entra solo si los DOS modelos de Groq
+// fallaron (cuota del minuto agotada, caída, etc.). Cuota independiente de Groq.
+const GEMINI_KEY = Deno.env.get('GEMINI_API_KEY')
+const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-flash-lite-latest'
 const PROJECT_ID = Deno.env.get('FIREBASE_PROJECT_ID') ?? 'brody-13148'
 
 // Dominios permitidos (CORS).
@@ -139,22 +143,39 @@ Deno.serve(async (req: Request) => {
         }),
       })
 
+    // Gemini habla el mismo idioma que Groq (endpoint compatible con OpenAI), así
+    // que la respuesta se procesa igual venga de donde venga.
+    const callGemini = () =>
+      fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${GEMINI_KEY}`,
+        },
+        body: JSON.stringify({
+          model: GEMINI_MODEL,
+          messages,
+          temperature: tier === 'fast' ? 0.75 : 0.4,
+          max_tokens: tier === 'fast' ? 900 : 1800,
+        }),
+      })
+
+    // Cadena de motores: modelo del tier → el otro modelo de Groq (cupo separado)
+    // → Gemini (proveedor aparte). El usuario solo ve error si fallan LOS TRES.
     let r = await callGroq(model)
     if (!r.ok) {
-      // Falló (cuota del minuto, caída puntual, lo que sea): probamos el OTRO modelo
-      // al tiro. Cada modelo tiene su cupo por minuto SEPARADO en el plan gratis, así
-      // que esto duplica el cupo efectivo y evita dejar al usuario esperando.
-      const why = await r.text().catch(() => '')
-      console.error('Groq fallo 1', r.status, why)
+      console.error('Groq fallo 1', r.status, await r.text().catch(() => ''))
       r = await callGroq(model === FAST_MODEL ? MODEL : FAST_MODEL)
+    }
+    if (!r.ok && GEMINI_KEY) {
+      console.error('Groq fallo 2', r.status, await r.text().catch(() => ''))
+      r = await callGemini()
     }
 
     if (!r.ok) {
-      // Los dos modelos fallaron. Si es cuota, el cliente sabe esperar lo que Groq
-      // sugiere y reintentar solo; cualquier otra cosa muestra su mensaje amable.
       const detail = await r.text().catch(() => '')
-      console.error('Groq fallo 2', r.status, detail)
-      return json({ error: 'Groq error', detail }, 502, origin)
+      console.error('Fallaron todos los motores', r.status, detail)
+      return json({ error: 'AI error', detail }, 502, origin)
     }
 
     const data = await r.json()

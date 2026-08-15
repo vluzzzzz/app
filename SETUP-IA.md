@@ -50,5 +50,8 @@ Abre la app → toca la barra **"Pregúntale a la IA…"** en el Inicio y prueba
 - Modelos por defecto: `openai/gpt-oss-120b` (crear/editar) y `openai/gpt-oss-20b`
   (preguntas), ambos gratis en Groq. Se cambian con los secretos `GROQ_MODEL` y
   `GROQ_FAST_MODEL`.
+- Respaldo (opcional): secreto `GEMINI_API_KEY` (key gratis de https://aistudio.google.com/apikey).
+  Si los dos modelos de Groq fallan (cuota/caída), responde Google Gemini
+  (`GEMINI_MODEL`, default `gemini-flash-lite-latest`).
 - Para probar en local: crea un archivo `.env` con `VITE_AI_ENDPOINT=...` (ver `.env.example`).
 - Costo: Groq tier gratis (~14.400 mensajes/día) + Supabase free. $0 para uso normal.
