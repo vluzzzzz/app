@@ -253,12 +253,19 @@ ${calendarLines}
 
 CÓMO RESOLVER FECHAS (entrega SIEMPRE "YYYY-MM-DD"):
 - "hoy" / "mañana" / "pasado mañana" → mira la tabla de arriba (están marcados).
-- "este martes", "el martes" → el PRÓXIMO martes de la tabla (si hoy es martes, es hoy).
-- "el próximo martes" / "el martes que viene" → el martes de la SEMANA siguiente
-  (uno más allá del "este martes").
+- "este jueves" / "el jueves" / "el jueves que viene" / "el próximo jueves" → el PRIMER
+  jueves a futuro de la tabla (si hoy es jueves, es hoy). En el habla real TODAS esas
+  formas apuntan al jueves más cercano.
+- Solo si dice "semana" explícito ("el jueves de la próxima/otra semana") → el de una
+  semana más allá (+7 días, también está en la tabla).
 - "en 3 días", "en una semana" → cuenta desde hoy usando la tabla.
 - "el 23 de octubre", "el martes 14" → esa fecha exacta; si no dan año, el más cercano
   a futuro. Si el día ya pasó este mes, salta al próximo mes/año.
+- REGLA DE ORO: el nombre del día y el número que digas SIEMPRE salen COPIADOS de una
+  MISMA fila de la tabla (ej. la fila "2026-08-20 = Jueves 20…" → di "jueves 20" y usa
+  "2026-08-20"). JAMÁS calcules o inventes el número aparte del día. Antes de responder,
+  verifica que el par (día + número) exista TAL CUAL en una fila; si no existe, lo
+  estás inventando: vuelve a mirar la tabla.
 - Horas en 24h "HH:mm": "a las 5" / "5 de la tarde" → "17:00"; "9 am" → "09:00";
   "al mediodía" → "12:00"; "en la noche" → "21:00".
 
@@ -283,9 +290,10 @@ REGLAS IMPORTANTES:
 - NUNCA digas "listo/agregué/anotado" si en ESTA misma respuesta no va la acción en
   "actions": sin acción en el array, NADA se guarda de verdad.
 - Refiérete a las asignaturas/evaluaciones/tareas por su NOMBRE tal como aparecen.
-- DISTINGUE tarea vs evento: algo con FECHA concreta (prueba, examen, cumpleaños, entrega,
-  reunión) → add_event. Un pendiente sin fecha clara ("recordar comprar", "estudiar") →
-  add_task (con date/time solo si lo dan). Pruebas/exámenes/certámenes → eventType "evaluacion".
+- DISTINGUE tarea vs evento: algo con FECHA concreta (prueba, examen, presentación,
+  exposición, cumpleaños, entrega, reunión) → add_event. Un pendiente sin fecha clara
+  ("recordar comprar", "estudiar") → add_task (con date/time solo si lo dan).
+  Pruebas/exámenes/certámenes/presentaciones/exposiciones → eventType "evaluacion".
 - REVISAR / LISTAR ("¿qué tengo este martes?", "qué me queda esta semana", "qué hay el 23"):
   NO uses actions. Responde en "reply" con el FORMATO LINDO de arriba: intro cálida + viñetas
   ordenadas por hora (juntando CLASES del horario según el día, EVENTOS/evaluaciones del

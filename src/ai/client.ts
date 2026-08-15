@@ -52,6 +52,11 @@ export async function askAi(messages: Msg[], tier: Tier = 'smart', attempt = 0):
   })
   if (!res.ok) {
     const detail = await res.text().catch(() => '')
+    // 401 = el ID token cacheado venció justo: lo renovamos a la fuerza y una más.
+    if (res.status === 401 && attempt === 0 && auth?.currentUser) {
+      await auth.currentUser.getIdToken(true).catch(() => null)
+      return askAi(messages, tier, attempt + 1)
+    }
     const isRateLimit = res.status === 429 || /rate.?limit/i.test(detail)
     if (isRateLimit && attempt < 3) {
       // Groq sugiere "try again in 2.8s" → esperamos eso (+ margen) y reintentamos.
