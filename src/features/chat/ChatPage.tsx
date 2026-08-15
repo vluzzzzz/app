@@ -25,6 +25,11 @@ const SUGERENCIAS = [
  */
 type Adjunto = { mime: string; data: string; name: string; kind: 'imagen' | 'pdf' }
 
+// Miniaturas de las imágenes enviadas, SOLO en memoria (id de mensaje → dataURL).
+// A propósito NO van al chat sincronizado: guardar fotos en Supabase engordaría la
+// base de datos. Al recargar la app la burbuja cae al texto "📸 Imagen" y ya.
+const localImgs = new Map<string, string>()
+
 /** Comprime una imagen a JPEG (máx 1600px) para no mandar fotos de 8MB al proxy. */
 async function compressImage(f: File): Promise<Adjunto> {
   const url = URL.createObjectURL(f)
@@ -105,11 +110,15 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
   async function send(textArg?: string) {
     const file = adjunto
     const typed = (textArg ?? input).trim()
-    // Con adjunto sin texto, la burbuja muestra el nombre del archivo.
-    const text = typed || (file ? `${file.kind === 'pdf' ? '📄' : '📸'} ${file.name}` : '')
+    // Con adjunto sin texto: los PDF muestran su nombre; las imágenes van con
+    // miniatura local (ver localImgs), sin el nombre feo del archivo.
+    const text = typed || (file ? (file.kind === 'pdf' ? `📄 ${file.name}` : '📸 Imagen') : '')
     if (!text || loading) return
     setInput('')
     const userMsgId = makeId()
+    if (file?.kind === 'imagen') {
+      localImgs.set(userMsgId, `data:${file.mime};base64,${file.data}`)
+    }
     pushChat({ id: userMsgId, role: 'user', text })
     setLoading(true)
     try {
@@ -158,6 +167,7 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
       // El adjunto queda puesto, listo para el reintento.
       const st = useAppStore.getState()
       st.setChat(st.chat.filter((m) => m.id !== userMsgId))
+      localImgs.delete(userMsgId)
       setInput(typed)
     } finally {
       setLoading(false)
@@ -274,7 +284,14 @@ export function ChatPage({ navigate }: { navigate: (r: Route) => void }) {
                       : 'glass glass-highlight text-ink'
                 }`}
               >
-                <RichText text={m.text} />
+                {localImgs.has(m.id) && (
+                  <img
+                    src={localImgs.get(m.id)}
+                    alt=""
+                    className="mb-1.5 max-h-48 w-full rounded-2xl object-cover"
+                  />
+                )}
+                {!(localImgs.has(m.id) && m.text === '📸 Imagen') && <RichText text={m.text} />}
                 {m.applied && m.applied.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {m.applied.map((a, i) => (

@@ -23,7 +23,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 // "agrégalo", "anótame", "bórralo", "súmale". Los bordes son lookarounds en vez
 // de \b porque \b no reconoce vocales acentuadas ("saqué " no tiene \b tras la é).
 const ACTION_RE =
-  /(?<![a-záéíóúüñ])(cr[eé][aá]|[aá]rm[aá]|h[aá]zme|agr[eé]g[aá]|a[ñn][aá]d[eií]|an[oó]t[aá]|ap[uú]nt[aá]|p[oó]n(?:g[aeoó]|me|le|l[oa])?|ingr[eé]s[aá]|reg[ií]str[aá]|s[uú]m[aá]|saqu[eé]|obtuve|s[uú]b[eií]|recu[eé]rd[aá]|record[aá]|b[oó]rr[aá]|elim[ií]n[aá]|qu[ií]t[aá]|c[aá]mbi[aá]|ed[ií]t[aá]|modif[ií]c[aá]|actual[ií]z[aá]|ren[oó]mbr[aá]|ag[eé]nd[aá]|m[aá]rc[aá]|compl[eé]t[aá]|mu[eé]v[eé])(?:r|l[oa]s?|les?|me(?:l[oa]s?)?|te(?:l[oa]s?)?)?(?![a-záéíóúüñ])/i
+  /(?<![a-záéíóúüñ])(cr[eé][aá]|[aá]rm[aá]|h[aá]zme|agr[eé]g[aá]|a[ñn][aá]d[eií]|an[oó]t[aá]|ap[uú]nt[aá]|p[oó]n(?:g[aeoó]|me|le|l[oa])?|ingr[eé]s[aá]|reg[ií]str[aá]|s[uú]m[aá]|saqu[eé]|obtuve|s[uú]b[eií]|recu[eé]rd[aá]|record[aá]|b[oó]rr[aá]|elim[ií]n[aá]|qu[ií]t[aá]|c[aá]mbi[aá]|ed[ií]t[aá]|modif[ií]c[aá]|actual[ií]z[aá]|ren[oó]mbr[aá]|ag[eé]nd[aá]|m[aá]rc[aá]|compl[eé]t[aá]|mu[eé]v[eé])(?:r(?:me(?:l[oa]s?)?|te(?:l[oa]s?)?|se(?:l[oa]s?)?|l[oa]s?|les?)?|l[oa]s?|les?|me(?:l[oa]s?)?|te(?:l[oa]s?)?|se(?:l[oa]s?)?)?(?![a-záéíóúüñ])/i
 
 /** Elige el modelo según el mensaje: orden de acción → 'smart', pregunta → 'fast'. */
 export function pickTier(text: string): Tier {
