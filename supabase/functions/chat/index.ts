@@ -115,7 +115,9 @@ Deno.serve(async (req: Request) => {
         body: JSON.stringify({
           model: useModel,
           messages,
-          temperature: 0.4,
+          // Charla/preguntas (fast): más temperatura = suena humano y variado.
+          // Crear/editar (smart): baja = JSON y datos precisos.
+          temperature: tier === 'fast' ? 0.75 : 0.4,
           // Acota la generación: respuestas más rápidas y menos gasto de tokens/minuto.
           // (2048 porque en GPT-OSS el razonamiento interno cuenta contra este límite.)
           max_tokens: 2048,
