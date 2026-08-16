@@ -189,3 +189,28 @@ body {
     box-shadow: 0 14px 34px -14px rgba(0, 0, 0, 0.28);
   }
 }
+
+/* Impresion del horario: en pantalla la hoja no existe; al imprimir se oculta
+   toda la app y solo se imprime #horario-print (A4 apaisada, fondo blanco). */
+#horario-print {
+  display: none;
+}
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+  html,
+  body {
+    overflow: visible !important;
+    background: #fff !important;
+    padding: 0 !important;
+  }
+  body > #root {
+    display: none !important;
+  }
+  #horario-print {
+    display: block !important;
+    background: #fff;
+  }
+}

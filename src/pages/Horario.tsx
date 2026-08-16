@@ -13,10 +13,11 @@ import {
 import { accentRgb } from '../lib/accents'
 import { ClassSheet } from '../features/schedule/ClassSheet'
 import { ShareHorarioSheet } from '../features/schedule/ShareHorarioSheet'
+import { HorarioPrint } from '../features/schedule/HorarioPrint'
 import { AgendaTimeline, ClassInfo } from '../features/schedule/AgendaTimeline'
 import { WeekGrid } from '../features/schedule/WeekGrid'
 import { useIsDesktop } from '../lib/useIsDesktop'
-import { ClockIcon, PlusIcon, ShareIcon } from '../components/ui/Icons'
+import { ClockIcon, PlusIcon, PrinterIcon, ShareIcon } from '../components/ui/Icons'
 
 /** Tarjeta de clase para la vista semanal (nombre afuera, info en capa interior). */
 function ClassCard({ block, onOpen }: { block: ClassBlock; onOpen: () => void }) {
@@ -58,6 +59,7 @@ export function Horario() {
   const [weekView, setWeekView] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
+  const [printing, setPrinting] = useState(false)
   const [editing, setEditing] = useState<ClassBlock | null>(null)
 
   // Semana actual (lunes → domingo) para la tira de días.
@@ -95,6 +97,14 @@ export function Horario() {
           <h1 className="text-[34px] font-bold leading-tight text-ink">Horario</h1>
         </div>
         <div className="flex items-center gap-2">
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setPrinting(true)}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink/5 text-ink"
+            aria-label="Imprimir o guardar como PDF"
+          >
+            <PrinterIcon className="h-5 w-5" />
+          </motion.button>
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => setShareOpen(true)}
@@ -246,6 +256,7 @@ export function Horario() {
         defaultDay={selectedDay}
       />
       <ShareHorarioSheet open={shareOpen} onClose={() => setShareOpen(false)} />
+      {printing && <HorarioPrint onDone={() => setPrinting(false)} />}
       </div>
     </div>
   )
