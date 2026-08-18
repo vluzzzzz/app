@@ -95,6 +95,7 @@ export function ChatView({ compact = false }: { compact?: boolean }) {
   const [transcribiendo, setTranscribiendo] = useState(false)
   const [verImg, setVerImg] = useState<string | null>(null)
   const kb = useKeyboardInset()
+  const rootRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const recRef = useRef<MediaRecorder | null>(null)
@@ -118,6 +119,34 @@ export function ChatView({ compact = false }: { compact?: boolean }) {
   // ya no paga el arranque en frío ("se queda cargando la primera vez").
   useEffect(() => {
     warmUpAi()
+  }, [])
+
+  // Ctrl+V / pegar: una imagen del portapapeles (captura de pantalla) se
+  // convierte en adjunto al tiro, sin pasar por el clip. Solo actúa si este
+  // chat está visible y el usuario no está escribiendo en otro campo.
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const root = rootRef.current
+      if (!root || root.offsetWidth === 0) return // panel colapsado / no visible
+      const ae = document.activeElement
+      const enElChat = ae ? root.contains(ae) : false
+      const libre = !ae || ae === document.body
+      if (!enElChat && !libre) return // está pegando en otro input de la app
+      const item = Array.from(e.clipboardData?.items ?? []).find((i) =>
+        i.type.startsWith('image/'),
+      )
+      if (!item) return // texto normal: que siga su curso
+      const f = item.getAsFile()
+      if (!f) return
+      e.preventDefault()
+      void fileToAdjunto(f)
+        .then(setAdjunto)
+        .catch(() => {
+          /* imagen ilegible */
+        })
+    }
+    window.addEventListener('paste', onPaste)
+    return () => window.removeEventListener('paste', onPaste)
   }, [])
 
   async function send(textArg?: string) {
@@ -231,7 +260,7 @@ export function ChatView({ compact = false }: { compact?: boolean }) {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div ref={rootRef} className="flex min-h-0 flex-1 flex-col">
       {/* Mensajes */}
       <div ref={scrollRef} className={`flex-1 space-y-3 overflow-y-auto py-4 ${px}`}>
         {chat.length === 0 && (
