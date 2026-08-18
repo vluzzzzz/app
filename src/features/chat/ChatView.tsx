@@ -7,7 +7,7 @@ import { EASE } from '../../lib/motion'
 import { buildSystemPrompt } from '../../ai/prompt'
 import { aiConfigured, askAi, pickTier, transcribeAudio, warmUpAi } from '../../ai/client'
 import { applyActions } from '../../ai/apply'
-import { MicIcon, PaperclipIcon } from '../../components/ui/Icons'
+import { CheckIcon, MicIcon, PaperclipIcon } from '../../components/ui/Icons'
 import { useKeyboardInset } from '../../lib/useKeyboardInset'
 
 const SUGERENCIAS = [
@@ -325,14 +325,24 @@ export function ChatView({ compact = false }: { compact?: boolean }) {
                 )}
                 {!(localImgs.has(m.id) && m.text === '📸 Imagen') && <RichText text={m.text} />}
                 {m.applied && m.applied.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
+                  /* Recibo de acciones: separador + check verde por cada una.
+                     Prueba de que se ejecutó DE VERDAD (sin pastillas chillonas). */
+                  <div className="mt-2.5 space-y-1.5 border-t border-ink/10 pt-2.5">
                     {m.applied.map((a, i) => (
-                      <span
+                      <motion.div
                         key={i}
-                        className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300"
+                        initial={{ opacity: 0, x: -6 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.06, duration: 0.2 }}
+                        className="flex items-center gap-2"
                       >
-                        {a}
-                      </span>
+                        <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
+                          <CheckIcon className="h-2.5 w-2.5" />
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-ink/65">
+                          {a}
+                        </span>
+                      </motion.div>
                     ))}
                   </div>
                 )}
