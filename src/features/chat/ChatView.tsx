@@ -196,7 +196,32 @@ export function ChatView({ compact = false }: { compact?: boolean }) {
         ...splitSystem(systemPrompt).map((content) => ({ role: 'system' as const, content })),
         ...history,
       ]
-      const res = await askAi(messages, tier, 0, file ? { mime: file.mime, data: file.data } : undefined)
+      const filePayload = file ? { mime: file.mime, data: file.data } : undefined
+      let res = await askAi(messages, tier, 0, filePayload)
+
+      // GUARDIÁN ANTI-CHAMUYO: si el usuario pidió una acción (tier smart) y el
+      // modelo AFIRMA haberla hecho ("listo, lo borré") pero el array de acciones
+      // llegó vacío, NADA se guardó. Lo confrontamos automáticamente y reintenta
+      // con las acciones de verdad — el usuario ya no tiene que reclamarle.
+      const CLAIMS_RE =
+        /\b(list[oa]|anotad[oa]|anot[eé]|agend[eé]|agendad[oa]|borr[eé]|borrad[oa]|elimin[eé]|eliminad[oa]|agregu[eé]|agregad[oa]|cre[eé]|cread[oa]|guard[eé]|guardad[oa]|actualic[eé]|quit[eé]|hecho|ya se borró|ya está)\b/i
+      if (tier === 'smart' && (!res.actions || res.actions.length === 0) && CLAIMS_RE.test(res.reply)) {
+        res = await askAi(
+          [
+            ...messages,
+            { role: 'assistant' as const, content: res.reply },
+            {
+              role: 'system' as const,
+              content:
+                'ERROR GRAVE: tu respuesta anterior AFIRMA que ejecutaste una acción, pero tu array "actions" llegó VACÍO — NO se guardó NADA en la app. Responde de nuevo AHORA incluyendo en "actions" la(s) acción(es) exactas que dijiste haber hecho (usa el catálogo de acciones y los mismos datos; para borrar usa remove_event/remove_task/remove_class según corresponda). No es opcional.',
+            },
+          ],
+          'smart',
+          0,
+          filePayload,
+        )
+      }
+
       const applied =
         res.actions && res.actions.length ? applyActions(res.actions) : []
       pushChat({
