@@ -16,6 +16,47 @@ export const EASE = {
   overshootBig: [0.37, 1.42, 0.37, 1] as Bezier,
   /** Estándar suave. */
   standard: [0, 0, 0.5, 1] as Bezier,
+  /** Material 3 "emphasized": la curva estrella para abrir/mover cosas en PC. */
+  emphasized: [0.2, 0, 0, 1] as Bezier,
+  /** Material 3 "emphasized decelerate": algo que entra y frena muy suave. */
+  decel: [0.05, 0.7, 0.1, 1] as Bezier,
+  /** Material 3 "emphasized accelerate": algo que sale/se cierra. */
+  accel: [0.3, 0, 0.8, 0.15] as Bezier,
+}
+
+/** Duraciones base (segundos) — cortas = se siente rápido y "caro". */
+export const DUR = {
+  /** Feedback al presionar (botón, ripple). */
+  press: 0.09,
+  /** Abrir/mover un panel u hoja. */
+  panel: 0.24,
+  /** Movimiento grande (página, overlay). */
+  large: 0.42,
+}
+
+/** ¿El usuario pidió menos movimiento? (accesibilidad). SSR-safe. */
+export function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  )
+}
+
+/** Contenedor con entrada escalonada para dashboards (Home PC). */
+export const staggerContainer: Variants = {
+  initial: {},
+  animate: { transition: { staggerChildren: 0.055, delayChildren: 0.04 } },
+}
+
+/** Item de dashboard: sube un poco, se aclara y crece un pelín con la curva emphasized. */
+export const dashItem: Variants = {
+  initial: { opacity: 0, y: 14, scale: 0.98 },
+  animate: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.44, ease: EASE.decel },
+  },
 }
 
 /** Entrada premium "blur-in": aparece desenfocado y se aclara mientras crece. */

@@ -15,3 +15,6 @@ login-shot.png
 .agents/
 .claude/
 skills-lock.json
+
+# Cache local del CLI de Supabase
+supabase/.temp/

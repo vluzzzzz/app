@@ -1,0 +1,35 @@
+# Mantiene despierto el proyecto de Supabase (plan gratis se pausa tras ~7 dias
+# sin actividad, y eso tira abajo TODA la IA de Brody: chat, voz e imagenes, porque
+# las tres pasan por la misma Edge Function). Este cron la toca cada 3 dias.
+#
+# OJO: GitHub desactiva los workflows 'schedule' si el repo pasa ~60 dias SIN commits.
+# No es problema mientras se siga commiteando seguido. Si llega a pasar, entra a la
+# pestana Actions y reactivalo (o dale a "Run workflow").
+name: Keep Supabase awake
+
+on:
+  schedule:
+    # Cada 3 dias a las 09:00 UTC. (La pausa real es a ~7 dias, hay margen de sobra.)
+    - cron: '0 9 */3 * *'
+  workflow_dispatch: {} # permite dispararlo a mano desde la pestana Actions
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tocar la Edge Function (OPTIONS, sin token)
+        run: |
+          # OPTIONS devuelve 200 por CORS sin necesitar login. Ese toque cuenta como
+          # actividad y mantiene el proyecto activo.
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X OPTIONS \
+            -H "Origin: https://brrody.app" \
+            --max-time 30 \
+            https://trtcqkyqmminnugouxxg.supabase.co/functions/v1/chat)
+          echo "HTTP $code"
+          # Falla el job si no hubo respuesta util (proyecto caido / error de servidor)
+          # para que GitHub mande aviso.
+          if [ "$code" = "000" ] || [ "$code" -ge 500 ]; then
+            echo "El endpoint no respondio bien (HTTP $code)."
+            exit 1
+          fi
