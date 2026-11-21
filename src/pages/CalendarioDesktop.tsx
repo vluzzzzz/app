@@ -35,7 +35,7 @@ const EVENT_TYPE_RGB: Record<EventType, string> = {
 }
 
 /** Cuántas píldoras caben en una celda antes de resumir con "+N". */
-const MAX_PILLS = 4
+const MAX_PILLS = 3
 
 type DayItem = {
   kind: 'event' | 'task'
@@ -76,7 +76,8 @@ export function CalendarioDesktop() {
   const [shareOpen, setShareOpen] = useState(false)
 
   // Una sola grilla plana de 7 columnas: así cada día es una tarjeta suelta.
-  const days = useMemo(() => monthGrid(year, month).flat(), [year, month])
+  const weeks = useMemo(() => monthGrid(year, month), [year, month])
+  const days = useMemo(() => weeks.flat(), [weeks])
 
   const subjectName = (id?: string) => subjects.find((s) => s.id === id)?.name
   const subjectRgb = (id?: string) => accentRgb(subjects.find((s) => s.id === id)?.color ?? 'gray')
@@ -201,7 +202,7 @@ export function CalendarioDesktop() {
 
       {/* ===== Grilla del mes ===== */}
       <div className="relative min-h-0 flex-1">
-        <div className="h-full overflow-y-auto pb-2 pr-1">
+        <div className="h-full overflow-hidden">
           <motion.div
             key={`${year}-${month}`}
             initial="initial"
@@ -214,7 +215,8 @@ export function CalendarioDesktop() {
                 transition: { duration: 0.3, ease: EASE.emphasized, staggerChildren: 0.012 },
               },
             }}
-            className="grid grid-cols-7 gap-2 auto-rows-[minmax(126px,auto)]"
+            className="grid h-full grid-cols-7 gap-1.5"
+            style={{ gridTemplateRows: `repeat(${weeks.length}, minmax(0, 1fr))` }}
           >
             {days.map((d, i) => {
               if (!d) return <div key={i} className="rounded-[20px] bg-ink/[0.02]" />
@@ -234,7 +236,7 @@ export function CalendarioDesktop() {
                   onClick={() => setOpenKey(key)}
                   whileHover={{ y: -2 }}
                   transition={{ duration: 0.16, ease: EASE.emphasized }}
-                  className={`group relative flex flex-col gap-1.5 overflow-hidden rounded-[20px] p-2.5 text-left ${
+                  className={`group relative flex flex-col gap-1 overflow-hidden rounded-[18px] p-2 text-left ${
                     hasItems
                       ? 'bg-[rgb(var(--card))] shadow-[0_1px_2px_rgba(17,24,39,0.05)] ring-1 ring-ink/[0.06]'
                       : 'bg-ink/[0.035]'
@@ -242,7 +244,7 @@ export function CalendarioDesktop() {
                 >
                   <div className="flex items-center justify-between">
                     {isToday ? (
-                      <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-ink text-[12.5px] font-bold tabular-nums text-surface">
+                      <span className="flex h-[24px] w-[24px] items-center justify-center rounded-full bg-ink text-[12.5px] font-bold tabular-nums text-surface">
                         {d.getDate()}
                       </span>
                     ) : (
@@ -337,28 +339,33 @@ export function CalendarioDesktop() {
 }
 
 /**
- * Píldora de un evento/tarea dentro de una celda. Llena de color lo que viene,
- * apagada con un punto de color lo que ya pasó — así el mes se lee de un vistazo.
+ * Píldora de un evento/tarea dentro de una celda. Lo que ya pasó queda en una
+ * píldora clara con punto de color y texto nítido; lo que viene se llena del
+ * color del ramo — así el mes se lee de un vistazo sin verse apagado.
  */
 function Pill({ item, muted }: { item: DayItem; muted: boolean }) {
   const off = muted || item.done
   return (
     <span
-      className={`flex items-center gap-1.5 rounded-full py-[5px] pl-[7px] pr-2.5 text-[11.5px] font-semibold ${
-        off ? 'bg-ink/[0.05] text-ink/55' : 'text-white'
+      className={`flex items-center gap-1.5 rounded-full py-[4px] pl-[7px] pr-2 text-[11.5px] font-semibold ${
+        off ? 'bg-ink/[0.045] text-ink/85' : 'text-white'
       }`}
       style={off ? undefined : { background: `rgb(${item.rgb})` }}
     >
       <span
         aria-hidden
-        className={`h-[11px] w-[11px] shrink-0 rounded-full border-[1.5px] ${
-          off ? 'border-transparent' : 'border-white/70'
-        }`}
+        className={`h-[10px] w-[10px] shrink-0 rounded-full ${off ? '' : 'border-[1.5px] border-white/75'}`}
         style={off ? { background: `rgb(${item.rgb})` } : undefined}
       />
-      <span className="min-w-0 flex-1 truncate">{item.title}</span>
+      <span className={`min-w-0 flex-1 truncate ${item.done ? 'line-through opacity-50' : ''}`}>
+        {item.title}
+      </span>
       {item.time && (
-        <span className={`shrink-0 tabular-nums ${off ? 'text-ink/40' : 'text-white/80'}`}>
+        <span
+          className={`shrink-0 text-[10.5px] font-medium tabular-nums ${
+            off ? 'text-ink/40' : 'text-white/75'
+          }`}
+        >
           {item.time}
         </span>
       )}
