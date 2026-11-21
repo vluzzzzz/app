@@ -19,6 +19,8 @@ import { EventSheet, EVENT_TYPE_LABEL } from '../features/schedule/EventSheet'
 import { TaskEditor } from '../features/tasks/TaskEditor'
 import { ShareCalendarioSheet } from '../features/schedule/ShareCalendarioSheet'
 import { CalendarIcon, CheckIcon, ChevronDown, ChevronLeft, ChevronRight, PlusIcon, ShareIcon } from '../components/ui/Icons'
+import { useIsDesktop } from '../lib/useIsDesktop'
+import { CalendarioDesktop } from './CalendarioDesktop'
 
 /** Color de acento por tipo de evento (cuando no hay ramo asociado). */
 const EVENT_TYPE_RGB: Record<EventType, string> = {
@@ -31,7 +33,16 @@ const EVENT_TYPE_RGB: Record<EventType, string> = {
 /** Item compacto para la vista mensual ampliada. */
 type DayItem = { title: string; time?: string; rgb: string }
 
+/**
+ * Selector de calendario: en PC (≥1024px) muestra el calendario grande de
+ * escritorio; en celular queda intacto el calendario táctil original.
+ */
 export function Calendario() {
+  const isDesktop = useIsDesktop()
+  return isDesktop ? <CalendarioDesktop /> : <CalendarioMobile />
+}
+
+function CalendarioMobile() {
   const classes = useAppStore((s) => s.classes)
   const events = useAppStore((s) => s.events)
   const tasks = useAppStore((s) => s.tasks)
