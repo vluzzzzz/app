@@ -34,18 +34,24 @@ const EVENT_TYPE_RGB: Record<EventType, string> = {
   recordatorio: '139 92 246',
 }
 
+/** Cuántas píldoras caben en una celda antes de resumir con "+N". */
+const MAX_PILLS = 4
+
 type DayItem = {
   kind: 'event' | 'task'
   id: string
   title: string
   time?: string
   rgb: string
+  done: boolean
   ref: CalendarEvent | Task
 }
 
 /**
- * Calendario del modo PC (≥1024px): mes a pantalla completa con celdas grandes
- * y un panel lateral que se desliza al abrir un día (estilo app de escritorio).
+ * Calendario del modo PC (≥1024px). Cada día es su propia tarjeta redondeada
+ * separada por aire (sin líneas de tabla) y los eventos son píldoras sólidas:
+ * llenas de color los que vienen, apagadas los que ya pasaron. Al abrir un día
+ * entra un panel lateral con la agenda completa.
  * El calendario del celular vive intacto en Calendario.tsx (CalendarioMobile).
  */
 export function CalendarioDesktop() {
@@ -69,7 +75,8 @@ export function CalendarioDesktop() {
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [shareOpen, setShareOpen] = useState(false)
 
-  const weeks = useMemo(() => monthGrid(year, month), [year, month])
+  // Una sola grilla plana de 7 columnas: así cada día es una tarjeta suelta.
+  const days = useMemo(() => monthGrid(year, month).flat(), [year, month])
 
   const subjectName = (id?: string) => subjects.find((s) => s.id === id)?.name
   const subjectRgb = (id?: string) => accentRgb(subjects.find((s) => s.id === id)?.color ?? 'gray')
@@ -96,6 +103,7 @@ export function CalendarioDesktop() {
       title: e.title,
       time: e.time,
       rgb: eventRgb(e),
+      done: !!e.done,
       ref: e,
     }))
     const tks: DayItem[] = tasks
@@ -106,14 +114,10 @@ export function CalendarioDesktop() {
         title: t.title,
         time: t.time,
         rgb: t.color ? accentRgb(t.color) : '148 163 184',
+        done: t.done,
         ref: t,
       }))
     return [...evs, ...tks].sort((a, b) => (a.time ?? '99').localeCompare(b.time ?? '99'))
-  }
-
-  const openNew = () => {
-    setEditingEvent(null)
-    setEventSheetOpen(true)
   }
 
   // Al cambiar de mes, si el día abierto ya no está en pantalla, cierra el panel.
@@ -123,128 +127,163 @@ export function CalendarioDesktop() {
   }, [month, year])
 
   const showHoy = year !== today.getFullYear() || month !== today.getMonth()
-  const totalWeeks = weeks.length
 
   return (
-    <div className="flex h-full flex-col overflow-hidden px-8 pb-8 pt-8 xl:px-12">
+    <div className="flex h-full flex-col overflow-hidden px-8 pb-6 pt-8 xl:px-12">
       {/* ===== Encabezado ===== */}
-      <header className="mb-5 flex shrink-0 items-center justify-between gap-4">
+      <header className="mb-6 flex shrink-0 items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <h1 className="text-[30px] font-bold capitalize leading-none text-ink">
-            {MONTH_NAMES[month]} <span className="font-semibold text-ink/40">{year}</span>
+          <h1 className="text-[32px] font-bold capitalize leading-none tracking-tight text-ink">
+            {MONTH_NAMES[month]} <span className="font-medium text-ink/30">{year}</span>
           </h1>
           <div className="flex items-center gap-1">
             <button
               onClick={() => changeMonth(-1)}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-ink/10 text-ink/60 transition-colors hover:bg-ink/5"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-ink/50 transition-colors hover:bg-ink/[0.06] hover:text-ink"
               aria-label="Mes anterior"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
             <button
               onClick={() => changeMonth(1)}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-ink/10 text-ink/60 transition-colors hover:bg-ink/5"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-ink/50 transition-colors hover:bg-ink/[0.06] hover:text-ink"
               aria-label="Mes siguiente"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
           </div>
-          {showHoy && (
-            <button
-              onClick={goToday}
-              className="rounded-full border border-ink/10 px-4 py-2 text-[13px] font-semibold text-ink/60 transition-colors hover:bg-ink/5"
-            >
-              Hoy
-            </button>
-          )}
+          <AnimatePresence>
+            {showHoy && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.18, ease: EASE.emphasized }}
+                onClick={goToday}
+                className="rounded-full bg-ink/[0.06] px-4 py-2 text-[13px] font-semibold text-ink/70 transition-colors hover:bg-ink/10"
+              >
+                Hoy
+              </motion.button>
+            )}
+          </AnimatePresence>
         </div>
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => setShareOpen(true)}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 text-ink/60 transition-colors hover:bg-ink/5"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-ink/[0.05] text-ink/60 transition-colors hover:bg-ink/10 hover:text-ink"
             aria-label="Compartir calendario"
           >
             <ShareIcon className="h-5 w-5" />
           </button>
-          <button
-            onClick={openNew}
-            className="flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-[14.5px] font-semibold text-surface shadow-[0_8px_20px_-8px_rgba(0,0,0,0.45)] transition-transform hover:-translate-y-0.5 active:translate-y-0"
+          <motion.button
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.96 }}
+            transition={{ duration: 0.18, ease: EASE.emphasized }}
+            onClick={() => {
+              setEditingEvent(null)
+              setEventSheetOpen(true)
+            }}
+            className="flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-[14.5px] font-semibold text-surface shadow-[0_10px_24px_-10px_rgba(0,0,0,0.6)]"
           >
             <PlusIcon className="h-5 w-5" /> Crear evento
-          </button>
+          </motion.button>
         </div>
       </header>
 
-      {/* ===== Cabecera de días ===== */}
-      <div className="grid shrink-0 grid-cols-7 border-b border-ink/5 pb-2">
+      {/* ===== Nombres de los días ===== */}
+      <div className="mb-2 grid shrink-0 grid-cols-7 gap-2">
         {DAY_NAMES.map((d) => (
-          <span key={d} className="px-2 text-[12px] font-bold uppercase tracking-wide text-ink/35">
-            {d.slice(0, 3)}
+          <span key={d} className="px-3 text-[13px] font-medium text-ink/35">
+            {d}
           </span>
         ))}
       </div>
 
-      {/* ===== Grilla del mes (llena el alto disponible) ===== */}
+      {/* ===== Grilla del mes ===== */}
       <div className="relative min-h-0 flex-1">
-        <motion.div
-          key={`${year}-${month}`}
-          initial={{ opacity: 0, x: monthDir * 36 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3, ease: EASE.emphasized }}
-          className="grid h-full"
-          style={{ gridTemplateRows: `repeat(${totalWeeks}, minmax(0, 1fr))` }}
-        >
-          {weeks.map((w, wi) => (
-            <div key={wi} className="grid grid-cols-7">
-              {w.map((d, di) => {
-                if (!d) return <div key={di} className="border-b border-r border-ink/[0.04]" />
-                const key = toDateKey(d)
-                const isToday = key === todayKey
-                const isOpen = key === openKey
-                const items = itemsFor(key)
-                return (
-                  <button
-                    key={di}
-                    onClick={() => setOpenKey(key)}
-                    className={`group relative flex min-h-0 flex-col items-stretch gap-1 border-b border-r border-ink/[0.04] p-1.5 text-left transition-colors ${
-                      isOpen ? 'bg-ink/[0.04]' : 'hover:bg-ink/[0.025]'
-                    }`}
-                  >
-                    <span
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13.5px] font-semibold tabular-nums ${
-                        isToday
-                          ? 'bg-ink text-surface'
-                          : 'text-ink/70 group-hover:text-ink'
-                      }`}
+        <div className="h-full overflow-y-auto pb-2 pr-1">
+          <motion.div
+            key={`${year}-${month}`}
+            initial="initial"
+            animate="animate"
+            variants={{
+              initial: { opacity: 0, x: monthDir * 28 },
+              animate: {
+                opacity: 1,
+                x: 0,
+                transition: { duration: 0.3, ease: EASE.emphasized, staggerChildren: 0.012 },
+              },
+            }}
+            className="grid grid-cols-7 gap-2 auto-rows-[minmax(126px,auto)]"
+          >
+            {days.map((d, i) => {
+              if (!d) return <div key={i} className="rounded-[20px] bg-ink/[0.02]" />
+              const key = toDateKey(d)
+              const isToday = key === todayKey
+              const isPast = key < todayKey
+              const isOpen = key === openKey
+              const items = itemsFor(key)
+              const hasItems = items.length > 0
+              return (
+                <motion.button
+                  key={key}
+                  variants={{
+                    initial: { opacity: 0, y: 10 },
+                    animate: { opacity: 1, y: 0, transition: { duration: 0.34, ease: EASE.decel } },
+                  }}
+                  onClick={() => setOpenKey(key)}
+                  whileHover={{ y: -2 }}
+                  transition={{ duration: 0.16, ease: EASE.emphasized }}
+                  className={`group relative flex flex-col gap-1.5 overflow-hidden rounded-[20px] p-2.5 text-left ${
+                    hasItems
+                      ? 'bg-[rgb(var(--card))] shadow-[0_1px_2px_rgba(17,24,39,0.05)] ring-1 ring-ink/[0.06]'
+                      : 'bg-ink/[0.035]'
+                  } ${isOpen ? 'ring-2 ring-ink/25' : ''}`}
+                >
+                  <div className="flex items-center justify-between">
+                    {isToday ? (
+                      <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-ink text-[12.5px] font-bold tabular-nums text-surface">
+                        {d.getDate()}
+                      </span>
+                    ) : (
+                      <span
+                        className={`px-1 text-[13.5px] font-medium tabular-nums ${
+                          isPast ? 'text-ink/30' : 'text-ink/55'
+                        }`}
+                      >
+                        {d.getDate()}
+                      </span>
+                    )}
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      aria-hidden
+                      className="mr-0.5 h-3.5 w-3.5 text-ink/25 opacity-0 transition-opacity group-hover:opacity-100"
                     >
-                      {d.getDate()}
-                    </span>
-                    <div className="flex min-h-0 flex-col gap-1 overflow-hidden">
-                      {items.slice(0, 3).map((it) => (
-                        <span
-                          key={it.id}
-                          className="flex items-center gap-1 truncate rounded-md px-1.5 py-0.5 text-[11.5px] font-semibold leading-tight"
-                          style={{
-                            background: `rgb(${it.rgb} / 0.14)`,
-                            color: `rgb(${it.rgb})`,
-                          }}
-                        >
-                          {it.time && <span className="shrink-0 tabular-nums opacity-70">{it.time}</span>}
-                          <span className="truncate">{it.title}</span>
-                        </span>
-                      ))}
-                      {items.length > 3 && (
-                        <span className="pl-1 text-[10.5px] font-semibold text-ink/40">
-                          +{items.length - 3} más
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          ))}
-        </motion.div>
+                      <path
+                        d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    {items.slice(0, MAX_PILLS).map((it) => (
+                      <Pill key={it.id} item={it} muted={isPast} />
+                    ))}
+                    {items.length > MAX_PILLS && (
+                      <span className="pl-2.5 pt-0.5 text-[11px] font-semibold text-ink/35">
+                        +{items.length - MAX_PILLS} más
+                      </span>
+                    )}
+                  </div>
+                </motion.button>
+              )
+            })}
+          </motion.div>
+        </div>
 
         {/* ===== Panel lateral del día (se desliza desde la derecha) ===== */}
         <AnimatePresence>
@@ -297,7 +336,37 @@ export function CalendarioDesktop() {
   )
 }
 
-/** Panel lateral deslizante con la agenda de un día. */
+/**
+ * Píldora de un evento/tarea dentro de una celda. Llena de color lo que viene,
+ * apagada con un punto de color lo que ya pasó — así el mes se lee de un vistazo.
+ */
+function Pill({ item, muted }: { item: DayItem; muted: boolean }) {
+  const off = muted || item.done
+  return (
+    <span
+      className={`flex items-center gap-1.5 rounded-full py-[5px] pl-[7px] pr-2.5 text-[11.5px] font-semibold ${
+        off ? 'bg-ink/[0.05] text-ink/55' : 'text-white'
+      }`}
+      style={off ? undefined : { background: `rgb(${item.rgb})` }}
+    >
+      <span
+        aria-hidden
+        className={`h-[11px] w-[11px] shrink-0 rounded-full border-[1.5px] ${
+          off ? 'border-transparent' : 'border-white/70'
+        }`}
+        style={off ? { background: `rgb(${item.rgb})` } : undefined}
+      />
+      <span className="min-w-0 flex-1 truncate">{item.title}</span>
+      {item.time && (
+        <span className={`shrink-0 tabular-nums ${off ? 'text-ink/40' : 'text-white/80'}`}>
+          {item.time}
+        </span>
+      )}
+    </span>
+  )
+}
+
+/** Panel lateral deslizante con la agenda completa de un día. */
 function DayPanel({
   dateKey,
   onClose,
@@ -327,46 +396,53 @@ function DayPanel({
   const n = classes.length + items.length
   const isPast = dateKey < todayKey
 
+  const row = {
+    initial: { opacity: 0, x: 18 },
+    animate: { opacity: 1, x: 0, transition: { duration: 0.34, ease: EASE.decel } },
+  }
+
   return (
     <>
-      {/* Telón que oscurece la grilla detrás del panel. */}
+      {/* Telón que apaga la grilla detrás del panel. */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
         onClick={onClose}
-        className="absolute inset-0 z-10 bg-black/20 backdrop-blur-[1px]"
+        className="absolute inset-0 z-10 bg-black/15 backdrop-blur-[2px]"
       />
       {/* Panel. */}
       <motion.aside
-        initial={{ x: 40, opacity: 0 }}
+        initial={{ x: 44, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        exit={{ x: 40, opacity: 0 }}
+        exit={{ x: 44, opacity: 0 }}
         transition={{ duration: 0.28, ease: EASE.emphasized }}
-        className="absolute inset-y-0 right-0 z-20 flex w-[400px] flex-col rounded-l-[28px] border-l border-ink/5 bg-surface shadow-[-20px_0_50px_-20px_rgba(0,0,0,0.35)]"
+        className="absolute inset-y-0 right-0 z-20 flex w-[420px] flex-col rounded-[28px] bg-[rgb(var(--card))] shadow-[0_30px_70px_-25px_rgba(0,0,0,0.45)] ring-1 ring-ink/[0.07]"
       >
-        <div className="flex items-start justify-between gap-3 px-6 pb-4 pt-6">
+        <div className="flex items-start justify-between gap-3 px-6 pb-5 pt-6">
           <div>
-            <p className="text-[12.5px] font-semibold uppercase tracking-wide text-ink/40">
+            <p className="text-[12.5px] font-semibold uppercase tracking-wide text-ink/35">
               {isPast ? 'Fue el' : 'Agenda del'}
             </p>
-            <h2 className="mt-0.5 text-[22px] font-bold capitalize leading-tight text-ink">
+            <h2 className="mt-1 text-[24px] font-bold capitalize leading-tight tracking-tight text-ink">
               {DAY_NAMES[weekday(d)]} {d.getDate()}
             </h2>
-            <p className="text-[13.5px] text-ink/45">de {MONTH_NAMES[d.getMonth()]}</p>
+            <p className="text-[13.5px] text-ink/40">de {MONTH_NAMES[d.getMonth()]}</p>
           </div>
           <div className="flex items-center gap-2">
-            <button
+            <motion.button
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.94 }}
               onClick={onNew}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-ink text-surface transition-transform hover:-translate-y-0.5"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-ink text-surface"
               aria-label="Agregar"
             >
               <PlusIcon className="h-5 w-5" />
-            </button>
+            </motion.button>
             <button
               onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-ink/45 transition-colors hover:bg-ink/5 hover:text-ink"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-ink/40 transition-colors hover:bg-ink/[0.06] hover:text-ink"
               aria-label="Cerrar"
             >
               <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
@@ -376,20 +452,25 @@ function DayPanel({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-6 pb-6">
+        <motion.div
+          initial="initial"
+          animate="animate"
+          variants={{ animate: { transition: { staggerChildren: 0.04, delayChildren: 0.06 } } }}
+          className="min-h-0 flex-1 space-y-2 overflow-y-auto px-6 pb-6"
+        >
           {n === 0 && (
-            <div className="mt-10 flex flex-col items-center text-center">
-              <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-ink/5 text-ink/50">
+            <motion.div variants={row} className="mt-12 flex flex-col items-center text-center">
+              <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-ink/[0.05] text-ink/40">
                 <CalendarIcon className="h-7 w-7" />
               </div>
-              <p className="text-[15px] font-semibold text-ink">No tienes nada para este día</p>
-              <p className="mt-0.5 text-[13.5px] text-ink/45">Disfruta el día.</p>
-            </div>
+              <p className="text-[15px] font-semibold text-ink">No tienes nada este día</p>
+              <p className="mt-0.5 text-[13.5px] text-ink/40">Disfruta el día.</p>
+            </motion.div>
           )}
 
           {/* Clases del horario */}
           {classes.map((c) => (
-            <div key={c.id} className="flex gap-3 rounded-[18px] bg-ink/[0.03] p-3.5">
+            <motion.div key={c.id} variants={row} className="flex gap-3 rounded-[18px] bg-ink/[0.035] p-3.5">
               <span
                 className="w-[3px] shrink-0 self-stretch rounded-full"
                 style={{ background: subjectColor(c.subjectId) }}
@@ -399,25 +480,26 @@ function DayPanel({
                   <p className="break-words text-[14.5px] font-bold text-ink">
                     {subjectName(c.subjectId) ?? 'Clase'}
                   </p>
-                  <span className="shrink-0 text-[12px] font-medium text-ink/40">
+                  <span className="shrink-0 text-[12px] font-medium text-ink/35">
                     Clase · {CLASS_TYPE_LABEL[c.type]}
                   </span>
                 </div>
-                <p className="mt-0.5 text-[13px] tabular-nums text-ink/55">
+                <p className="mt-0.5 text-[13px] tabular-nums text-ink/50">
                   {c.start} — {c.end}
                   {c.room ? ` · ${c.room}` : ''}
                 </p>
               </div>
-            </div>
+            </motion.div>
           ))}
 
           {/* Eventos y tareas */}
           {items.map((it) =>
             it.kind === 'event' ? (
-              <button
+              <motion.button
                 key={it.id}
+                variants={row}
                 onClick={() => onEditEvent(it.ref as CalendarEvent)}
-                className="flex w-full gap-3 rounded-[18px] bg-ink/[0.03] p-3.5 text-left transition-colors hover:bg-ink/[0.06]"
+                className="flex w-full gap-3 rounded-[18px] bg-ink/[0.035] p-3.5 text-left transition-colors hover:bg-ink/[0.07]"
               >
                 <span
                   className="w-[3px] shrink-0 self-stretch rounded-full"
@@ -426,55 +508,58 @@ function DayPanel({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <p className="break-words text-[14.5px] font-bold text-ink">{it.title}</p>
-                    <span className="shrink-0 text-[12px] font-medium text-ink/40">
+                    <span className="shrink-0 text-[12px] font-medium text-ink/35">
                       {EVENT_TYPE_LABEL[(it.ref as CalendarEvent).type]}
                     </span>
                   </div>
-                  <p className="mt-0.5 text-[13px] tabular-nums text-ink/55">
-                    {[subjectName((it.ref as CalendarEvent).subjectId), it.time ?? 'Todo el día', (it.ref as CalendarEvent).location]
+                  <p className="mt-0.5 text-[13px] tabular-nums text-ink/50">
+                    {[
+                      subjectName((it.ref as CalendarEvent).subjectId),
+                      it.time ?? 'Todo el día',
+                      (it.ref as CalendarEvent).location,
+                    ]
                       .filter(Boolean)
                       .join(' · ')}
                   </p>
                 </div>
-              </button>
+              </motion.button>
             ) : (
-              <div key={it.id} className="flex gap-3 rounded-[18px] bg-ink/[0.03] p-3.5">
+              <motion.div key={it.id} variants={row} className="flex gap-3 rounded-[18px] bg-ink/[0.035] p-3.5">
                 <span className="w-[3px] shrink-0 self-stretch rounded-full" style={{ background: `rgb(${it.rgb})` }} />
                 <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
                   <button onClick={() => onEditTask(it.ref as Task)} className="min-w-0 flex-1 text-left">
                     <p
                       className={`break-words text-[14.5px] font-bold text-ink ${
-                        (it.ref as Task).done ? 'line-through opacity-60' : ''
+                        it.done ? 'line-through opacity-50' : ''
                       }`}
                     >
                       {it.title}
                     </p>
-                    <p className="mt-0.5 text-[13px] text-ink/55">
+                    <p className="mt-0.5 text-[13px] text-ink/50">
                       Tarea{it.time ? ` · ${it.time}` : ''}
-                      {!(it.ref as Task).done && dateKey < todayKey && (
-                        <span className="font-semibold text-rose-500"> · Vencida</span>
-                      )}
-                      {(it.ref as Task).done && (
+                      {!it.done && isPast && <span className="font-semibold text-rose-500"> · Vencida</span>}
+                      {it.done && (
                         <span className="font-semibold text-emerald-600 dark:text-emerald-300"> · Completada</span>
                       )}
                     </p>
                   </button>
-                  <button
+                  <motion.button
+                    whileTap={{ scale: 0.88 }}
                     onClick={() => onToggleTask(it.id)}
-                    aria-label={(it.ref as Task).done ? 'Marcar pendiente' : 'Completar'}
+                    aria-label={it.done ? 'Marcar pendiente' : 'Completar'}
                     className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors ${
-                      (it.ref as Task).done
+                      it.done
                         ? 'border-emerald-500 bg-emerald-500 text-white'
                         : 'border-ink/20 text-transparent hover:border-ink/40'
                     }`}
                   >
                     <CheckIcon className="h-4 w-4" />
-                  </button>
+                  </motion.button>
                 </div>
-              </div>
+              </motion.div>
             ),
           )}
-        </div>
+        </motion.div>
       </motion.aside>
     </>
   )
