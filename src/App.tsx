@@ -21,7 +21,7 @@ import { SharedCalendarioView } from './features/schedule/SharedCalendarioView'
 import { Onboarding } from './features/onboarding/Onboarding'
 import { FpsMeter } from './components/dev/FpsMeter'
 import { EASE } from './lib/motion'
-import { accentLightRgb, accentRgb } from './lib/accents'
+import { accentGhost, accentLightRgb, accentRgb } from './lib/accents'
 import { useAppStore } from './store/useAppStore'
 
 export type Route =
@@ -207,6 +207,33 @@ export default function App() {
         </main>
 
         {isDesktop && <ChatDock open={chatOpen} onClose={() => setChatDock(false)} />}
+
+        {/* Botón flotante de Brody (solo PC): el panel "crece" desde aquí.
+            Se oculta mientras el panel está abierto para no taparlo. */}
+        {isDesktop && (
+          <motion.button
+            type="button"
+            onClick={() => setChatDock(true)}
+            aria-label="Abrir a Brody"
+            initial={false}
+            animate={
+              chatOpen
+                ? { opacity: 0, scale: 0.6, pointerEvents: 'none' }
+                : { opacity: 1, scale: 1, pointerEvents: 'auto' }
+            }
+            transition={{ duration: 0.22, ease: EASE.emphasized }}
+            whileHover={{ scale: 1.06, y: -2 }}
+            whileTap={{ scale: 0.94 }}
+            style={{ originX: 1, originY: 1 }}
+            className="fixed bottom-6 right-6 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-ink shadow-[0_18px_40px_-12px_rgba(0,0,0,0.55)]"
+          >
+            <img
+              src={accentGhost(accent, theme === 'dark')}
+              alt=""
+              className="h-9 w-9 object-contain"
+            />
+          </motion.button>
+        )}
       </div>
 
       {/* Velo degradado: el contenido se desvanece detrás de la nav flotante. */}
