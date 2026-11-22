@@ -42,7 +42,7 @@ const MAX_PILLS = 3
 const SWIPE_DISTANCE = 140
 
 /**
- * Relieve suave de lo "presionable" oscuro (píldoras que vienen, botón Crear):
+ * Relieve suave de lo "presionable" (píldoras que vienen, botón Crear):
  * un brillo arriba, un filo oscuro abajo y una sombra corta. Se ve con volumen
  * sin parecer un botón de los 2000.
  */
@@ -203,12 +203,7 @@ export function CalendarioDesktop() {
 
   return (
     <MotionConfig reducedMotion="user">
-      {/* Con el panel abierto, la página se va un pelín hacia atrás (profundidad iOS). */}
-      <motion.div
-        animate={{ scale: openKey ? 0.985 : 1 }}
-        transition={SPRING.soft}
-        className="flex h-full flex-col overflow-hidden px-8 pb-6 pt-8 xl:px-12"
-      >
+      <div className="flex h-full flex-col overflow-hidden px-8 pb-6 pt-8 xl:px-12">
         {/* ===== Encabezado ===== */}
         <header className="mb-6 flex shrink-0 items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -383,7 +378,7 @@ export function CalendarioDesktop() {
             </motion.div>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* ===== Panel del día (crece desde la celda tocada) ===== */}
       <AnimatePresence>
@@ -438,18 +433,18 @@ export function CalendarioDesktop() {
 }
 
 /**
- * Píldora de un evento/tarea dentro de una celda. Lo que viene es oscuro con
- * relieve y un aro del color del ramo; lo que ya pasó es claro y flota apenas;
- * lo completado lleva un check.
+ * Píldora de un evento/tarea dentro de una celda. Lo que viene va lleno del
+ * color del ramo con relieve; lo que ya pasó es claro con un punto de color y
+ * flota apenas; lo completado lleva un check.
  */
 function Pill({ item, muted }: { item: DayItem; muted: boolean }) {
   const off = muted || item.done
   return (
     <span
       className={`flex items-center gap-1.5 rounded-full py-[3px] pl-[6px] pr-2.5 text-[11.5px] leading-4 font-semibold ${
-        off ? 'bg-[rgb(var(--card))] text-ink/80' : 'bg-ink text-surface'
+        off ? 'bg-[rgb(var(--card))] text-ink/80' : 'text-white'
       }`}
-      style={off ? RAISED_LIGHT : RAISED}
+      style={off ? RAISED_LIGHT : { ...RAISED, backgroundColor: `rgb(${item.rgb})` }}
     >
       {item.done ? (
         <span
@@ -465,11 +460,7 @@ function Pill({ item, muted }: { item: DayItem; muted: boolean }) {
           style={{ background: `rgb(${item.rgb})` }}
         />
       ) : (
-        <span
-          aria-hidden
-          className="h-[11px] w-[11px] shrink-0 rounded-full border-[1.75px]"
-          style={{ borderColor: `rgb(${item.rgb})` }}
-        />
+        <span aria-hidden className="h-[11px] w-[11px] shrink-0 rounded-full border-[1.75px] border-white/80" />
       )}
       <span className={`min-w-0 flex-1 truncate ${item.done ? 'text-ink/45 line-through' : ''}`}>
         {item.title}
@@ -477,7 +468,7 @@ function Pill({ item, muted }: { item: DayItem; muted: boolean }) {
       {item.time && (
         <span
           className={`shrink-0 text-[10.5px] font-medium tabular-nums ${
-            off ? 'text-ink/40' : 'text-surface/70'
+            off ? 'text-ink/40' : 'text-white/75'
           }`}
         >
           {item.time}
