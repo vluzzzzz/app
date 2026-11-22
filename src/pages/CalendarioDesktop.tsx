@@ -364,7 +364,7 @@ export function CalendarioDesktop() {
                     </div>
                     <div className="flex flex-col gap-1">
                       {items.slice(0, shown).map((it) => (
-                        <Pill key={it.id} item={it} muted={isPast} />
+                        <Pill key={it.id} item={it} />
                       ))}
                       {shown < items.length && (
                         <span className="pl-2.5 pt-0.5 text-[11px] font-semibold text-ink/40">
@@ -433,12 +433,11 @@ export function CalendarioDesktop() {
 }
 
 /**
- * Píldora de un evento/tarea dentro de una celda. Lo que viene va lleno del
- * color del ramo con relieve; lo que ya pasó es claro con un punto de color y
- * flota apenas; lo completado lleva un check.
+ * Píldora de un evento/tarea dentro de una celda: llena del color del ramo con
+ * relieve, también en días pasados. Solo lo completado queda claro con un check.
  */
-function Pill({ item, muted }: { item: DayItem; muted: boolean }) {
-  const off = muted || item.done
+function Pill({ item }: { item: DayItem }) {
+  const off = item.done
   return (
     <span
       className={`flex items-center gap-1.5 rounded-full py-[3px] pl-[6px] pr-2.5 text-[11.5px] leading-4 font-semibold ${
@@ -453,12 +452,6 @@ function Pill({ item, muted }: { item: DayItem; muted: boolean }) {
         >
           <CheckIcon className="h-[9px] w-[9px]" />
         </span>
-      ) : off ? (
-        <span
-          aria-hidden
-          className="h-[9px] w-[9px] shrink-0 rounded-full"
-          style={{ background: `rgb(${item.rgb})` }}
-        />
       ) : (
         <span aria-hidden className="h-[11px] w-[11px] shrink-0 rounded-full border-[1.75px] border-white/80" />
       )}
