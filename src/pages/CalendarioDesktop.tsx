@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAppStore } from '../store/useAppStore'
 import type { CalendarEvent, EventType, Task } from '../lib/types'
@@ -294,6 +295,7 @@ export function CalendarioDesktop() {
               key="daypanel"
               dateKey={openKey}
               onClose={() => setOpenKey(null)}
+              sheetOpen={eventSheetOpen || taskSheetOpen || shareOpen}
               classes={classesForDay(classes, weekday(fromDateKey(openKey)))}
               items={itemsFor(openKey)}
               todayKey={todayKey}
@@ -377,6 +379,7 @@ function Pill({ item, muted }: { item: DayItem; muted: boolean }) {
 function DayPanel({
   dateKey,
   onClose,
+  sheetOpen,
   classes,
   items,
   todayKey,
@@ -389,6 +392,7 @@ function DayPanel({
 }: {
   dateKey: string
   onClose: () => void
+  sheetOpen: boolean
   classes: ReturnType<typeof classesForDay>
   items: DayItem[]
   todayKey: string
@@ -408,24 +412,38 @@ function DayPanel({
     animate: { opacity: 1, x: 0, transition: { duration: 0.34, ease: EASE.decel } },
   }
 
-  return (
+  // Con una hoja abierta encima, Escape cierra solo la hoja, no el panel.
+  useEffect(() => {
+    if (sheetOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose, sheetOpen])
+
+  // Por `document.body`: la página va dentro de un `motion.div` con transform,
+  // y eso ancla a los `fixed` hijos. Con el portal el telón sí cubre la pantalla
+  // completa (barra lateral incluida) en vez de un rectángulo sobre la grilla.
+  return createPortal(
     <>
-      {/* Telón que apaga la grilla detrás del panel. */}
+      {/* Telón suave sobre TODA la pantalla, sin desenfoque: solo baja el brillo
+          de lo que queda detrás para que el panel mande. */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
+        transition={{ duration: 0.24, ease: EASE.emphasized }}
         onClick={onClose}
-        className="absolute inset-0 z-10 bg-black/15 backdrop-blur-[2px]"
+        className="fixed inset-0 z-[41] bg-black/[0.12]"
       />
-      {/* Panel. */}
+      {/* Panel. z menor a 50 para que las hojas (GlassSheet) abran por encima. */}
       <motion.aside
         initial={{ x: 44, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         exit={{ x: 44, opacity: 0 }}
         transition={{ duration: 0.28, ease: EASE.emphasized }}
-        className="absolute inset-y-0 right-0 z-20 flex w-[420px] flex-col rounded-[28px] bg-[rgb(var(--card))] shadow-[0_30px_70px_-25px_rgba(0,0,0,0.45)] ring-1 ring-ink/[0.07]"
+        className="fixed inset-y-4 right-4 z-[42] flex w-[420px] flex-col rounded-[28px] bg-[rgb(var(--card))] shadow-[0_30px_70px_-25px_rgba(0,0,0,0.45)] ring-1 ring-ink/[0.07]"
       >
         <div className="flex items-start justify-between gap-3 px-6 pb-5 pt-6">
           <div>
@@ -568,6 +586,7 @@ function DayPanel({
           )}
         </motion.div>
       </motion.aside>
-    </>
+    </>,
+    document.body,
   )
 }
