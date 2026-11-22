@@ -662,7 +662,7 @@ function DayPanel({
                 >
                   <span
                     aria-hidden
-                    className="mt-[5px] h-3 w-3 shrink-0 rounded-full"
+                    className="w-3 shrink-0 self-stretch rounded-full"
                     style={{ ...RAISED, backgroundColor: `rgb(${it.rgb})` }}
                   />
                   <div className="min-w-0 flex-1">
@@ -697,7 +697,7 @@ function DayPanel({
                 >
                   <span
                     aria-hidden
-                    className="mt-[5px] h-3 w-3 shrink-0 rounded-full"
+                    className="w-3 shrink-0 self-stretch rounded-full"
                     style={{ ...RAISED, backgroundColor: `rgb(${it.rgb})` }}
                   />
                   <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
