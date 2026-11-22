@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type WheelEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type WheelEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, MotionConfig, motion, type PanInfo } from 'framer-motion'
 import { useAppStore } from '../store/useAppStore'
@@ -19,6 +19,7 @@ import { EASE, SPRING } from '../lib/motion'
 import { EventSheet, EVENT_TYPE_LABEL } from '../features/schedule/EventSheet'
 import { TaskEditor } from '../features/tasks/TaskEditor'
 import { ShareCalendarioSheet } from '../features/schedule/ShareCalendarioSheet'
+import { RAISED, RAISED_LIGHT } from '../components/ui/relief'
 import {
   CalendarIcon,
   CheckIcon,
@@ -40,22 +41,6 @@ const MAX_PILLS = 3
 
 /** Cuánto hay que arrastrar (px, con el impulso proyectado) para cambiar de mes. */
 const SWIPE_DISTANCE = 140
-
-/**
- * Relieve suave de lo "presionable" (píldoras que vienen, botón Crear):
- * un brillo arriba, un filo oscuro abajo y una sombra corta. Se ve con volumen
- * sin parecer un botón de los 2000.
- */
-const RAISED: CSSProperties = {
-  backgroundImage: 'linear-gradient(to bottom, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0))',
-  boxShadow:
-    'inset 0 1px 0 rgb(255 255 255 / 0.16), inset 0 -1px 0 rgb(0 0 0 / 0.22), 0 1px 2px rgb(0 0 0 / 0.16), 0 4px 10px -4px rgb(0 0 0 / 0.35)',
-}
-
-/** Relieve de lo claro (píldoras que ya pasaron): flota apenas sobre la celda. */
-const RAISED_LIGHT: CSSProperties = {
-  boxShadow: '0 1px 1.5px rgb(0 0 0 / 0.06), 0 3px 8px -3px rgb(0 0 0 / 0.12)',
-}
 
 type DayItem = {
   kind: 'event' | 'task'

@@ -15,7 +15,7 @@ import { ClassSheet } from '../features/schedule/ClassSheet'
 import { ShareHorarioSheet } from '../features/schedule/ShareHorarioSheet'
 import { HorarioPrint } from '../features/schedule/HorarioPrint'
 import { AgendaTimeline, ClassInfo } from '../features/schedule/AgendaTimeline'
-import { WeekGrid } from '../features/schedule/WeekGrid'
+import { HorarioDesktop } from './HorarioDesktop'
 import { useIsDesktop } from '../lib/useIsDesktop'
 import { ClockIcon, PlusIcon, PrinterIcon, ShareIcon } from '../components/ui/Icons'
 
@@ -87,6 +87,9 @@ export function Horario() {
     setEditing(b)
     setSheetOpen(true)
   }
+
+  // PC: vista propia, con el mismo lenguaje que el calendario de escritorio.
+  if (isDesktop) return <HorarioDesktop />
 
   return (
     <div className="h-full overflow-y-auto px-5 pb-36 pt-6 lg:px-8 lg:pb-10 lg:pt-8">
@@ -200,14 +203,6 @@ export function Horario() {
             <PlusIcon className="h-5 w-5" /> Agregar clase
           </button>
         </div>
-      ) : isDesktop ? (
-        /* PC: la semana completa como calendario real, con línea de la hora actual */
-        <WeekGrid
-          classes={classes}
-          subjectName={subjectName}
-          subjectColor={subjectColor}
-          onOpen={openEdit}
-        />
       ) : weekView ? (
         /* Vista semanal: lista compacta por día */
         <div className="space-y-5">

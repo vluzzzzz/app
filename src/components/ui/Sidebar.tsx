@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import type { Route } from '../../App'
 import { useAppStore } from '../../store/useAppStore'
 import { avatarSrc } from '../../lib/avatars'
-import { ChatBubbleIcon, DotsIcon, NavIcon, SettingsIcon } from './Icons'
+import { DotsIcon, NavIcon, SettingsIcon } from './Icons'
 import type { TabId } from './TabBar'
 
 const TABS: { id: TabId; label: string }[] = [
@@ -14,21 +14,17 @@ const TABS: { id: TabId; label: string }[] = [
 
 /**
  * Navegación lateral del modo PC (≥1024px). Organización: logo arriba (único
- * lugar con el logo), nav principal, Brody (chat) — y abajo del todo, como en
+ * lugar con el logo), nav principal — y abajo del todo, como en
  * cualquier app de escritorio: Ajustes y la tarjeta de perfil (foto + nombre)
  * con el menú de opciones en los puntitos. Sin emojis: es interfaz.
  */
 export function Sidebar({
   active,
   navigate,
-  chatOpen,
-  onToggleChat,
   onOpenMenu,
 }: {
   active: string
   navigate: (r: Route) => void
-  chatOpen: boolean
-  onToggleChat: () => void
   onOpenMenu: () => void
 }) {
   const userName = useAppStore((s) => s.userName)
@@ -79,18 +75,6 @@ export function Sidebar({
             </button>
           )
         })}
-
-        {/* Brody (panel de chat) */}
-        <button
-          onClick={onToggleChat}
-          className={`flex items-center gap-3 rounded-2xl px-3.5 py-3 text-[15px] font-semibold transition-colors ${
-            chatOpen ? 'bg-ink/5 text-ink' : 'text-ink/55 hover:bg-ink/5 hover:text-ink'
-          }`}
-        >
-          <ChatBubbleIcon className="h-6 w-6 text-ink/40" />
-          <span>Brody</span>
-          {chatOpen && <span className="ml-auto h-2 w-2 rounded-full bg-emerald-500" />}
-        </button>
       </div>
 
       {/* Bloque inferior: Ajustes + perfil en la esquina */}

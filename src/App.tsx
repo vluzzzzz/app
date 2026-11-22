@@ -163,8 +163,6 @@ export default function App() {
           <Sidebar
             active={route.name}
             navigate={nav}
-            chatOpen={chatOpen}
-            onToggleChat={() => setChatDock(!chatOpen)}
             onOpenMenu={() => setMenuOpen(true)}
           />
         )}
