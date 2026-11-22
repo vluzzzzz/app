@@ -34,6 +34,22 @@ export const DUR = {
   large: 0.42,
 }
 
+/**
+ * Resortes estilo iOS: arrancan desde donde está la cosa en pantalla y se
+ * pueden interrumpir a mitad de camino. Sin rebote por defecto; el rebote se
+ * guarda para lo que el usuario "lanza" o abre con un gesto.
+ */
+export const SPRING = {
+  /** Respuesta al presionar: casi instantáneo. */
+  press: { type: 'spring', bounce: 0, duration: 0.25 } as Transition,
+  /** Mover/reubicar algo sin rebote. */
+  soft: { type: 'spring', bounce: 0, duration: 0.4 } as Transition,
+  /** Panel u hoja que crece desde su origen, con un rebote mínimo. */
+  panel: { type: 'spring', bounce: 0.14, duration: 0.55 } as Transition,
+  /** Entrada con un poco de vida (celdas, filas). */
+  pop: { type: 'spring', bounce: 0.22, duration: 0.5 } as Transition,
+}
+
 /** ¿El usuario pidió menos movimiento? (accesibilidad). SSR-safe. */
 export function prefersReducedMotion(): boolean {
   return (
