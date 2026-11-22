@@ -338,13 +338,19 @@ export function CalendarioDesktop() {
                     transition={SPRING.press}
                     onClick={(e) => openDay(key, e.currentTarget)}
                     className={`group relative flex flex-col gap-1 overflow-hidden rounded-[22px] p-2 text-left transition-colors duration-200 ${
-                      isOpen ? 'bg-ink/[0.08]' : 'bg-ink/[0.035] hover:bg-ink/[0.055]'
+                      isOpen
+                        ? 'bg-ink/[0.08]'
+                        : isToday
+                          ? 'bg-[rgb(var(--card))] ring-1 ring-ink/[0.05] dark:ring-ink/[0.14]'
+                          : 'bg-ink/[0.035] hover:bg-ink/[0.055]'
                     }`}
+                    style={isToday && !isOpen ? RAISED_LIGHT : undefined}
                   >
                     <div className="flex items-center justify-between px-0.5">
                       {isToday ? (
-                        <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-ink text-[12px] font-bold tabular-nums text-surface">
-                          {d.getDate()}
+                        <span className="flex items-baseline gap-1.5 px-1 leading-[22px]">
+                          <span className="text-[13px] font-bold tabular-nums text-ink">{d.getDate()}</span>
+                          <span className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-ink/40">Hoy</span>
                         </span>
                       ) : (
                         <span
@@ -523,6 +529,16 @@ function DayPanel({
     }
   }, [origin])
 
+  // Con algo importante en el día, las clases parten plegadas; si no hay nada más, abiertas.
+  const [classesOpen, setClassesOpen] = useState(items.length === 0)
+  const classSpan = classes.length
+    ? `${classes.reduce((a, c) => (c.start < a ? c.start : a), classes[0].start)} — ${classes.reduce(
+        (a, c) => (c.end > a ? c.end : a),
+        classes[0].end,
+      )}`
+    : ''
+  const classDots = [...new Set(classes.map((c) => subjectColor(c.subjectId)))].slice(0, 4)
+
   const row = {
     initial: { opacity: 0, y: 12, scale: 0.97 },
     animate: { opacity: 1, y: 0, scale: 1, transition: SPRING.pop },
@@ -624,31 +640,15 @@ function DayPanel({
               </motion.div>
             )}
 
-            {/* Clases del horario */}
-            {classes.map((c) => (
-              <motion.div key={c.id} variants={row} className="flex gap-3 rounded-[20px] bg-ink/[0.035] p-3.5">
-                <span
-                  className="w-[3px] shrink-0 self-stretch rounded-full"
-                  style={{ background: subjectColor(c.subjectId) }}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="break-words text-[14.5px] font-bold text-ink">
-                      {subjectName(c.subjectId) ?? 'Clase'}
-                    </p>
-                    <span className="shrink-0 text-[12px] font-medium text-ink/35">
-                      Clase · {CLASS_TYPE_LABEL[c.type]}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-[13px] tabular-nums text-ink/50">
-                    {c.start} — {c.end}
-                    {c.room ? ` · ${c.room}` : ''}
-                  </p>
-                </div>
-              </motion.div>
-            ))}
-
-            {/* Eventos y tareas */}
+            {/* Lo importante (evaluaciones, eventos, tareas) va arriba y con su color. */}
+            {items.length > 0 && (
+              <motion.p
+                variants={row}
+                className="px-1 pb-0.5 text-[12px] font-semibold uppercase tracking-wide text-ink/40"
+              >
+                Importante · {items.length}
+              </motion.p>
+            )}
             {items.map((it) =>
               it.kind === 'event' ? (
                 <motion.button
@@ -656,20 +656,25 @@ function DayPanel({
                   variants={row}
                   whileTap={{ scale: 0.97 }}
                   onClick={() => onEditEvent(it.ref as CalendarEvent)}
-                  className="flex w-full gap-3 rounded-[20px] bg-ink/[0.035] p-3.5 text-left transition-colors hover:bg-ink/[0.065]"
+                  className="flex w-full items-start gap-3 rounded-[20px] p-3.5 text-left transition-[filter] hover:brightness-[0.97]"
+                  style={{ background: `rgb(${it.rgb} / 0.12)` }}
                 >
                   <span
-                    className="w-[3px] shrink-0 self-stretch rounded-full"
-                    style={{ background: `rgb(${it.rgb})` }}
+                    aria-hidden
+                    className="mt-[5px] h-3 w-3 shrink-0 rounded-full"
+                    style={{ ...RAISED, backgroundColor: `rgb(${it.rgb})` }}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="break-words text-[14.5px] font-bold text-ink">{it.title}</p>
-                      <span className="shrink-0 text-[12px] font-medium text-ink/35">
+                      <p className="break-words text-[15px] font-bold text-ink">{it.title}</p>
+                      <span
+                        className="shrink-0 rounded-full px-2 py-[2px] text-[11px] font-semibold text-white"
+                        style={{ ...RAISED, backgroundColor: `rgb(${it.rgb})` }}
+                      >
                         {EVENT_TYPE_LABEL[(it.ref as CalendarEvent).type]}
                       </span>
                     </div>
-                    <p className="mt-0.5 text-[13px] tabular-nums text-ink/50">
+                    <p className="mt-0.5 text-[13px] tabular-nums text-ink/55">
                       {[
                         subjectName((it.ref as CalendarEvent).subjectId),
                         it.time ?? 'Todo el día',
@@ -681,12 +686,21 @@ function DayPanel({
                   </div>
                 </motion.button>
               ) : (
-                <motion.div key={it.id} variants={row} className="flex gap-3 rounded-[20px] bg-ink/[0.035] p-3.5">
-                  <span className="w-[3px] shrink-0 self-stretch rounded-full" style={{ background: `rgb(${it.rgb})` }} />
+                <motion.div
+                  key={it.id}
+                  variants={row}
+                  className="flex items-start gap-3 rounded-[20px] p-3.5 transition-colors duration-300"
+                  style={{ background: it.done ? 'rgb(var(--ink) / 0.035)' : `rgb(${it.rgb} / 0.12)` }}
+                >
+                  <span
+                    aria-hidden
+                    className="mt-[5px] h-3 w-3 shrink-0 rounded-full"
+                    style={{ ...RAISED, backgroundColor: `rgb(${it.rgb})` }}
+                  />
                   <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
                     <button onClick={() => onEditTask(it.ref as Task)} className="min-w-0 flex-1 text-left">
                       <p
-                        className={`break-words text-[14.5px] font-bold text-ink transition-opacity ${
+                        className={`break-words text-[15px] font-bold text-ink transition-opacity ${
                           it.done ? 'line-through opacity-50' : ''
                         }`}
                       >
@@ -726,6 +740,96 @@ function DayPanel({
                   </div>
                 </motion.div>
               ),
+            )}
+
+            {/* Clases del horario: una carpeta desplegable para que no tapen lo importante. */}
+            {classes.length > 0 && (
+              <motion.div
+                variants={row}
+                className={`overflow-hidden rounded-[20px] bg-ink/[0.035] ${items.length > 0 ? '!mt-5' : ''}`}
+              >
+                <button
+                  onClick={() => setClassesOpen((o) => !o)}
+                  aria-expanded={classesOpen}
+                  className="flex w-full items-center gap-3 p-3.5 text-left transition-colors hover:bg-ink/[0.03]"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-ink/[0.06] text-ink/55">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden className="h-[18px] w-[18px]">
+                      <path
+                        d="M3.5 7.5A2 2 0 0 1 5.5 5.5h3.6l2 2h7.4a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-9Z"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[14.5px] font-bold text-ink">Clases</p>
+                    <p className="text-[13px] tabular-nums text-ink/50">
+                      {classes.length} {classes.length === 1 ? 'clase' : 'clases'} · {classSpan}
+                    </p>
+                  </div>
+                  <span className="flex -space-x-1">
+                    {classDots.map((c) => (
+                      <span
+                        key={c}
+                        className="h-3 w-3 rounded-full ring-2 ring-[rgb(var(--card))]"
+                        style={{ background: c }}
+                      />
+                    ))}
+                  </span>
+                  <motion.span
+                    animate={{ rotate: classesOpen ? 90 : 0 }}
+                    transition={SPRING.soft}
+                    className="flex text-ink/35"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </motion.span>
+                </button>
+                <AnimatePresence initial={false}>
+                  {classesOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ height: SPRING.soft, opacity: { duration: 0.2 } }}
+                    >
+                      <motion.ul
+                        initial="initial"
+                        animate="animate"
+                        variants={{ animate: { transition: { staggerChildren: 0.035 } } }}
+                        className="space-y-1 px-2 pb-2"
+                      >
+                        {classes.map((c) => (
+                          <motion.li
+                            key={c.id}
+                            variants={row}
+                            className="flex items-center gap-3 rounded-[14px] bg-[rgb(var(--card))] px-3 py-2.5"
+                          >
+                            <span
+                              className="w-[3px] shrink-0 self-stretch rounded-full"
+                              style={{ background: subjectColor(c.subjectId) }}
+                            />
+                            <div className="w-[44px] shrink-0 text-[12.5px] leading-tight tabular-nums">
+                              <p className="font-semibold text-ink/80">{c.start}</p>
+                              <p className="text-ink/40">{c.end}</p>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-[14px] font-semibold text-ink">
+                                {subjectName(c.subjectId) ?? 'Clase'}
+                              </p>
+                              <p className="truncate text-[12.5px] text-ink/45">
+                                {CLASS_TYPE_LABEL[c.type]}
+                                {c.room ? ` · ${c.room}` : ''}
+                              </p>
+                            </div>
+                          </motion.li>
+                        ))}
+                      </motion.ul>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
             )}
           </motion.div>
         </motion.div>
