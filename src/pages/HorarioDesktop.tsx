@@ -275,51 +275,78 @@ export function HorarioDesktop() {
                             ...RAISED_LIGHT,
                             top,
                             height,
-                            left: `calc(${lane * width}% + 4px)`,
-                            width: `calc(${width}% - 8px)`,
-                            backgroundImage: `linear-gradient(135deg, rgb(${rgb} / ${narrow ? 0.11 : 0.07}), transparent 72%)`,
+                            left: `calc(${lane * width}% + ${narrow ? 7 : 4}px)`,
+                            width: `calc(${width}% - ${narrow ? 14 : 8}px)`,
                           }}
-                          className={`absolute flex flex-col overflow-hidden rounded-[13px] bg-[rgb(var(--card))] text-left ring-1 ring-ink/[0.045] transition-shadow hover:ring-ink/10 ${
-                            narrow ? 'pl-2.5 pr-1.5' : 'pl-3 pr-2.5'
+                          className={`absolute flex overflow-hidden rounded-[13px] bg-[rgb(var(--card))] text-left ring-1 ring-ink/[0.045] transition-shadow hover:ring-ink/10 ${
+                            narrow
+                              ? 'flex-col justify-center pl-3 pr-2'
+                              : 'items-center justify-between gap-3 pl-3.5 pr-3'
                           } ${compact ? 'py-1.5' : 'py-2'}`}
                         >
                           {/* Rayita de color: identifica el ramo sin llenar toda la tarjeta. */}
                           <span
                             aria-hidden
-                            className="absolute inset-y-0 left-0 w-[3px] rounded-r-full"
+                            className="absolute inset-y-0 left-0 w-[3px]"
                             style={{ backgroundColor: `rgb(${rgb})` }}
                           />
-                          {/* Contenido compacto y centrado: la tarjeta no queda con un hueco enorme. */}
-                          <div className="my-auto w-full">
-                            <div className={narrow ? 'flex min-h-[38px] items-center' : undefined}>
+                          {narrow ? (
+                            <>
+                              {/* Choque: nombre arriba y datos abajo, con las dos tarjetas separadas. */}
+                              <div className={compact ? undefined : 'flex min-h-[38px] items-center'}>
+                                <p className="w-full break-words text-[11px] font-bold leading-[1.14] text-ink">
+                                  {subjectName(block.subjectId)}
+                                </p>
+                              </div>
+                              <div className={compact ? 'mt-0.5' : 'mt-1'}>
+                                {compact ? (
+                                  <p className="break-words text-[9.5px] font-semibold leading-tight tabular-nums text-ink/55">
+                                    {block.start}–{block.end}
+                                    {block.room ? ` · ${block.room}` : ''}
+                                  </p>
+                                ) : (
+                                  <>
+                                    <p className="whitespace-nowrap text-[10px] font-semibold leading-tight tabular-nums text-ink/55">
+                                      {block.start} – {block.end}
+                                    </p>
+                                    <p className="mt-0.5 break-words text-[10px] font-medium leading-[1.2] text-ink/40">
+                                      {CLASS_TYPE_LABEL[block.type]}
+                                      {block.room ? ` · ${block.room}` : ''}
+                                    </p>
+                                  </>
+                                )}
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              {/* Sin choque: nombre a la izquierda y hora/sala a la derecha. */}
                               <p
-                                className={`w-full break-words font-bold leading-[1.14] text-ink ${
-                                  narrow ? 'text-[11px]' : 'text-[12.5px]'
+                                className={`min-w-0 flex-1 break-words font-bold leading-[1.16] text-ink ${
+                                  compact ? 'text-[12px]' : 'text-[13px]'
                                 }`}
                               >
                                 {subjectName(block.subjectId)}
                               </p>
-                            </div>
-                            {/* Hora y sala siempre en el mismo orden y alineadas, incluso en choques. */}
-                            <div className={`shrink-0 ${compact ? 'mt-0.5' : 'mt-1'}`}>
-                              {compact ? (
-                                <p className="break-words text-[9.5px] font-semibold leading-tight tabular-nums text-ink/55">
-                                  {block.start}–{block.end}
-                                  {block.room ? ` · ${block.room}` : ''}
-                                </p>
-                              ) : (
-                                <>
-                                  <p className="whitespace-nowrap text-[10px] font-semibold leading-tight tabular-nums text-ink/55">
-                                    {block.start} – {block.end}
-                                  </p>
-                                  <p className="mt-0.5 break-words text-[10px] font-medium leading-[1.2] text-ink/40">
-                                    {CLASS_TYPE_LABEL[block.type]}
+                              <div className="shrink-0 text-right">
+                                {compact ? (
+                                  <p className="break-words text-[9.5px] font-semibold leading-tight tabular-nums text-ink/55">
+                                    {block.start}–{block.end}
                                     {block.room ? ` · ${block.room}` : ''}
                                   </p>
-                                </>
-                              )}
-                            </div>
-                          </div>
+                                ) : (
+                                  <>
+                                    <p className="whitespace-nowrap text-[10px] font-semibold leading-tight tabular-nums text-ink/55">
+                                      {block.start} – {block.end}
+                                    </p>
+                                    <p className="mt-0.5 break-words text-[10px] font-medium leading-[1.2] text-ink/40">
+                                      {CLASS_TYPE_LABEL[block.type]}
+                                      {block.room ? ` · ${block.room}` : ''}
+                                    </p>
+                                  </>
+                                )}
+                              </div>
+                            </>
+                          )}
                         </motion.button>
                       )
                     })}
