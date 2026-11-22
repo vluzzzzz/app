@@ -84,8 +84,6 @@ export function HorarioDesktop() {
 
   const now = new Date()
   const today = weekday(now)
-  const monday = new Date(now)
-  monday.setDate(now.getDate() - today)
 
   // Días visibles: Lun-Vie siempre; Sáb/Dom solo si tienen clases.
   const days = [0, 1, 2, 3, 4, 5, 6].filter((d) => d < 5 || classes.some((c) => c.day === d))
@@ -183,23 +181,18 @@ export function HorarioDesktop() {
         ) : (
           <>
             {/* ===== Nombres de los días ===== */}
-            <div className="mb-2 grid shrink-0 gap-1.5" style={{ gridTemplateColumns: cols }}>
+            <div className="mb-3 grid shrink-0 gap-1.5" style={{ gridTemplateColumns: cols }}>
               <span />
               {days.map((d) => {
-                const date = new Date(monday)
-                date.setDate(monday.getDate() + d)
                 const isToday = d === today
                 return (
                   <span
                     key={d}
-                    className={`flex items-baseline justify-center gap-1.5 text-[13px] ${
+                    className={`flex items-center justify-center text-[13px] ${
                       isToday ? 'font-bold text-ink' : 'font-medium text-ink/35'
                     }`}
                   >
-                    {DAY_NAMES[d]} <span className="tabular-nums">{date.getDate()}</span>
-                    {isToday && (
-                      <span className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-ink/40">Hoy</span>
-                    )}
+                    {DAY_NAMES[d]}
                   </span>
                 )
               })}
@@ -260,6 +253,8 @@ export function HorarioDesktop() {
                       const height = Math.max(26, yOf(toMinutes(block.end)) - top - 3)
                       const width = 100 / lanes
                       const rgb = subjectRgb(block.subjectId)
+                      const narrow = lanes > 1
+                      const compact = height < 58
                       return (
                         <motion.button
                           key={block.id}
@@ -269,7 +264,7 @@ export function HorarioDesktop() {
                             scale: 1,
                             transition: { ...SPRING.pop, delay: 0.08 + di * 0.04 + bi * 0.03 },
                           }}
-                          whileHover={{ y: -2, scale: 1.02, zIndex: 10 }}
+                          whileHover={{ y: -2, zIndex: 10 }}
                           whileTap={{ scale: 0.97 }}
                           transition={SPRING.press}
                           onClick={(e) => {
@@ -277,29 +272,54 @@ export function HorarioDesktop() {
                             openEdit(block)
                           }}
                           style={{
-                            ...RAISED,
-                            backgroundColor: `rgb(${rgb})`,
+                            ...RAISED_LIGHT,
                             top,
                             height,
-                            left: `calc(${lane * width}% + 5px)`,
-                            width: `calc(${width}% - 10px)`,
+                            left: `calc(${lane * width}% + 4px)`,
+                            width: `calc(${width}% - 8px)`,
+                            backgroundImage: `linear-gradient(135deg, rgb(${rgb} / ${narrow ? 0.11 : 0.07}), transparent 72%)`,
                           }}
-                          className="absolute flex flex-col overflow-hidden rounded-[14px] px-2.5 py-1.5 text-left text-white"
+                          className={`absolute flex flex-col overflow-hidden rounded-[13px] bg-[rgb(var(--card))] text-left ring-1 ring-ink/[0.045] transition-shadow hover:ring-ink/10 ${
+                            narrow ? 'pl-2.5 pr-1.5' : 'pl-3 pr-2.5'
+                          } ${compact ? 'py-1.5' : 'py-2'}`}
                         >
-                          <p className="truncate text-[12.5px] font-bold leading-tight">
-                            {subjectName(block.subjectId)}
-                          </p>
-                          {height > 40 && (
-                            <p className="truncate text-[11px] font-medium tabular-nums leading-tight text-white/80">
-                              {block.start} – {block.end}
-                            </p>
-                          )}
-                          {height > 62 && (
-                            <p className="mt-auto truncate text-[11px] leading-tight text-white/70">
-                              {CLASS_TYPE_LABEL[block.type]}
-                              {block.room ? ` · ${block.room}` : ''}
-                            </p>
-                          )}
+                          {/* Rayita de color: identifica el ramo sin llenar toda la tarjeta. */}
+                          <span
+                            aria-hidden
+                            className="absolute inset-y-0 left-0 w-[3px] rounded-r-full"
+                            style={{ backgroundColor: `rgb(${rgb})` }}
+                          />
+                          {/* Contenido compacto y centrado: la tarjeta no queda con un hueco enorme. */}
+                          <div className="my-auto w-full">
+                            <div className={narrow ? 'flex min-h-[38px] items-center' : undefined}>
+                              <p
+                                className={`w-full break-words font-bold leading-[1.14] text-ink ${
+                                  narrow ? 'text-[11px]' : 'text-[12.5px]'
+                                }`}
+                              >
+                                {subjectName(block.subjectId)}
+                              </p>
+                            </div>
+                            {/* Hora y sala siempre en el mismo orden y alineadas, incluso en choques. */}
+                            <div className={`shrink-0 ${compact ? 'mt-0.5' : 'mt-1'}`}>
+                              {compact ? (
+                                <p className="break-words text-[9.5px] font-semibold leading-tight tabular-nums text-ink/55">
+                                  {block.start}–{block.end}
+                                  {block.room ? ` · ${block.room}` : ''}
+                                </p>
+                              ) : (
+                                <>
+                                  <p className="whitespace-nowrap text-[10px] font-semibold leading-tight tabular-nums text-ink/55">
+                                    {block.start} – {block.end}
+                                  </p>
+                                  <p className="mt-0.5 break-words text-[10px] font-medium leading-[1.2] text-ink/40">
+                                    {CLASS_TYPE_LABEL[block.type]}
+                                    {block.room ? ` · ${block.room}` : ''}
+                                  </p>
+                                </>
+                              )}
+                            </div>
+                          </div>
                         </motion.button>
                       )
                     })}
