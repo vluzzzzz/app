@@ -579,7 +579,7 @@ function DayPanel({
         }}
         transition={{ default: SPRING.panel, opacity: { duration: 0.12 } }}
         style={{ originX: 0, originY: 0, width: PANEL_W }}
-        className="fixed bottom-4 right-4 top-4 z-[42] flex flex-col overflow-hidden rounded-[30px] bg-[rgb(var(--card))] shadow-[0_30px_70px_-25px_rgba(0,0,0,0.45)] ring-1 ring-ink/[0.07]"
+        className="fixed bottom-4 right-4 top-4 z-[42] flex flex-col overflow-hidden rounded-[30px] bg-surface shadow-[0_30px_70px_-25px_rgba(0,0,0,0.45)] ring-1 ring-ink/[0.07]"
       >
         {/* El contenido aparece cuando el panel ya casi tomó su forma, así no se ve estirado. */}
         <motion.div
@@ -654,10 +654,11 @@ function DayPanel({
                 <motion.button
                   key={it.id}
                   variants={row}
+                  whileHover={{ y: -1 }}
                   whileTap={{ scale: 0.97 }}
                   onClick={() => onEditEvent(it.ref as CalendarEvent)}
-                  className="flex w-full items-start gap-3 rounded-[20px] p-3.5 text-left transition-[filter] hover:brightness-[0.97]"
-                  style={{ background: `rgb(${it.rgb} / 0.12)` }}
+                  className="flex w-full items-start gap-3 rounded-[20px] bg-[rgb(var(--card))] p-3.5 text-left ring-1 ring-ink/[0.04]"
+                  style={RAISED_LIGHT}
                 >
                   <span
                     aria-hidden
@@ -689,8 +690,10 @@ function DayPanel({
                 <motion.div
                   key={it.id}
                   variants={row}
-                  className="flex items-start gap-3 rounded-[20px] p-3.5 transition-colors duration-300"
-                  style={{ background: it.done ? 'rgb(var(--ink) / 0.035)' : `rgb(${it.rgb} / 0.12)` }}
+                  className={`flex items-start gap-3 rounded-[20px] p-3.5 transition-colors duration-300 ${
+                    it.done ? 'bg-ink/[0.035]' : 'bg-[rgb(var(--card))] ring-1 ring-ink/[0.04]'
+                  }`}
+                  style={it.done ? undefined : RAISED_LIGHT}
                 >
                   <span
                     aria-hidden
@@ -773,7 +776,7 @@ function DayPanel({
                     {classDots.map((c) => (
                       <span
                         key={c}
-                        className="h-3 w-3 rounded-full ring-2 ring-[rgb(var(--card))]"
+                        className="h-3 w-3 rounded-full ring-2 ring-surface"
                         style={{ background: c }}
                       />
                     ))}
