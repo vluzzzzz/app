@@ -642,13 +642,13 @@ function DayPanel({
                   whileHover={{ y: -1 }}
                   whileTap={{ scale: 0.97 }}
                   onClick={() => onEditEvent(it.ref as CalendarEvent)}
-                  className="relative flex w-full items-start gap-3 overflow-hidden rounded-[20px] bg-[rgb(var(--card))] p-3.5 pl-9 text-left ring-1 ring-ink/[0.04]"
+                  className="relative flex w-full items-start gap-3 overflow-hidden rounded-[20px] bg-[rgb(var(--card))] p-3.5 pl-8 text-left ring-1 ring-ink/[0.04]"
                   style={RAISED_LIGHT}
                 >
                   <span
                     aria-hidden
-                    className="absolute inset-y-0 left-0 w-7 rounded-r-full"
-                    style={{ backgroundColor: `rgb(${it.rgb})` }}
+                    className="absolute inset-y-0 left-0 w-[18px] rounded-r-[7px]"
+                    style={{ ...RAISED, backgroundColor: `rgb(${it.rgb})` }}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
@@ -675,15 +675,15 @@ function DayPanel({
                 <motion.div
                   key={it.id}
                   variants={row}
-                  className={`relative flex items-start gap-3 overflow-hidden rounded-[20px] p-3.5 pl-9 transition-colors duration-300 ${
+                  className={`relative flex items-start gap-3 overflow-hidden rounded-[20px] p-3.5 pl-8 transition-colors duration-300 ${
                     it.done ? 'bg-ink/[0.035]' : 'bg-[rgb(var(--card))] ring-1 ring-ink/[0.04]'
                   }`}
                   style={it.done ? undefined : RAISED_LIGHT}
                 >
                   <span
                     aria-hidden
-                    className="absolute inset-y-0 left-0 w-7 rounded-r-full"
-                    style={{ backgroundColor: `rgb(${it.rgb})` }}
+                    className="absolute inset-y-0 left-0 w-[18px] rounded-r-[7px]"
+                    style={{ ...RAISED, backgroundColor: `rgb(${it.rgb})` }}
                   />
                   <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
                     <button onClick={() => onEditTask(it.ref as Task)} className="min-w-0 flex-1 text-left">
