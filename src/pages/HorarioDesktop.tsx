@@ -216,7 +216,7 @@ export function HorarioDesktop() {
                 {hours.map((h) => (
                   <span
                     key={h}
-                    className="absolute left-1 right-1 -translate-y-1/2 rounded-full bg-[rgb(var(--card))] bg-gradient-to-b from-white/60 to-white/0 py-[3px] text-center text-[11.5px] font-semibold tabular-nums text-ink/60 shadow-[inset_0_1px_0_rgb(255_255_255/0.7),inset_0_-1px_0_rgb(0_0_0/0.05),0_1px_1.5px_rgb(0_0_0/0.07),0_3px_8px_-3px_rgb(0_0_0/0.14)] ring-1 ring-ink/[0.05] dark:bg-ink/[0.07] dark:from-white/[0.06] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.07),0_1px_2px_rgb(0_0_0/0.6)]"
+                    className="absolute left-1 right-1 -translate-y-1/2 rounded-full bg-ink/[0.045] py-[3px] text-center text-[11.5px] font-semibold tabular-nums text-ink/60"
                     style={{ top: yOf(h * 60) }}
                   >
                     {String(h).padStart(2, '0')}:00
@@ -265,10 +265,24 @@ export function HorarioDesktop() {
                       const cardW = colW / lanes - 10
                       const side = lanes === 1 && cardW >= SIDE_MIN_W
                       const tiny = !side && cardW < TINY_W
-                      const short = height < 52
-                      const showTime = side || height >= 56
-                      const showPlace = side ? !short : !tiny && height >= 78
                       const place = [CLASS_TYPE_LABEL[block.type], block.room].filter(Boolean).join(' · ')
+                      const name = subjectName(block.subjectId)
+                      // El nombre manda: estimo cuántas líneas necesita y solo muestro
+                      // hora y sala si sobra alto. Así el nombre nunca se corta a medias.
+                      const nameFont = side ? 15 : tiny ? 11.5 : 13
+                      const nameW = side ? cardW * 0.5 - 14 : cardW - 22
+                      const cpl = Math.max(5, Math.floor(nameW / (nameFont * 0.52)))
+                      const lineH = nameFont * 1.18
+                      const contentH = height - (tiny ? 12 : 16)
+                      const fitLines = Math.max(1, Math.floor(contentH / lineH))
+                      // +1 línea de holgura cuando el nombre parte (las palabras largas gastan espacio).
+                      const estLines = Math.max(1, Math.ceil(name.length / cpl))
+                      const nameLines = Math.min(estLines > 1 ? estLines + 1 : 1, fitLines, side ? 3 : 4)
+                      const afterName = contentH - nameLines * lineH
+                      const showTime = side || afterName >= 16
+                      const showPlace = side
+                        ? place && height >= 50
+                        : !tiny && place && afterName >= (showTime ? 44 : 26)
                       return (
                         <motion.button
                           key={block.id}
@@ -306,8 +320,11 @@ export function HorarioDesktop() {
                           {side ? (
                             /* Clase sola: nombre a la izquierda | hora y sala a la derecha. */
                             <div className="flex min-w-0 flex-1 items-center gap-3">
-                              <p className="line-clamp-2 min-w-0 flex-1 text-[15px] font-bold leading-[1.15] tracking-[-0.012em] text-ink [overflow-wrap:normal]">
-                                {subjectName(block.subjectId)}
+                              <p
+                                className="line-clamp-3 min-w-0 flex-1 text-[15px] font-bold leading-[1.15] tracking-[-0.012em] text-ink [overflow-wrap:normal]"
+                                style={{ WebkitLineClamp: nameLines }}
+                              >
+                                {name}
                               </p>
                               <span aria-hidden className="w-px self-stretch bg-ink/[0.08]" style={{ margin: '4px 0' }} />
                               <div className="w-[46%] shrink-0">
@@ -324,13 +341,12 @@ export function HorarioDesktop() {
                             <div className="flex min-w-0 flex-1 flex-col justify-center">
                               <p
                                 lang="es"
-                                className={`font-bold leading-[1.15] tracking-[-0.01em] text-ink ${
-                                  tiny
-                                    ? 'truncate text-[11.5px]'
-                                    : `break-words hyphens-auto ${short ? 'line-clamp-1 text-[12.5px]' : 'line-clamp-2 text-[13px]'}`
+                                className={`line-clamp-4 font-bold leading-[1.15] tracking-[-0.01em] text-ink hyphens-auto [overflow-wrap:anywhere] ${
+                                  tiny ? 'text-[11.5px]' : 'text-[13px]'
                                 }`}
+                                style={{ WebkitLineClamp: nameLines }}
                               >
-                                {subjectName(block.subjectId)}
+                                {name}
                               </p>
                               {showTime && (
                                 <p className="mt-1 whitespace-nowrap text-[11px] font-semibold tabular-nums leading-tight tracking-[-0.01em] text-ink/70">
