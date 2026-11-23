@@ -13,6 +13,14 @@ import { ClockIcon, PlusIcon, PrinterIcon, ShareIcon } from '../components/ui/Ic
 
 /** Margen interno arriba/abajo de cada columna, para que los bloques no toquen las esquinas. */
 const COL_PAD = 8
+/** Ancho de la columna de horas y separación entre columnas (gap-1.5). */
+const GUTTER_W = 64
+const COL_GAP = 6
+/** Ancho mínimo de tarjeta para poner los datos al costado del nombre. */
+const SIDE_MIN_W = 230
+/** Bajo este ancho de tarjeta solo caben el nombre y la hora de inicio. */
+const TINY_W = 100
+
 
 /** Reparte los bloques de un día en "carriles" para que los topes de horario
  *  no se tapen (primer carril libre). Cada grupo de clases que se cruzan se
@@ -44,26 +52,12 @@ function layoutDay(blocks: ClassBlock[]): { block: ClassBlock; lane: number; lan
   return out
 }
 
-/** Pin de ubicación (sala) para las tarjetas de clase. */
-function PinIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden className={className}>
-      <path
-        d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      <circle cx="12" cy="10" r="2.2" stroke="currentColor" strokeWidth="2" />
-    </svg>
-  )
-}
-
 /**
  * Horario del modo PC (≥1024px): un horario universitario fijo (sin fechas).
  * Días y horas van en etiquetas redondeadas; cada clase es una tarjeta blanca
- * elevada con la barra larga del color del ramo (la misma del calendario), con
- * la hora arriba, el nombre y la sala. La semana entra completa en pantalla.
+ * elevada con la barra larga del color del ramo (la misma del calendario): si
+ * va sola, nombre a la izquierda y hora/sala a la derecha; si choca o la columna
+ * es angosta, apilada. La semana entra completa en pantalla.
  * Click en una tarjeta → editar; click en el espacio libre de un día → nueva
  * clase ese día.
  * El horario del celular vive intacto en Horario.tsx.
@@ -85,16 +79,18 @@ export function HorarioDesktop() {
     return () => clearInterval(t)
   }, [])
 
-  // Alto real del área de bloques: con él se calcula cuánto mide una hora.
+  // Tamaño real del área de bloques: el alto da cuánto mide una hora y el
+  // ancho decide si las tarjetas van con datos al costado o apiladas.
   const bodyRef = useRef<HTMLDivElement>(null)
-  const [bodyH, setBodyH] = useState(0)
+  const [body, setBody] = useState({ w: 0, h: 0 })
   const hasClasses = classes.length > 0
   useLayoutEffect(() => {
     const el = bodyRef.current
     if (!el) return
-    const ro = new ResizeObserver(() => setBodyH(el.clientHeight))
+    const measure = () => setBody({ w: el.clientWidth, h: el.clientHeight })
+    const ro = new ResizeObserver(measure)
     ro.observe(el)
-    setBodyH(el.clientHeight)
+    measure()
     return () => ro.disconnect()
   }, [hasClasses])
 
@@ -111,8 +107,11 @@ export function HorarioDesktop() {
   const endH = Math.max(19, ...(ends.length ? [Math.ceil(Math.max(...ends) / 60)] : []))
   const hours = Array.from({ length: endH - startH + 1 }, (_, i) => startH + i)
 
-  const innerH = Math.max(0, bodyH - COL_PAD * 2)
-  const yOf = (mins: number) => COL_PAD + ((mins - startH * 60) / ((endH - startH) * 60)) * innerH
+  const innerH = Math.max(0, body.h - COL_PAD * 2)
+  // Redondeado al píxel: así todas las líneas y tarjetas quedan igual de nítidas.
+  const yOf = (mins: number) =>
+    Math.round(COL_PAD + ((mins - startH * 60) / ((endH - startH) * 60)) * innerH)
+  const colW = days.length ? (body.w - GUTTER_W - COL_GAP * days.length) / days.length : 0
   const nowMins = now.getHours() * 60 + now.getMinutes()
   const showNowLine = days.includes(today) && nowMins >= startH * 60 && nowMins <= endH * 60
 
@@ -129,7 +128,7 @@ export function HorarioDesktop() {
     setSheetOpen(true)
   }
 
-  const cols = `64px repeat(${days.length}, minmax(0, 1fr))`
+  const cols = `${GUTTER_W}px repeat(${days.length}, minmax(0, 1fr))`
 
   return (
     <MotionConfig reducedMotion="user">
@@ -217,7 +216,7 @@ export function HorarioDesktop() {
                 {hours.map((h) => (
                   <span
                     key={h}
-                    className="absolute left-1 right-1 -translate-y-1/2 rounded-full bg-ink/[0.045] py-[3px] text-center text-[11.5px] font-semibold tabular-nums text-ink/60"
+                    className="absolute left-1 right-1 -translate-y-1/2 rounded-full bg-[rgb(var(--card))] bg-gradient-to-b from-white/60 to-white/0 py-[3px] text-center text-[11.5px] font-semibold tabular-nums text-ink/60 shadow-[inset_0_1px_0_rgb(255_255_255/0.7),inset_0_-1px_0_rgb(0_0_0/0.05),0_1px_1.5px_rgb(0_0_0/0.07),0_3px_8px_-3px_rgb(0_0_0/0.14)] ring-1 ring-ink/[0.05] dark:bg-ink/[0.07] dark:from-white/[0.06] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.07),0_1px_2px_rgb(0_0_0/0.6)]"
                     style={{ top: yOf(h * 60) }}
                   >
                     {String(h).padStart(2, '0')}:00
@@ -262,10 +261,13 @@ export function HorarioDesktop() {
                       const height = Math.max(26, yOf(toMinutes(block.end)) - top - 4)
                       const width = 100 / lanes
                       const rgb = subjectRgb(block.subjectId)
-                      const narrow = lanes > 1
-                      // Qué cabe según el alto: el nombre siempre; la hora y la sala si hay espacio.
-                      const showTime = height >= (narrow ? 64 : 52)
-                      const showPlace = height >= (narrow ? 96 : 72)
+                      // Datos al costado solo si la clase va sola y la tarjeta es ancha; si no, apilada.
+                      const cardW = colW / lanes - 10
+                      const side = lanes === 1 && cardW >= SIDE_MIN_W
+                      const tiny = !side && cardW < TINY_W
+                      const short = height < 52
+                      const showTime = side || height >= 56
+                      const showPlace = side ? !short : !tiny && height >= 78
                       const place = [CLASS_TYPE_LABEL[block.type], block.room].filter(Boolean).join(' · ')
                       return (
                         <motion.button
@@ -292,45 +294,54 @@ export function HorarioDesktop() {
                             width: `calc(${width}% - 10px)`,
                           }}
                           className={`absolute flex overflow-hidden rounded-[14px] bg-[rgb(var(--card))] text-left ring-1 ring-ink/[0.05] ${
-                            narrow ? 'gap-1.5 p-1.5 pr-1.5' : 'gap-2.5 p-2 pr-2.5'
+                            tiny ? 'gap-1.5 p-1.5' : 'gap-2.5 p-2 pr-3'
                           }`}
                         >
-                          {/* Barra larga del color del ramo, igual que en el calendario. */}
+                          {/* Barra larga del color del ramo, igual que en el calendario (mismo grosor siempre). */}
                           <span
                             aria-hidden
-                            className={`shrink-0 self-stretch rounded-full ${narrow ? 'w-1' : 'w-[6px]'}`}
+                            className="w-[5px] shrink-0 self-stretch rounded-full"
                             style={{ ...RAISED, backgroundColor: `rgb(${rgb})` }}
                           />
-                          <div className="flex min-w-0 flex-1 flex-col justify-center">
-                            {showTime && (
+                          {side ? (
+                            /* Clase sola: nombre a la izquierda | hora y sala a la derecha. */
+                            <div className="flex min-w-0 flex-1 items-center gap-3">
+                              <p className="line-clamp-2 min-w-0 flex-1 text-[15px] font-bold leading-[1.15] tracking-[-0.012em] text-ink [overflow-wrap:normal]">
+                                {subjectName(block.subjectId)}
+                              </p>
+                              <span aria-hidden className="w-px self-stretch bg-ink/[0.08]" style={{ margin: '4px 0' }} />
+                              <div className="w-[46%] shrink-0">
+                                <p className="whitespace-nowrap text-[11.5px] font-semibold tabular-nums leading-tight text-ink/70">
+                                  {block.start} – {block.end}
+                                </p>
+                                {showPlace && place && (
+                                  <p className="mt-1 line-clamp-2 text-[11px] font-medium leading-tight text-ink/45">{place}</p>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            /* Choque o columna angosta: nombre arriba, hora y sala debajo. */
+                            <div className="flex min-w-0 flex-1 flex-col justify-center">
                               <p
-                                className={`whitespace-nowrap font-semibold tabular-nums leading-tight text-ink/55 ${
-                                  narrow ? 'text-[10px] tracking-[-0.02em]' : 'text-[11px]'
+                                lang="es"
+                                className={`font-bold leading-[1.15] tracking-[-0.01em] text-ink ${
+                                  tiny
+                                    ? 'truncate text-[11.5px]'
+                                    : `break-words hyphens-auto ${short ? 'line-clamp-1 text-[12.5px]' : 'line-clamp-2 text-[13px]'}`
                                 }`}
                               >
-                                {narrow ? `${block.start}–${block.end}` : `${block.start} – ${block.end}`}
+                                {subjectName(block.subjectId)}
                               </p>
-                            )}
-                            {/* El nombre corta por palabras (o con guion si una palabra no cabe) y como máximo en 2 líneas. */}
-                            <p
-                              lang="es"
-                              className={`line-clamp-2 hyphens-auto font-bold leading-[1.15] tracking-[-0.01em] text-ink [overflow-wrap:normal] ${
-                                narrow ? 'text-[12px]' : height < 52 ? 'text-[13px]' : 'text-[15px]'
-                              } ${showTime ? 'mt-0.5' : ''}`}
-                            >
-                              {subjectName(block.subjectId)}
-                            </p>
-                            {showPlace && place && (
-                              <p
-                                className={`mt-1 flex items-start gap-1 font-medium leading-tight text-ink/50 ${
-                                  narrow ? 'text-[10px]' : 'text-[11.5px]'
-                                }`}
-                              >
-                                <PinIcon className={`mt-px shrink-0 ${narrow ? 'h-2.5 w-2.5' : 'h-3 w-3'}`} />
-                                <span className="line-clamp-2 min-w-0">{place}</span>
-                              </p>
-                            )}
-                          </div>
+                              {showTime && (
+                                <p className="mt-1 whitespace-nowrap text-[11px] font-semibold tabular-nums leading-tight tracking-[-0.01em] text-ink/70">
+                                  {tiny ? block.start : `${block.start} – ${block.end}`}
+                                </p>
+                              )}
+                              {showPlace && place && (
+                                <p className="mt-0.5 line-clamp-2 text-[10.5px] font-medium leading-tight text-ink/45">{place}</p>
+                              )}
+                            </div>
+                          )}
                         </motion.button>
                       )
                     })}
