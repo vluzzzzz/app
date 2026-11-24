@@ -4,10 +4,10 @@ import type { Route } from '../App'
 import { useAppStore } from '../store/useAppStore'
 import { SubjectCard } from '../features/subjects/SubjectCard'
 import { AddSubjectWizard } from '../features/subjects/AddSubjectWizard'
-import { SubjectDetail } from '../features/subjects/SubjectDetail'
 import { useIsDesktop } from '../lib/useIsDesktop'
 import { CalculatorIcon, PlusIcon } from '../components/ui/Icons'
 import { EASE } from '../lib/motion'
+import { CalculadoraDesktop } from './CalculadoraDesktop'
 
 export function Calculadora({
   navigate,
@@ -19,9 +19,9 @@ export function Calculadora({
   const isDesktop = useIsDesktop()
   const subjects = useAppStore((s) => s.subjects)
   const [adding, setAdding] = useState(!!startAdding)
-  // PC: ramo seleccionado para el panel de detalle (lista + detalle simultáneo).
-  const [selected, setSelected] = useState<string | null>(null)
-  const selId = subjects.some((s) => s.id === selected) ? selected : (subjects[0]?.id ?? null)
+
+  // PC: vista propia de tres columnas (lista · ramo · simulador).
+  if (isDesktop) return <CalculadoraDesktop startAdding={startAdding} />
 
   return (
     <div className="h-full overflow-y-auto px-5 pb-28 pt-6 lg:px-8 lg:pb-10 lg:pt-8">
@@ -55,37 +55,6 @@ export function Calculadora({
         />
       ) : subjects.length === 0 ? (
         <EmptyState onAdd={() => setAdding(true)} />
-      ) : isDesktop ? (
-        /* PC: lista de ramos a la izquierda + detalle en vivo a la derecha
-           (sin cambiar de página, como una app de escritorio de verdad). */
-        <div className="grid grid-cols-[320px_minmax(0,1fr)] items-start gap-6">
-          <div className="space-y-3">
-            {subjects.map((s) => (
-              <div
-                key={s.id}
-                className={`rounded-2xl transition-shadow ${
-                  selId === s.id ? 'ring-2 ring-ink/70' : ''
-                }`}
-              >
-                <SubjectCard subject={s} onOpen={() => setSelected(s.id)} />
-              </div>
-            ))}
-          </div>
-          <div className="min-w-0">
-            {selId && (
-              <SubjectDetail
-                id={selId}
-                embedded
-                navigate={(r) => {
-                  // Al borrar el ramo, el detalle "vuelve a calculadora":
-                  // acá eso significa seleccionar el siguiente de la lista.
-                  if (r.name === 'calculadora') setSelected(null)
-                  else navigate(r)
-                }}
-              />
-            )}
-          </div>
-        </div>
       ) : (
         <motion.div className="space-y-3">
           <AnimatePresence initial={false}>

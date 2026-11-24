@@ -6,7 +6,13 @@ import { formatGrade } from '../../lib/format'
 import { CheckIcon, ChevronRight, PlusIcon, TrashIcon } from '../../components/ui/Icons'
 
 /** "Más opciones → Condiciones de aprobación" (solo con 2+ secciones). */
-export function ApprovalConditions({ subjectId }: { subjectId: string }) {
+export function ApprovalConditions({
+  subjectId,
+  title = 'Más opciones',
+}: {
+  subjectId: string
+  title?: string
+}) {
   const subject = useAppStore((s) => s.subjects.find((x) => x.id === subjectId))
   const addCondition = useAppStore((s) => s.addCondition)
   const removeCondition = useAppStore((s) => s.removeCondition)
@@ -36,7 +42,7 @@ export function ApprovalConditions({ subjectId }: { subjectId: string }) {
   return (
     <div className="glass rounded-3xl p-4">
       <button onClick={() => setOpen((v) => !v)} className="flex w-full items-center justify-between">
-        <span className="text-[15px] font-semibold text-ink/70">Más opciones</span>
+        <span className="text-[15px] font-semibold text-ink/70">{title}</span>
         <ChevronRight className={`h-4 w-4 text-ink/40 transition-transform ${open ? 'rotate-90' : ''}`} />
       </button>
 
