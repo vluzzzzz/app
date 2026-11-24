@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '../../store/useAppStore'
 import type { ClassBlock, ClassType } from '../../lib/types'
-import { CLASS_TYPE_LABEL, DAY_SHORT, overlaps, toMinutes } from '../../lib/schedule'
+import { CLASS_TYPE_LABEL, DAY_NAMES, DAY_SHORT, overlaps, toMinutes } from '../../lib/schedule'
 
 /** minutos → "HH:mm" (tope 23:59). */
 function toHHMM(mins: number): string {
@@ -20,13 +20,17 @@ function fmt12Full(hhmm: string): string {
   return `${fmt12(hhmm)} ${h < 12 ? 'AM' : 'PM'}`
 }
 import { accentRgb } from '../../lib/accents'
+import { useIsDesktop } from '../../lib/useIsDesktop'
 import { GlassSheet } from '../../components/ui/GlassSheet'
+import { WheelModal, SheetCard, SheetRow } from '../../components/ui/WheelModal'
 import { TimeWheelSheet } from '../../components/ui/TimeWheelSheet'
+import { RAISED } from '../../components/ui/relief'
 import {
   AlertIcon,
   ChevronDown,
   ClockIcon,
   DoorIcon,
+  PinIcon,
   TrashIcon,
   UserIcon,
 } from '../../components/ui/Icons'
@@ -44,6 +48,7 @@ const TYPES: ClassType[] = ['catedra', 'laboratorio', 'ayudantia', 'taller', 'ot
 
 /** Hoja para crear/editar una clase del horario. */
 export function ClassSheet({ open, onClose, block, defaultDay }: Props) {
+  const isDesktop = useIsDesktop()
   const subjects = useAppStore((s) => s.subjects)
   const classes = useAppStore((s) => s.classes)
   const addClass = useAppStore((s) => s.addClass)
@@ -133,6 +138,8 @@ export function ClassSheet({ open, onClose, block, defaultDay }: Props) {
     ? subjects.find((s) => s.id === conflict.subjectId)?.name ?? 'otra clase'
     : null
 
+  const subjectRgb = (id: string) => accentRgb(subjects.find((s) => s.id === id)?.color ?? 'gray')
+
   const save = () => {
     if (!canSave) return
     const data = {
@@ -155,6 +162,149 @@ export function ClassSheet({ open, onClose, block, defaultDay }: Props) {
     }
   }
 
+  // ====== Versión PC: modal de dos columnas con rueda de ramos ======
+  if (isDesktop) {
+    const wheelItems = subjects.map((s) => ({ id: s.id, name: s.name, rgb: subjectRgb(s.id) }))
+    const name = subjects.find((s) => s.id === subjectId)?.name ?? 'Elige un ramo'
+    const rgb = subjectId ? subjectRgb(subjectId) : '148 163 184'
+
+    return (
+      <>
+        <WheelModal
+          open={open}
+          onClose={onClose}
+          items={wheelItems}
+          value={subjectId}
+          onChange={(id) => {
+            setSubjectId(id)
+            if (!block) prefillFrom(id)
+          }}
+          onDelete={block ? del : undefined}
+          onSave={save}
+          canSave={canSave}
+          saveLabel={block ? 'Guardar' : days.length > 1 ? `Agregar ${days.length} clases` : 'Agregar clase'}
+        >
+          <div className="space-y-5">
+            {/* Vista previa de la clase */}
+            <div className="flex">
+              <span
+                className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] font-semibold text-white"
+                style={{ ...RAISED, backgroundColor: `rgb(${rgb})` }}
+              >
+                {name}
+                <span className="font-medium text-white/80 tabular-nums">· {start}–{end}</span>
+              </span>
+            </div>
+
+            {/* Tipo de clase (segmentado) */}
+            <div className="flex gap-1.5 rounded-2xl bg-ink/[0.04] p-1">
+              {TYPES.map((t) => {
+                const on = type === t
+                return (
+                  <button
+                    key={t}
+                    onClick={() => setType(t)}
+                    style={on ? RAISED : undefined}
+                    className={`flex-1 rounded-xl py-2.5 text-[13.5px] font-semibold transition-colors ${
+                      on ? 'bg-ink text-surface' : 'text-ink/55 hover:text-ink'
+                    }`}
+                  >
+                    {CLASS_TYPE_LABEL[t]}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Cuándo: días + horario */}
+            <div>
+              <p className="mb-2 px-1 text-[13px] font-semibold text-ink/50">
+                {block ? 'Día' : 'Días'}
+                {!block && <span className="font-normal text-ink/30"> · toca varios si se repite</span>}
+              </p>
+              <div className="mb-3 flex gap-1.5">
+                {DAY_SHORT.map((d, i) => {
+                  const on = days.includes(i)
+                  return (
+                    <button
+                      key={d}
+                      onClick={() => toggleDay(i)}
+                      style={on ? RAISED : undefined}
+                      className={`flex-1 rounded-xl py-2.5 text-[13.5px] font-semibold transition-colors ${
+                        on ? 'bg-ink text-surface' : 'bg-ink/[0.04] text-ink/55 hover:text-ink'
+                      }`}
+                    >
+                      {d}
+                    </button>
+                  )
+                })}
+              </div>
+              <SheetCard>
+                <SheetRow
+                  icon={<ClockIcon className="h-[18px] w-[18px]" />}
+                  label="Inicio"
+                  onClick={() => setPickerFor('start')}
+                >
+                  <span className="tabular-nums">{fmt12Full(start)}</span>
+                  <ChevronDown className="h-4 w-4 text-ink/35" />
+                </SheetRow>
+                <SheetRow
+                  icon={<ClockIcon className="h-[18px] w-[18px]" />}
+                  label="Término"
+                  onClick={() => setPickerFor('end')}
+                  last
+                >
+                  <span className="tabular-nums">{fmt12Full(end)}</span>
+                  <ChevronDown className="h-4 w-4 text-ink/35" />
+                </SheetRow>
+              </SheetCard>
+              {!validTimes && (
+                <p className="mt-2 px-1 text-[13px] text-rose-500">
+                  La hora de término debe ser después del inicio.
+                </p>
+              )}
+            </div>
+
+            {/* Dónde: sala + profesor */}
+            <SheetCard title="Dónde">
+              <SheetRow icon={<PinIcon className="h-[18px] w-[18px]" />} label="Sala">
+                <input
+                  value={room}
+                  onChange={(e) => setRoom(e.target.value)}
+                  placeholder="Ej: C 304"
+                  className="w-40 bg-transparent text-right font-semibold text-ink placeholder:font-normal placeholder:text-ink/35 focus:outline-none"
+                />
+              </SheetRow>
+              <SheetRow icon={<UserIcon className="h-[18px] w-[18px]" />} label="Profesor" last>
+                <input
+                  value={professor}
+                  onChange={(e) => setProfessor(e.target.value)}
+                  placeholder="Opcional"
+                  className="w-40 bg-transparent text-right font-semibold text-ink placeholder:font-normal placeholder:text-ink/35 focus:outline-none"
+                />
+              </SheetRow>
+            </SheetCard>
+
+            {conflict && conflictName && validTimes && (
+              <div className="flex items-center gap-2 rounded-2xl bg-amber-400/15 px-3 py-2.5 text-[13px] font-medium text-amber-700 dark:text-amber-200">
+                <AlertIcon className="h-4 w-4 shrink-0" />
+                Tienes {conflictName} el {DAY_NAMES[conflict.day].toLowerCase()} en este horario.
+              </div>
+            )}
+          </div>
+        </WheelModal>
+
+        <TimeWheelSheet
+          open={pickerFor !== null}
+          title={pickerFor === 'end' ? 'Hora de término' : 'Hora de inicio'}
+          value={pickerFor === 'end' ? end : start}
+          onClose={() => setPickerFor(null)}
+          onSave={(v) => (pickerFor === 'end' ? setEnd(v) : onStartChange(v))}
+        />
+      </>
+    )
+  }
+
+  // ====== Versión celu (intacta) ======
   return (
     <GlassSheet open={open} onClose={onClose} title={block ? 'Editar clase' : 'Nueva clase'}>
       <div className="pt-1">

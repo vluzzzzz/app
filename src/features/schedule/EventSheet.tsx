@@ -2,8 +2,22 @@ import { useEffect, useState } from 'react'
 import { useAppStore } from '../../store/useAppStore'
 import type { CalendarEvent, EventType } from '../../lib/types'
 import { accentRgb } from '../../lib/accents'
+import { DAY_NAMES, MONTH_NAMES, fromDateKey, weekday } from '../../lib/schedule'
+import { useIsDesktop } from '../../lib/useIsDesktop'
 import { GlassSheet } from '../../components/ui/GlassSheet'
-import { BellIcon, CalendarIcon, CheckIcon, FileUploadIcon, TrashIcon } from '../../components/ui/Icons'
+import { WheelModal, SheetCard, SheetRow } from '../../components/ui/WheelModal'
+import { TimeWheelSheet } from '../../components/ui/TimeWheelSheet'
+import { RAISED } from '../../components/ui/relief'
+import {
+  BellIcon,
+  CalendarIcon,
+  CheckIcon,
+  ClockIcon,
+  FileUploadIcon,
+  PinIcon,
+  ReloadIcon,
+  TrashIcon,
+} from '../../components/ui/Icons'
 
 type Props = {
   open: boolean
@@ -14,6 +28,14 @@ type Props = {
   defaultDate: string
   /** Al elegir "Tarea" en el selector: delega al editor de tareas existente. */
   onPickTask: () => void
+}
+
+/** Color de respaldo por tipo cuando el evento no tiene ramo. */
+const EVENT_TYPE_RGB: Record<EventType, string> = {
+  evaluacion: '239 68 68',
+  tarea: '249 115 22',
+  evento: '59 130 246',
+  recordatorio: '139 92 246',
 }
 
 const TYPE_META: { type: EventType; label: string; icon: JSX.Element }[] = [
@@ -38,12 +60,13 @@ const REPEAT_LABEL: Record<NonNullable<CalendarEvent['repeat']>, string> = {
 
 /** Hoja para crear/editar un evento del calendario (con selector de tipo al crear). */
 export function EventSheet({ open, onClose, event, defaultDate, onPickTask }: Props) {
+  const isDesktop = useIsDesktop()
   const subjects = useAppStore((s) => s.subjects)
   const addEvent = useAppStore((s) => s.addEvent)
   const updateEvent = useAppStore((s) => s.updateEvent)
   const removeEvent = useAppStore((s) => s.removeEvent)
 
-  // 'pick' = elegir qué agregar; 'form' = formulario.
+  // 'pick' = elegir qué agregar; 'form' = formulario. (Solo celu usa 'pick'.)
   const [step, setStep] = useState<'pick' | 'form'>('pick')
   const [type, setType] = useState<EventType>('evento')
   const [title, setTitle] = useState('')
@@ -53,10 +76,11 @@ export function EventSheet({ open, onClose, event, defaultDate, onPickTask }: Pr
   const [location, setLocation] = useState('')
   const [repeat, setRepeat] = useState<NonNullable<CalendarEvent['repeat']>>('none')
   const [repeatOpen, setRepeatOpen] = useState(false)
+  const [timeOpen, setTimeOpen] = useState(false)
 
   useEffect(() => {
     if (!open) return
-    setStep(event ? 'form' : 'pick')
+    setStep(event || isDesktop ? 'form' : 'pick')
     setType(event?.type ?? 'evento')
     setTitle(event?.title ?? '')
     setDate(event?.date ?? defaultDate)
@@ -65,10 +89,13 @@ export function EventSheet({ open, onClose, event, defaultDate, onPickTask }: Pr
     setLocation(event?.location ?? '')
     setRepeat(event?.repeat ?? 'none')
     setRepeatOpen(false)
+    setTimeOpen(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, event])
 
   const canSave = title.trim() !== '' && date !== ''
+  const subjectRgb = (id: string) => accentRgb(subjects.find((s) => s.id === id)?.color ?? 'gray')
+  const rgb = subjectId ? subjectRgb(subjectId) : EVENT_TYPE_RGB[type]
 
   const save = () => {
     if (!canSave) return
@@ -93,6 +120,163 @@ export function EventSheet({ open, onClose, event, defaultDate, onPickTask }: Pr
     }
   }
 
+  // ====== Versión PC: modal de dos columnas con rueda de ramos ======
+  if (isDesktop) {
+    const d = fromDateKey(date)
+    const dateLabel = `${DAY_NAMES[weekday(d)].toLowerCase()} ${d.getDate()} de ${MONTH_NAMES[d.getMonth()].toLowerCase()}`
+    const wheelItems = [
+      { id: '', name: 'Sin ramo', rgb: '148 163 184' },
+      ...subjects.map((s) => ({ id: s.id, name: s.name, rgb: subjectRgb(s.id) })),
+    ]
+    const tabs: { type: EventType; label: string; icon: JSX.Element }[] = [
+      { type: 'evaluacion', label: 'Evaluación', icon: <FileUploadIcon className="h-[18px] w-[18px]" /> },
+      { type: 'tarea', label: 'Tarea', icon: <CheckIcon className="h-[18px] w-[18px]" /> },
+      { type: 'evento', label: 'Evento', icon: <CalendarIcon className="h-[18px] w-[18px]" /> },
+      { type: 'recordatorio', label: 'Recordatorio', icon: <BellIcon className="h-[18px] w-[18px]" /> },
+    ]
+
+    return (
+      <>
+        <WheelModal
+          open={open}
+          onClose={onClose}
+          items={wheelItems}
+          value={subjectId}
+          onChange={setSubjectId}
+          onDelete={event ? del : undefined}
+          onSave={save}
+          canSave={canSave}
+          saveLabel={event ? 'Guardar' : 'Agregar'}
+        >
+          <div className="space-y-5">
+            {/* Vista previa en vivo de la píldora del evento. */}
+            <div className="flex">
+              <span
+                className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] font-semibold text-white"
+                style={{ ...RAISED, backgroundColor: `rgb(${rgb})` }}
+              >
+                <span className="h-2.5 w-2.5 rounded-full border-[1.5px] border-white/75" />
+                {title.trim() || 'Nuevo evento'}
+                {time && <span className="font-medium text-white/80">· {time}</span>}
+              </span>
+            </div>
+
+            {/* Nombre, como título. */}
+            <input
+              autoFocus={!event}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder={type === 'evaluacion' ? 'Control 2' : 'Nombre del evento'}
+              className="w-full rounded-2xl bg-[rgb(var(--card))] px-4 py-3.5 text-[22px] font-bold text-ink placeholder:text-ink/30 ring-1 ring-ink/[0.05] focus:outline-none focus:ring-ink/20"
+            />
+
+            {/* Tipo (segmentado). Tarea delega al editor de tareas. */}
+            <div className="flex gap-1.5 rounded-2xl bg-ink/[0.04] p-1">
+              {tabs.map((t) => {
+                const on = type === t.type
+                return (
+                  <button
+                    key={t.type}
+                    onClick={() => {
+                      if (t.type === 'tarea') {
+                        onClose()
+                        onPickTask()
+                      } else setType(t.type)
+                    }}
+                    style={on ? RAISED : undefined}
+                    className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-[13.5px] font-semibold transition-colors ${
+                      on ? 'bg-ink text-surface' : 'text-ink/55 hover:text-ink'
+                    }`}
+                  >
+                    {t.icon}
+                    {t.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Cuándo */}
+            <SheetCard title="Cuándo">
+              <SheetRow icon={<CalendarIcon className="h-[18px] w-[18px]" />} label="Fecha">
+                <span className="relative first-letter:uppercase">
+                  {dateLabel}
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => e.target.value && setDate(e.target.value)}
+                    className="absolute inset-0 cursor-pointer opacity-0"
+                  />
+                </span>
+              </SheetRow>
+              <SheetRow
+                icon={<ClockIcon className="h-[18px] w-[18px]" />}
+                label="Hora"
+                onClick={() => setTimeOpen(true)}
+              >
+                {time ? (
+                  <>
+                    <span className="tabular-nums">{time}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setTime('')
+                      }}
+                      className="ml-1 text-ink/35 hover:text-ink/70"
+                      aria-label="Quitar hora"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
+                        <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  </>
+                ) : (
+                  <span className="text-ink/45">Todo el día</span>
+                )}
+              </SheetRow>
+              <SheetRow icon={<ReloadIcon className="h-[18px] w-[18px]" />} label="Repetir" last>
+                <span className="relative">
+                  {REPEAT_LABEL[repeat]}
+                  <select
+                    value={repeat}
+                    onChange={(e) => setRepeat(e.target.value as typeof repeat)}
+                    className="absolute inset-0 cursor-pointer opacity-0"
+                  >
+                    {(Object.keys(REPEAT_LABEL) as (keyof typeof REPEAT_LABEL)[]).map((r) => (
+                      <option key={r} value={r}>
+                        {REPEAT_LABEL[r]}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              </SheetRow>
+            </SheetCard>
+
+            {/* Dónde */}
+            <SheetCard title="Dónde">
+              <SheetRow icon={<PinIcon className="h-[18px] w-[18px]" />} label="Sala" last>
+                <input
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Agregar"
+                  className="w-32 bg-transparent text-right font-semibold text-ink placeholder:font-normal placeholder:text-ink/35 focus:outline-none"
+                />
+              </SheetRow>
+            </SheetCard>
+          </div>
+        </WheelModal>
+
+        <TimeWheelSheet
+          open={timeOpen}
+          title="Hora del evento"
+          value={time || '08:00'}
+          onClose={() => setTimeOpen(false)}
+          onSave={(v) => setTime(v)}
+        />
+      </>
+    )
+  }
+
+  // ====== Versión celu (intacta) ======
   return (
     <GlassSheet
       open={open}
