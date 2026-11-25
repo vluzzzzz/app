@@ -12,16 +12,19 @@ import { CalculadoraDesktop } from './CalculadoraDesktop'
 export function Calculadora({
   navigate,
   startAdding,
+  selectId,
 }: {
   navigate: (r: Route) => void
   startAdding?: boolean
+  /** PC: ramo a mostrar al entrar (ej: desde una tarjeta del Inicio). */
+  selectId?: string
 }) {
   const isDesktop = useIsDesktop()
   const subjects = useAppStore((s) => s.subjects)
   const [adding, setAdding] = useState(!!startAdding)
 
   // PC: vista propia de tres columnas (lista · ramo · simulador).
-  if (isDesktop) return <CalculadoraDesktop startAdding={startAdding} />
+  if (isDesktop) return <CalculadoraDesktop startAdding={startAdding} selectId={selectId} />
 
   return (
     <div className="h-full overflow-y-auto px-5 pb-28 pt-6 lg:px-8 lg:pb-10 lg:pt-8">

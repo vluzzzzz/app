@@ -26,7 +26,7 @@ import { useAppStore } from './store/useAppStore'
 
 export type Route =
   | { name: 'inicio' }
-  | { name: 'calculadora'; add?: boolean }
+  | { name: 'calculadora'; add?: boolean; id?: string }
   | { name: 'horario' }
   | { name: 'calendario' }
   | { name: 'settings' }
@@ -161,7 +161,7 @@ export default function App() {
             dos navs con layout animations a la vez confunden a framer. */}
         {isDesktop && (
           <Sidebar
-            active={route.name}
+            active={route.name === 'subject' ? 'calculadora' : route.name}
             navigate={nav}
             onOpenMenu={() => setMenuOpen(true)}
           />
@@ -190,16 +190,19 @@ export default function App() {
             >
               {route.name === 'inicio' && <Inicio navigate={nav} />}
               {route.name === 'calculadora' && (
-                <Calculadora navigate={nav} startAdding={route.add} />
+                <Calculadora navigate={nav} startAdding={route.add} selectId={route.id} />
               )}
               {route.name === 'chat' && <ChatPage navigate={nav} />}
               {route.name === 'horario' && <Horario />}
               {route.name === 'calendario' && <Calendario />}
               {route.name === 'settings' && <Settings navigate={nav} />}
               {route.name === 'profile' && <ProfilePage navigate={nav} />}
-              {route.name === 'subject' && (
-                <SubjectDetail id={route.id} navigate={nav} />
-              )}
+              {route.name === 'subject' &&
+                (isDesktop ? (
+                  <Calculadora navigate={nav} selectId={route.id} />
+                ) : (
+                  <SubjectDetail id={route.id} navigate={nav} />
+                ))}
             </motion.div>
           </ErrorBoundary>
         </main>

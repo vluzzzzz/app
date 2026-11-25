@@ -6,7 +6,6 @@ import { accentRgb } from '../lib/accents'
 import { formatGrade } from '../lib/format'
 import { SPRING } from '../lib/motion'
 import {
-  analyzeSituation,
   currentGrade,
   gradedEvaluationCount,
   minGradeToPass,
@@ -19,13 +18,13 @@ import { AddSubjectWizard } from '../features/subjects/AddSubjectWizard'
 import { ApprovalConditions } from '../features/subjects/ApprovalConditions'
 import { SpecialEvals } from '../features/subjects/SpecialEvals'
 import { CalcAnalysis } from '../features/subjects/CalcAnalysis'
+import { ProgressRing, SubjectTile, TONE_TEXT, type Tone } from '../features/subjects/SubjectTile'
 import { Stepper } from '../components/ui/Stepper'
 import { RAISED, RAISED_LIGHT } from '../components/ui/relief'
 import {
   CalculatorIcon,
   CheckIcon,
   ChevronDown,
-  ChevronRight,
   FolderIcon,
   PencilIcon,
   PlusIcon,
@@ -33,23 +32,8 @@ import {
 } from '../components/ui/Icons'
 
 const EPS = 1e-9
-/** Desde este ancho el simulador y las opciones van en una tercera columna. */
-const THREE_COLS_MIN = 1360
-
-type Tone = 'green' | 'amber' | 'red' | 'gray'
-
-const CHIP: Record<Tone, string> = {
-  green: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-  amber: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
-  red: 'bg-rose-500/10 text-rose-600 dark:text-rose-300',
-  gray: 'bg-ink/[0.06] text-ink/50',
-}
-const TEXT: Record<Tone, string> = {
-  green: 'text-emerald-600 dark:text-emerald-300',
-  amber: 'text-amber-500 dark:text-amber-300',
-  red: 'text-rose-500 dark:text-rose-300',
-  gray: 'text-ink/40',
-}
+/** Desde este ancho el simulador y las opciones van al costado del ramo. */
+const TOOLS_SIDE_MIN = 1200
 
 function useMinWidth(px: number) {
   const query = `(min-width: ${px}px)`
@@ -65,28 +49,6 @@ function useMinWidth(px: number) {
 }
 
 const pctLabel = (w: number) => String(Math.round(w * 10) / 10).replace('.', ',')
-
-/** Chip de estado de un ramo para la lista. */
-function statusOf(s: Subject): { label: string; tone: Tone } {
-  if (realEvaluationCount(s) === 0) return { label: 'Sin evaluaciones', tone: 'gray' }
-  if (gradedEvaluationCount(s) === 0) return { label: 'Sin notas', tone: 'gray' }
-  const res = minGradeToPass(s)
-  switch (analyzeSituation(s)) {
-    case 'cerrado_aprobado':
-      return { label: 'Aprobado', tone: 'green' }
-    case 'asegurado':
-      return { label: 'Ya aprobaste', tone: 'green' }
-    case 'facil':
-      return { label: 'Vas aprobando', tone: 'green' }
-    case 'medio':
-    case 'dificil':
-      return res.status === 'ALCANZABLE'
-        ? { label: `Necesitas ${formatGrade(res.needed)}`, tone: 'amber' }
-        : { label: 'Revisa condiciones', tone: 'amber' }
-    default:
-      return { label: 'Remedial', tone: 'red' }
-  }
-}
 
 /** Lo que muestra el bloque "Necesitas" del encabezado del ramo. */
 function needOf(s: Subject): { label: string; value: string; sub: string; tone: Tone } {
@@ -394,41 +356,6 @@ function SectionCard({ node }: { node: GradeNode }) {
 
 /* ======================= Bloques de la derecha ======================= */
 
-/** Anillo de progreso: cuántas notas llevas puestas. */
-function Ring({ graded, total, rgb }: { graded: number; total: number; rgb: string }) {
-  const R = 46
-  const C = 2 * Math.PI * R
-  const p = total ? graded / total : 0
-  return (
-    <div className="relative h-[116px] w-[116px] shrink-0">
-      <svg viewBox="0 0 116 116" className="h-full w-full -rotate-90">
-        <circle cx="58" cy="58" r={R} fill="none" strokeWidth="10" className="stroke-ink/[0.08]" />
-        {graded > 0 && (
-          <motion.circle
-            cx="58"
-            cy="58"
-            r={R}
-            fill="none"
-            stroke={`rgb(${rgb})`}
-            strokeWidth="10"
-            strokeLinecap="round"
-            strokeDasharray={C}
-            initial={{ strokeDashoffset: C }}
-            animate={{ strokeDashoffset: C * (1 - p) }}
-            transition={SPRING.soft}
-          />
-        )}
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <p className="text-[17px] font-bold tabular-nums text-ink">
-          {graded} de {total}
-        </p>
-        <p className="text-[12.5px] font-medium text-ink/50">notas</p>
-      </div>
-    </div>
-  )
-}
-
 /** Simulador: "si te sacas X en lo que queda, terminas con Y". */
 function Simulator({ s, rgb }: { s: Subject; rgb: string }) {
   const { min, max, pass } = s.scale
@@ -462,7 +389,7 @@ function Simulator({ s, rgb }: { s: Subject; rgb: string }) {
           <p className="mt-1 text-[44px] font-black leading-none tabular-nums tracking-[-0.02em]" style={{ color: `rgb(${rgb})` }}>
             {formatGrade(final)}
           </p>
-          <p className={`mt-1.5 text-[13px] font-semibold ${ok ? TEXT.green : TEXT.red}`}>
+          <p className={`mt-1.5 text-[13px] font-semibold ${ok ? TONE_TEXT.green : TONE_TEXT.red}`}>
             {ok ? 'Apruebas' : 'No alcanzas a aprobar'}
           </p>
 
@@ -570,11 +497,16 @@ function SubjectPanel({ s, wide }: { s: Subject; wide: boolean }) {
                 {current == null ? '0,0' : formatGrade(current)}
               </p>
             </div>
-            <Ring graded={graded} total={total} rgb={rgb} />
+            <ProgressRing graded={graded} total={total} rgb={rgb}>
+              <p className="text-[17px] font-bold tabular-nums text-ink">
+                {graded} de {total}
+              </p>
+              <p className="text-[12.5px] font-medium text-ink/50">notas</p>
+            </ProgressRing>
             <div className="min-w-0 border-l border-ink/[0.08] pl-6">
               <p className="text-[14px] font-medium text-ink/50">{need.label}</p>
               <p
-                className={`mt-1 font-black leading-none tracking-[-0.03em] tabular-nums ${TEXT[need.tone]} ${
+                className={`mt-1 font-black leading-none tracking-[-0.03em] tabular-nums ${TONE_TEXT[need.tone]} ${
                   need.value.length > 4 ? 'text-[34px]' : 'text-[56px]'
                 }`}
               >
@@ -684,92 +616,65 @@ function SubjectPanel({ s, wide }: { s: Subject; wide: boolean }) {
 /* ======================= Página ======================= */
 
 /**
- * Calculadora del modo PC (≥1024px): lista compacta de ramos a la izquierda,
- * el ramo elegido al centro (promedio, anillo de notas, cuánto necesitas y las
- * evaluaciones en tarjetas) y el simulador con las opciones a la derecha.
+ * Calculadora del modo PC (≥1024px): arriba, los ramos en una fila horizontal
+ * de tarjetas (barra de color, promedio, anillo de notas y estado); abajo, el
+ * ramo elegido (promedio, cuánto necesitas y las evaluaciones en tarjetas) con
+ * el simulador y las opciones a la derecha.
  * La calculadora del celular vive intacta en Calculadora.tsx.
  */
-export function CalculadoraDesktop({ startAdding }: { startAdding?: boolean }) {
+export function CalculadoraDesktop({ startAdding, selectId }: { startAdding?: boolean; selectId?: string }) {
   const subjects = useAppStore((s) => s.subjects)
-  const wide = useMinWidth(THREE_COLS_MIN)
+  const wide = useMinWidth(TOOLS_SIDE_MIN)
   const [adding, setAdding] = useState(!!startAdding)
-  const [selected, setSelected] = useState<string | null>(null)
+  const [selected, setSelected] = useState<string | null>(selectId ?? null)
   const sel = subjects.find((s) => s.id === selected) ?? subjects[0] ?? null
+  const side = wide && !adding && sel
 
-  const threeCols = wide && !adding && sel
   return (
     <MotionConfig reducedMotion="user">
-      <div
-        className={`mx-auto grid h-full w-full max-w-[1480px] gap-6 overflow-hidden px-8 pt-8 ${
-          threeCols ? 'grid-cols-[260px_minmax(0,1fr)_290px]' : 'grid-cols-[260px_minmax(0,1fr)]'
-        }`}
-      >
-        {/* ===== Lista de ramos ===== */}
-        <aside className="flex min-h-0 flex-col">
-          <h1 className="text-[32px] font-bold leading-[36px] tracking-[-0.02em] text-ink">Calculadora</h1>
-          <p className="mt-0.5 text-[14px] font-medium text-ink/45">Tus ramos</p>
-          <motion.button
-            whileHover={{ y: -1 }}
-            whileTap={{ scale: 0.97, y: 0 }}
-            transition={SPRING.press}
-            onClick={() => setAdding(true)}
-            style={RAISED}
-            className="mt-5 flex h-11 w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-ink text-[14.5px] font-semibold text-surface"
-          >
-            <PlusIcon className="h-5 w-5" /> Agregar ramo
-          </motion.button>
+      <div className="h-full overflow-y-auto">
+        <div className="mx-auto w-full max-w-[1480px] px-8 pb-10 pt-8">
+          {/* ===== Encabezado ===== */}
+          <header className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <h1 className="text-[32px] font-bold leading-[36px] tracking-[-0.02em] text-ink">Calculadora</h1>
+              <p className="mt-0.5 text-[14px] font-medium text-ink/45">
+                {subjects.length
+                  ? `${subjects.length} ${subjects.length === 1 ? 'ramo' : 'ramos'} en curso`
+                  : 'Tus ramos'}
+              </p>
+            </div>
+            <motion.button
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.97, y: 0 }}
+              transition={SPRING.press}
+              onClick={() => setAdding(true)}
+              style={RAISED}
+              className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-ink px-5 text-[14.5px] font-semibold text-surface"
+            >
+              <PlusIcon className="h-5 w-5" /> Agregar ramo
+            </motion.button>
+          </header>
 
-          <div className="-mx-2 mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto px-2 pb-6">
-            {subjects.map((s, i) => {
-              const on = !adding && sel?.id === s.id
-              const st = statusOf(s)
-              const cur = currentGrade(s)
-              return (
-                <motion.button
+          {/* ===== Ramos en fila horizontal ===== */}
+          {subjects.length > 0 && (
+            <div className="-mx-3 mb-6 grid auto-cols-[minmax(164px,1fr)] grid-flow-col gap-3 overflow-x-auto px-3 pb-3 pt-1 [scrollbar-width:thin]">
+              {subjects.map((s, i) => (
+                <SubjectTile
                   key={s.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0, transition: { ...SPRING.soft, delay: i * 0.03 } }}
-                  whileTap={{ scale: 0.98 }}
+                  subject={s}
+                  index={i}
+                  selected={!adding && sel?.id === s.id}
                   onClick={() => {
                     setAdding(false)
                     setSelected(s.id)
                   }}
-                  className="group relative flex w-full items-center gap-3 rounded-[18px] p-3 text-left"
-                >
-                  {on ? (
-                    <motion.span
-                      layoutId="calc-selected"
-                      transition={SPRING.soft}
-                      className="absolute inset-0 rounded-[18px] bg-[rgb(var(--card))] ring-1 ring-ink/[0.06]"
-                      style={RAISED_LIGHT}
-                    />
-                  ) : (
-                    <span className="absolute inset-0 rounded-[18px] bg-ink/[0.035] transition-colors group-hover:bg-ink/[0.055]" />
-                  )}
-                  <span
-                    className="relative w-[5px] shrink-0 self-stretch rounded-full"
-                    style={{ ...RAISED, backgroundColor: `rgb(${accentRgb(s.color ?? 'gray')})` }}
-                  />
-                  <div className="relative min-w-0 flex-1">
-                    <p className="line-clamp-2 text-[15px] font-bold leading-tight tracking-[-0.01em] text-ink">{s.name}</p>
-                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                      <span className="rounded-full bg-ink/[0.06] px-2.5 py-0.5 text-[13px] font-bold tabular-nums text-ink">
-                        {cur == null ? '0,0' : formatGrade(cur)}
-                      </span>
-                      <span className={`rounded-full px-2.5 py-0.5 text-[12.5px] font-semibold ${CHIP[st.tone]}`}>
-                        {st.label}
-                      </span>
-                    </div>
-                  </div>
-                  <ChevronRight className="relative h-4 w-4 shrink-0 text-ink/30" />
-                </motion.button>
-              )
-            })}
-          </div>
-        </aside>
+                />
+              ))}
+            </div>
+          )}
 
-        {/* ===== Centro ===== */}
-        <main className="-mx-2 min-h-0 overflow-y-auto px-2 pb-8">
+          {/* ===== Ramo elegido + herramientas ===== */}
           {adding ? (
             <div className="mx-auto max-w-xl pt-1">
               <AddSubjectWizard
@@ -781,11 +686,24 @@ export function CalculadoraDesktop({ startAdding }: { startAdding?: boolean }) {
               />
             </div>
           ) : sel ? (
-            <motion.div key={sel.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={SPRING.soft}>
-              <SubjectPanel s={sel} wide={!!threeCols} />
-            </motion.div>
+            <div className={`grid items-start gap-6 ${side ? 'grid-cols-[minmax(0,1fr)_300px]' : 'grid-cols-1'}`}>
+              <motion.div key={sel.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={SPRING.soft}>
+                <SubjectPanel s={sel} wide={!!side} />
+              </motion.div>
+              {side && (
+                <motion.div
+                  key={`tools-${sel.id}`}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={SPRING.soft}
+                  className="sticky top-6"
+                >
+                  <Tools s={sel} rgb={accentRgb(sel.color ?? 'gray')} />
+                </motion.div>
+              )}
+            </div>
           ) : (
-            <div className="flex h-full flex-col items-center justify-center text-center">
+            <div className="flex flex-col items-center justify-center py-24 text-center">
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-ink/[0.05] text-ink/45">
                 <CalculatorIcon className="h-7 w-7" />
               </div>
@@ -803,16 +721,7 @@ export function CalculadoraDesktop({ startAdding }: { startAdding?: boolean }) {
               </motion.button>
             </div>
           )}
-        </main>
-
-        {/* ===== Simulador y opciones ===== */}
-        {threeCols && sel && (
-          <div className="-mx-2 min-h-0 overflow-y-auto px-2 pb-8">
-            <motion.div key={sel.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={SPRING.soft}>
-              <Tools s={sel} rgb={accentRgb(sel.color ?? 'gray')} />
-            </motion.div>
-          </div>
-        )}
+        </div>
       </div>
     </MotionConfig>
   )
